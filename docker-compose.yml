@@ -1,9 +1,9 @@
 services:
-  hmpps-template-kotlin:
-    image: ghcr.io/ministryofjustice/hmpps-template-kotlin:latest
+  hmpps-transfer-scheduler-api:
+    image: ghcr.io/ministryofjustice/hmpps-transfer-scheduler-api:latest
     networks:
       - hmpps
-    container_name: hmpps-template-kotlin
+    container_name: hmpps-transfer-scheduler-api
     ports:
       - "8080:8080"
     healthcheck:
