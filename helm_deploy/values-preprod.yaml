@@ -2,16 +2,16 @@
 # Per environment values which override defaults in hmpps-transfer-scheduler-api/values.yaml
 
 generic-service:
-  replicaCount: 2
-
   ingress:
     host: transfer-scheduler-api-preprod.hmpps.service.justice.gov.uk
 
   env:
     APPLICATIONINSIGHTS_CONFIGURATION_FILE: "applicationinsights.dev.json"
     HMPPS_AUTH_URL: "https://sign-in-preprod.hmpps.service.justice.gov.uk/auth"
+    SPRING_PROFILES_ACTIVE: preprod
 
 # CloudPlatform AlertManager receiver to route prometheus alerts to slack
 # See https://user-guide.cloud-platform.service.justice.gov.uk/documentation/monitoring-an-app/how-to-create-alarms.html#creating-your-own-custom-alerts
 generic-prometheus-alerts:
   alertSeverity: move-and-improve-alerts-non-prod
+  businessHoursOnly: true

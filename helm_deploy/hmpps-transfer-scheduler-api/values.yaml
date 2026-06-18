@@ -2,7 +2,14 @@ generic-service:
   nameOverride: hmpps-transfer-scheduler-api
   productId: "DPS138" # productId for the product that this belongs too, i.e. DPS001, see README.md for details
 
-  replicaCount: 4
+  replicaCount: 2
+  resources:
+    requests:
+      cpu: 128m
+      memory: 1024Mi
+    limits:
+      cpu: 2048m
+      memory: 1280Mi
 
   image:
     repository: ghcr.io/ministryofjustice/hmpps-transfer-scheduler-api
@@ -13,11 +20,23 @@ generic-service:
     enabled: true
     host: app-hostname.local # override per environment
     tlsSecretName: hmpps-transfer-scheduler-api-cert
+    annotations:
+      nginx.ingress.kubernetes.io/server-snippet: |
+        server_tokens off;
+        location /queue-admin/retry-all-dlqs {
+          deny all;
+          return 401;
+        }
+
+  # Used to access resources like S3 buckets, SQS queues and SNS topics
+  serviceAccountName: hmpps-transfer-scheduler-api
+
 
   # Environment variables to load into the deployment
   env:
     SERVER_PORT: "8080"
     APPLICATIONINSIGHTS_CONFIGURATION_FILE: applicationinsights.json
+    JDK_JAVA_OPTIONS: "-javaagent:/agent/agent.jar -Xmx512m -XX:+UseG1GC"
     # JAVA_TOOL_OPTIONS is set in the base image (hmpps-eclipse-temurin) with:
     #   -XX:MaxRAMPercentage=50.0
     # Uncomment below to override memory settings if needed.
@@ -37,10 +56,36 @@ generic-service:
   namespace_secrets:
     hmpps-transfer-scheduler-api-application-insights:
       APPLICATIONINSIGHTS_CONNECTION_STRING: "APPLICATIONINSIGHTS_CONNECTION_STRING"
+    hmpps-transfer-scheduler-api-client-creds:
+      CLIENT_ID: "API_CLIENT_ID"
+      CLIENT_SECRET: "API_CLIENT_SECRET"
+    hmpps-transfer-scheduler-postgres:
+      DB_SERVER: "database_server"
+      DB_NAME: "database_name"
+      DB_USER: "database_username"
+      DB_PASS: "database_password"
+    hmpps-domain-events-topic:
+      HMPPS_SQS_TOPICS_HMPPSEVENTTOPIC_ARN: "topic_arn"
+    domain-events-queue-secret:
+      HMPPS_SQS_QUEUES_HMPPSDOMAINEVENTSQUEUE_QUEUE_NAME: "queue_name"
+    domain-events-dlq-secret:
+      HMPPS_SQS_QUEUES_HMPPSDOMAINEVENTSQUEUE_DLQ_NAME: "queue_name"
 
   allowlist:
     groups:
-      - internal
+      - digital_staff_and_mojo
+      - moj_cloud_platform
+
+  retryDlqCronjob:
+    enabled: true
+    retryDlqSchedule: "0/30 7-19 * * 1-5"
+
+  scheduledDowntime:
+    enabled: true
+    startup: '30 6 * * 1-5'
+    shutdown: '30 21 * * 1-5'
+    timeZone: Europe/London
+    retryDlqSchedule: "0/30 7-19 * * 1-5"
 
 generic-prometheus-alerts:
   targetApplication: hmpps-transfer-scheduler-api
