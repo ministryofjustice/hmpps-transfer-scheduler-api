@@ -84,6 +84,7 @@ generic-service:
     enabled: true
     startup: '30 6 * * 1-5'
     shutdown: '30 21 * * 1-5'
+    timeZone: Europe/London
     retryDlqSchedule: "0/30 7-19 * * 1-5"
 
 generic-prometheus-alerts:
