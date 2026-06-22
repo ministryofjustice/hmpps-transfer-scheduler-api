@@ -6,12 +6,21 @@ generic-service:
     host: transfer-scheduler-api-preprod.hmpps.service.justice.gov.uk
 
   env:
-    APPLICATIONINSIGHTS_CONFIGURATION_FILE: "applicationinsights.dev.json"
-    HMPPS_AUTH_URL: "https://sign-in-preprod.hmpps.service.justice.gov.uk/auth"
     SPRING_PROFILES_ACTIVE: preprod
+    SENTRY_ENVIRONMENT: preprod
 
 # CloudPlatform AlertManager receiver to route prometheus alerts to slack
 # See https://user-guide.cloud-platform.service.justice.gov.uk/documentation/monitoring-an-app/how-to-create-alarms.html#creating-your-own-custom-alerts
 generic-prometheus-alerts:
   alertSeverity: move-and-improve-alerts-non-prod
   businessHoursOnly: true
+  rdsAlertsDatabases:
+    cloud-platform-4a26007d97c38c66: "Transfer Scheduler API DB"
+    rdsAlertsConnectionThreshold: 100
+  sqsOldestAlertQueueNames:
+    - "hmpps-transfer-scheduler-preprod-domain_events_queue"
+  sqsAlertsOldestThreshold: 10
+  sqsNumberAlertQueueNames:
+    - "hmpps-transfer-scheduler-preprod-domain_events_dlq"
+  sqsAlertsTotalMessagesThreshold: 1
+  applicationCronJobStatusFailedWindowMinutes: 15

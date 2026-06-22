@@ -1,0 +1,16 @@
+version: "3"
+services:
+  db:
+    image: postgres:18
+    networks:
+      - hmpps
+    container_name: transfer-scheduler-db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_PASSWORD=5ch3du13r
+      - POSTGRES_USER=transfer
+      - POSTGRES_DB=transfer
+
+networks:
+  hmpps:

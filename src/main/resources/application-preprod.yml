@@ -1,0 +1,16 @@
+integration:
+  hmpps-auth:
+    url: "https://sign-in-preprod.hmpps.service.justice.gov.uk/auth"
+  manage-users:
+    url:  "https://manage-users-api-preprod.hmpps.service.justice.gov.uk"
+  nomis-migration:
+    url: "https://prisoner-nomis-migration-preprod.hmpps.service.justice.gov.uk"
+  prison-register:
+    url: "https://prison-register-preprod.hmpps.service.justice.gov.uk"
+  prisoner-search:
+    url: "https://prisoner-search-preprod.prison.service.justice.gov.uk"
+
+service:
+  active-prisons:
+  domain-events:
+    poll-interval: PT10s
