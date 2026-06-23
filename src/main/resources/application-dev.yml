@@ -1,2 +1,22 @@
-hmpps-auth:
-  url: "http://localhost:8090/auth"
+integration:
+  hmpps-auth:
+    url: "https://sign-in-dev.hmpps.service.justice.gov.uk/auth"
+  manage-users:
+    url:  "https://manage-users-api-dev.hmpps.service.justice.gov.uk"
+  nomis-migration:
+    url: "https://prisoner-nomis-migration-dev.hmpps.service.justice.gov.uk"
+  prison-register:
+    url: "https://prison-register-dev.hmpps.service.justice.gov.uk"
+  prisoner-search:
+    url: "https://prisoner-search-dev.prison.service.justice.gov.uk"
+
+service:
+  active-prisons: "***"
+  domain-events:
+    poll-interval: PT10s
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true

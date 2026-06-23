@@ -7,7 +7,12 @@ import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDO
 import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient
 import org.springframework.http.HttpHeaders
 import org.springframework.test.context.ActiveProfiles
+import org.springframework.test.context.DynamicPropertyRegistry
+import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.web.reactive.server.WebTestClient
+import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.container.LocalStackContainer
+import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.container.LocalStackContainer.setLocalStackProperties
+import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.container.PostgresContainer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.wiremock.HmppsAuthApiExtension
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.wiremock.HmppsAuthApiExtension.Companion.hmppsAuth
 import uk.gov.justice.hmpps.test.kotlin.auth.JwtAuthorisationHelper
@@ -32,5 +37,26 @@ abstract class IntegrationTestBase {
 
   protected fun stubPingWithResponse(status: Int) {
     hmppsAuth.stubHealthPing(status)
+  }
+
+  companion object {
+    private val pgContainer = PostgresContainer.instance
+    private val localStackContainer = LocalStackContainer.instance
+    const val DEFAULT_USERNAME = "TR4N5CH3DU13R"
+    const val DEFAULT_NAME = "Transfer Scheduler"
+
+    @JvmStatic
+    @DynamicPropertySource
+    @Suppress("unused")
+    fun properties(registry: DynamicPropertyRegistry) {
+      pgContainer?.also {
+        registry.add("spring.datasource.url", pgContainer::getJdbcUrl)
+        registry.add("spring.datasource.username", pgContainer::getUsername)
+        registry.add("spring.datasource.password", pgContainer::getPassword)
+      }
+
+      System.setProperty("aws.region", "eu-west-2")
+      localStackContainer?.also { setLocalStackProperties(it, registry) }
+    }
   }
 }

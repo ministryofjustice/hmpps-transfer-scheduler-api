@@ -5,8 +5,60 @@ management.endpoint:
   health.cache.time-to-live: 0
   info.cache.time-to-live: 0
 
-hmpps-auth:
-  url: "http://localhost:8090/auth"
+integration:
+  hmpps-auth:
+    url: "http://localhost:8090/auth"
+  manage-users:
+    url: "http://localhost:8095"
+  nomis-migration:
+    url: "http://localhost:9990"
+  prison-register:
+    url: "http://localhost:9005"
+  prisoner-search:
+    url: "http://localhost:9000"
+
+spring:
+  jpa:
+    show-sql: true
+    properties:
+      hibernate.generate_statistics: true
+  datasource:
+    hikari:
+      data-source-properties:
+        sslmode: 'disable'
+
+client:
+  id: transfer-scheduler
+  secret: transfer-scheduler
+
+db:
+  server: "localhost:5432"
+  name: "transfer"
+  user: "transfer"
+  pass: "5ch3du13r"
+
+hmpps.sqs:
+  provider: localstack
+  queues:
+    hmppseventtestqueue:
+      queueName: ${random.uuid}
+      dlqName: ${random.uuid}
+      subscribeTopicId: hmppseventtopic
+    hmppsdomaineventsqueue:
+      queueName: ${random.uuid}
+      dlqName: ${random.uuid}
+      subscribeTopicId: hmppseventtesttopic
+    offendereventsqueue:
+      queueName: ${random.uuid}
+      dlqName: ${random.uuid}
+      subscribeTopicId: offendereventstopic
+  topics:
+    hmppseventtopic:
+      arn: arn:aws:sns:eu-west-2:000000000000:${random.uuid}
+    hmppseventtesttopic:
+      arn: arn:aws:sns:eu-west-2:000000000000:${random.uuid}
+    offendereventstopic:
+      arn: arn:aws:sns:eu-west-2:000000000000:${random.uuid}
 
 springdoc:
   api-docs:
