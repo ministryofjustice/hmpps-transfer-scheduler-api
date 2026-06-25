@@ -7,6 +7,8 @@ plugins {
   kotlin("plugin.jpa") version "2.4.0"
 }
 
+val ehcacheVersion = "3.12.0"
+val hibernateJcacheVersion = "7.4.2.Final"
 val hmppsKotlinVersion = "2.5.0"
 val sentryVersion = "8.44.1"
 val springDocVersion = "3.0.3"
@@ -25,7 +27,9 @@ dependencies {
   implementation("org.springframework.boot:spring-boot-starter-data-jpa")
   implementation("org.springframework.data:spring-data-envers")
   implementation("io.sentry:sentry-spring-boot-4:$sentryVersion")
+  implementation("org.hibernate:hibernate-jcache:$hibernateJcacheVersion")
 
+  runtimeOnly("org.ehcache:ehcache:$ehcacheVersion")
   runtimeOnly("org.springframework.boot:spring-boot-starter-flyway")
   runtimeOnly("org.flywaydb:flyway-database-postgresql")
   runtimeOnly("org.postgresql:postgresql")
