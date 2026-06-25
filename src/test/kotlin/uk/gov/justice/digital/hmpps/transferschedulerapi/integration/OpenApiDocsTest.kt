@@ -2,7 +2,6 @@ package uk.gov.justice.digital.hmpps.transferschedulerapi.integration
 
 import io.swagger.v3.parser.OpenAPIV3Parser
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.info.BuildProperties
@@ -33,7 +32,6 @@ class OpenApiDocsTest(
       .expectHeader().value("Location") { it.contains("/swagger-ui/index.html?configUrl=/v3/api-docs/swagger-config") }
   }
 
-  @Disabled // TODO: enable this test when api doc is no longer empty
   @Test
   fun `the open api json contains documentation`() {
     webTestClient.get()
@@ -79,14 +77,14 @@ class OpenApiDocsTest(
   }
 
   @Test
-  @Disabled("TODO Enable this test once you have an endpoint.")
-  fun `all endpoints have a security scheme defined`() {
+  fun `global security scheme defined`() {
     webTestClient.get()
       .uri("/v3/api-docs")
       .accept(MediaType.APPLICATION_JSON)
       .exchange()
       .expectStatus().isOk
       .expectBody()
-      .jsonPath("$.paths[*][*][?(!@.security)]").doesNotExist()
+      .jsonPath("$.security").isArray()
+      .jsonPath("$.security[0].bearer-jwt").exists()
   }
 }
