@@ -20,7 +20,6 @@ infix fun TransferModel.verifyAgainst(transfer: TransferEntity) {
   assertThat(reason.code).isEqualTo(transfer.reason.code)
   assertThat(destination?.code).isEqualTo(transfer.destinationCode)
   assertThat(logistics?.code).isEqualTo(transfer.logistics?.code)
-  assertThat(comments).isEqualTo(transfer.comments)
   check(nullStateIsEqual(plan, transfer.plan)) { "Invalid plan state" }
   check(nullStateIsEqual(schedule, transfer.schedule)) { "Invalid plan state" }
   plan?.also { it verifyAgainst transfer.plan!! }
@@ -43,7 +42,6 @@ infix fun TransferEntity.verifyAgainst(request: TransferRequest) {
   assertThat(reason.code).isEqualTo(request.reasonCode)
   assertThat(destinationCode).isEqualTo(request.destinationCode)
   assertThat(logistics?.code).isEqualTo(request.logisticsCode)
-  assertThat(comments).isEqualTo(request.comments)
   check(nullStateIsEqual(plan, request.plan)) { "Invalid plan state" }
   check(nullStateIsEqual(schedule, request.schedule)) { "Invalid plan state" }
   plan?.also { it verifyAgainst request.plan!! }

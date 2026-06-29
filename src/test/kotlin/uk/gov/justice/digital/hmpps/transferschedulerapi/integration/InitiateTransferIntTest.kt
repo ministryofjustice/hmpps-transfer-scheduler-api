@@ -169,8 +169,7 @@ class InitiateTransferIntTest(
     logisticsCode: String? = TransferLogisticsCode.randomCode(),
     plan: CreatePlanRequest? = planRequest(),
     schedule: CreateScheduleRequest? = scheduleRequest(),
-    comments: String? = word(50),
-  ) = CreateTransferRequest(reasonCode, destinationCode, logisticsCode, plan, schedule, comments)
+  ) = CreateTransferRequest(reasonCode, destinationCode, logisticsCode, plan, schedule)
 
   private fun initiateTransfer(
     personIdentifier: String,

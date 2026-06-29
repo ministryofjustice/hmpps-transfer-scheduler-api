@@ -46,7 +46,6 @@ final class Transfer(
   reason: TransferReason,
   destinationCode: String?,
   logistics: TransferLogistics?,
-  comments: String?,
   legacyId: Long?,
   @Id
   @Column(name = "id", nullable = false)
@@ -99,10 +98,6 @@ final class Transfer(
   @ManyToOne
   @JoinColumn(name = "logistics_id")
   var logistics: TransferLogistics? = logistics
-    private set
-
-  @Column(name = "comments")
-  var comments: String? = comments
     private set
 
   @Column(name = "legacy_id")
