@@ -10,15 +10,18 @@ import org.springframework.context.annotation.Configuration
 import tools.jackson.core.JsonGenerator
 import tools.jackson.core.JsonParser
 import tools.jackson.databind.json.JsonMapper
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.EntityInterceptor
 import java.io.IOException
 import java.lang.reflect.Type
 
 @Configuration
 class HibernateCustomiser(
   private val jsonMapper: JsonMapper,
+  private val entityInterceptor: EntityInterceptor,
 ) : HibernatePropertiesCustomizer {
   override fun customize(hibernateProperties: MutableMap<String, Any>) {
     hibernateProperties[AvailableSettings.JSON_FORMAT_MAPPER] = JacksonJson3FormatMapper(jsonMapper)
+    hibernateProperties[AvailableSettings.INTERCEPTOR] = entityInterceptor
   }
 }
 

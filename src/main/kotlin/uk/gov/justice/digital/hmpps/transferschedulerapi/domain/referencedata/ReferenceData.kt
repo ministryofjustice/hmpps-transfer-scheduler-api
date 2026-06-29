@@ -41,10 +41,7 @@ class ReferenceDataRepository(
 
   fun findAllByType(clazz: KClass<out ReferenceData>): List<ReferenceData> = entityManager.createQuery("from ${clazz.qualifiedName}", clazz.java).cacheable().resultList
 
-  fun rdProvider(): (KClass<out ReferenceData>, String) -> ReferenceData {
-    val allRd = findAll().associateBy { it::class to it.code }
-    return { domain: KClass<out ReferenceData>, code: String -> requireNotNull(allRd[domain to code]) }
-  }
+  fun rdProvider(): RdProvider = RdProvider(findAll())
 }
 
 fun Query.cacheable(): Query = setHint(AvailableHints.HINT_CACHEABLE, true)

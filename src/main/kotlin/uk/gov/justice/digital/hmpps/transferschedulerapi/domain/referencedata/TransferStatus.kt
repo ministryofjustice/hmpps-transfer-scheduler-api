@@ -19,4 +19,14 @@ class TransferStatus(
   sequenceNumber: Int,
   active: Boolean,
   id: UUID,
-) : ReferenceData(code, description, sequenceNumber, active, id)
+) : ReferenceData(code, description, sequenceNumber, active, id) {
+  enum class Code {
+    PLANNING,
+    READY_TO_SCHEDULE,
+    SCHEDULED,
+    CANCELLED,
+    EXPIRED,
+    IN_TRANSIT,
+    COMPLETED,
+  }
+}

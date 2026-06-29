@@ -65,3 +65,6 @@ springdoc:
     enabled: true
   swagger-ui:
     enabled: true
+
+service:
+  api-base-url: "http://local-api"

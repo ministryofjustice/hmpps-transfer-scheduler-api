@@ -14,3 +14,4 @@ service:
   active-prisons: 
   domain-events:
     poll-interval: PT10s
+  api-base-url: "https://transfer-scheduler-api.hmpps.service.justice.gov.uk"

@@ -107,7 +107,7 @@ class ApiExceptionHandler {
         userMessage = "Unexpected error",
         developerMessage = e.devMessage(),
       ),
-    )
+    ).also { e.printStackTrace() }
 }
 
 private fun Exception.devMessage(): String {
