@@ -10,7 +10,6 @@ data class CreateTransferRequest(
   override val logisticsCode: String?,
   override val plan: CreatePlanRequest?,
   override val schedule: CreateScheduleRequest?,
-  override val comments: String?,
 ) : TransferRequest
 
 data class CreatePlanRequest(

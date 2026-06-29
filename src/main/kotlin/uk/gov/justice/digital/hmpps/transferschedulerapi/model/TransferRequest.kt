@@ -9,7 +9,6 @@ interface TransferRequest {
   val logisticsCode: String?
   val plan: CreatePlanRequest?
   val schedule: CreateScheduleRequest?
-  val comments: String?
 }
 
 interface PlanRequest {
