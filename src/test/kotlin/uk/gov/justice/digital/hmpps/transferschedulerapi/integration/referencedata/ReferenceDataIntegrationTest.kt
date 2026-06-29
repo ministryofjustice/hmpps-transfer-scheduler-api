@@ -25,18 +25,18 @@ class ReferenceDataIntegrationTest : IntegrationTestBase() {
 
   @Test
   fun `403 forbidden without correct role`() {
-    getReferenceDataSpec("any-domain", "ROLE_ANY__OTHER_RW").expectStatus().isForbidden
+    getReferenceData("any-domain", "ROLE_ANY__OTHER_RW").expectStatus().isForbidden
   }
 
   @Test
   fun `404 if invalid domain`() {
-    getReferenceDataSpec("any-domain").expectStatus().isNotFound
+    getReferenceData("any-domain").expectStatus().isNotFound
   }
 
   @Test
   fun `sorts by sequence number`() {
     val rd =
-      getReferenceDataSpec("transfer-status")
+      getReferenceData("transfer-status")
         .expectStatus()
         .isOk
         .expectBody<ReferenceDataResponse>()
@@ -58,7 +58,7 @@ class ReferenceDataIntegrationTest : IntegrationTestBase() {
   @MethodSource("referenceDataDomains")
   fun `200 ok - can retrieve reference data domains with correct role`(domain: String) {
     val rd =
-      getReferenceDataSpec(domain)
+      getReferenceData(domain)
         .expectStatus()
         .isOk
         .expectBody<ReferenceDataResponse>()
@@ -68,7 +68,7 @@ class ReferenceDataIntegrationTest : IntegrationTestBase() {
     assertThat(rd.items).isNotEmpty
   }
 
-  private fun getReferenceDataSpec(
+  private fun getReferenceData(
     domain: String,
     role: String? = Roles.TRANSFER_SCHEDULER_UI,
   ) = webTestClient

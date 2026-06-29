@@ -24,7 +24,8 @@ class PrisonRegisterClient(
       .retryOnTransientException()
   }
 
-  fun findPrison(code: String): Mono<Prison> = findPrisons(setOf(code)).map { prs -> prs.firstOrNull { it.code == code } ?: Prison.default(code) }
+  fun findPrison(code: String): Mono<Prison> = findPrisons(setOf(code))
+    .map { prs -> prs.firstOrNull { it.code == code } ?: Prison.default(code) }
 }
 
 data class PrisonsByIdsRequest(val prisonIds: Set<String>)

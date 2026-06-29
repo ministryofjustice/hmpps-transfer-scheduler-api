@@ -1,11 +1,26 @@
 package uk.gov.justice.digital.hmpps.transferschedulerapi.event
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonSubTypes
+import com.fasterxml.jackson.annotation.JsonTypeInfo
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.DataSource
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.IdGenerator.newUuid
 import java.time.ZonedDateTime
 import java.util.UUID
 
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXISTING_PROPERTY, property = "eventType")
+@JsonSubTypes(
+  value = [
+    JsonSubTypes.Type(value = PrisonerMerged::class, name = PrisonerMerged.EVENT_TYPE),
+    JsonSubTypes.Type(value = PrisonerUpdated::class, name = PrisonerUpdated.EVENT_TYPE),
+    JsonSubTypes.Type(value = PrisonerReceived::class, name = PrisonerReceived.EVENT_TYPE),
+
+    JsonSubTypes.Type(value = TransferMigrated::class, name = TransferMigrated.EVENT_TYPE),
+    JsonSubTypes.Type(value = TransferRecorded::class, name = TransferRecorded.EVENT_TYPE),
+    JsonSubTypes.Type(value = TransferPlanned::class, name = TransferPlanned.EVENT_TYPE),
+    JsonSubTypes.Type(value = TransferScheduled::class, name = TransferScheduled.EVENT_TYPE),
+  ],
+)
 sealed interface DomainEvent<T : AdditionalInformation> {
   val occurredAt: ZonedDateTime
     get() = ZonedDateTime.now()
