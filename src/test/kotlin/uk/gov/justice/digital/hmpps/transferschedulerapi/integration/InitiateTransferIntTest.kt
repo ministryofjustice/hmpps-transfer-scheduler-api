@@ -41,7 +41,7 @@ class InitiateTransferIntTest(
   @Test
   fun `401 unauthorised without a valid token`() {
     webTestClient
-      .get()
+      .post()
       .uri(INITIATE_TRANSFER_URL, personIdentifier())
       .exchange()
       .expectStatus()

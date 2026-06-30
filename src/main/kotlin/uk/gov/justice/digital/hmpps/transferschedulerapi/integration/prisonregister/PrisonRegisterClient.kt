@@ -24,8 +24,13 @@ class PrisonRegisterClient(
       .retryOnTransientException()
   }
 
-  fun findPrison(code: String): Mono<Prison> = findPrisons(setOf(code))
-    .map { prs -> prs.firstOrNull { it.code == code } ?: Prison.default(code) }
+  fun prisonProvider(ids: Set<String>): PrisonProvider = PrisonProvider(findPrisons(ids).block()!!)
 }
 
 data class PrisonsByIdsRequest(val prisonIds: Set<String>)
+
+class PrisonProvider(prisons: List<Prison>) {
+  private val prisons = prisons.associateBy(Prison::code)
+  fun get(code: String): Prison = prisons[code] ?: Prison.default(code)
+  fun containsAll(codes: Set<String>) = prisons.keys.containsAll(codes)
+}
