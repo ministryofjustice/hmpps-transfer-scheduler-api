@@ -6,12 +6,14 @@ import org.springframework.transaction.support.TransactionTemplate
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.HmppsDomainEventRepository
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.PersonSummaryRepository
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.TransferRepository
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.ReferenceDataRepository
 
 @TestConfiguration
 class TestConfig(
   private val transactionTemplate: TransactionTemplate,
   private val hmppsDomainEventRepository: HmppsDomainEventRepository,
   private val personSummaryRepository: PersonSummaryRepository,
+  private val rdRepository: ReferenceDataRepository,
   private val transferRepository: TransferRepository,
 ) {
   @Bean
@@ -21,5 +23,5 @@ class TestConfig(
   fun personSummaryOperations(): PersonSummaryOperations = PersonSummaryOperationsImpl(personSummaryRepository)
 
   @Bean
-  fun transferOperations(): TransferOperations = TransferOperationsImpl(transferRepository)
+  fun transferOperations(psOperations: PersonSummaryOperations): TransferOperations = TransferOperationsImpl(transactionTemplate, rdRepository, transferRepository, psOperations)
 }

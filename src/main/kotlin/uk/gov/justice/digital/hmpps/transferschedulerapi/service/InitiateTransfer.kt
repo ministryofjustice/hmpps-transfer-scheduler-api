@@ -19,11 +19,10 @@ class InitiateTransfer(
   fun transferFor(personIdentifier: String, request: CreateTransferRequest): Transfer {
     val person = personSummaryService.getWithSave(personIdentifier)
     val prisonCodes = setOfNotNull(person.prisonCode, request.destinationCode)
-    val prisons = prisonRegister.findPrisons(prisonCodes).block()!!.associateBy { it.code }
-    require(prisons.keys.containsAll(prisonCodes)) { "Prison not recognised" }
+    val prisons = prisonRegister.prisonProvider(prisonCodes)
+    require(prisons.containsAll(prisonCodes)) { "Prison not recognised" }
 
-    val prisonProvider = { code: String -> requireNotNull(prisons[code]) }
     val rdProvider = rdRepository.rdProvider()
-    return transferRepository.save(request.asEntity(person, rdProvider)).asModel(prisonProvider)
+    return transferRepository.save(request.asEntity(person, rdProvider)).asModel(prisons::get)
   }
 }
