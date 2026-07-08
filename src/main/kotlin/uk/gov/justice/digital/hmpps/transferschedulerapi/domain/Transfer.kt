@@ -18,8 +18,6 @@ import org.hibernate.annotations.FetchMode
 import org.hibernate.envers.Audited
 import org.hibernate.envers.NotAudited
 import org.hibernate.envers.RelationTargetAuditMode.NOT_AUDITED
-import org.springframework.data.jpa.repository.JpaRepository
-import org.springframework.data.repository.findByIdOrNull
 import uk.gov.justice.digital.hmpps.transferschedulerapi.context.SchedulerContext
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.IdGenerator.newUuid
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.RdProvider
@@ -31,7 +29,6 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferMigrated
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferPlanned
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferRecorded
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferScheduled
-import uk.gov.justice.digital.hmpps.transferschedulerapi.exception.NotFoundException
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.MovementRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.PlanRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.ScheduleRequest
@@ -174,7 +171,3 @@ final class Transfer(
     status = rdProvider.get<TransferStatus>(statusCode.name)
   }
 }
-
-interface TransferRepository : JpaRepository<Transfer, UUID>
-
-fun TransferRepository.getTransfer(id: UUID): Transfer = findByIdOrNull(id) ?: throw NotFoundException("Transfer not found")
