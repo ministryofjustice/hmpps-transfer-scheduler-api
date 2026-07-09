@@ -58,7 +58,7 @@ class ApiExceptionHandler {
         userMessage = "Invalid request",
         developerMessage = e.devMessage(),
       ),
-    ).also { e.printStackTrace() }
+    )
 
   @ExceptionHandler(MethodArgumentTypeMismatchException::class)
   fun handleArgumentTypeMismatchException(e: MethodArgumentTypeMismatchException): ResponseEntity<ErrorResponse> = ResponseEntity
@@ -107,7 +107,7 @@ class ApiExceptionHandler {
         userMessage = "Unexpected error",
         developerMessage = e.devMessage(),
       ),
-    ).also { e.printStackTrace() }
+    )
 }
 
 private fun Exception.devMessage(): String {
