@@ -59,7 +59,7 @@ fun startsOnOrBefore(end: LocalDate) = Specification<Transfer> { tr, _, cb ->
 
 fun transferStatusCodeIn(codes: Set<TransferStatus.Code>) = Specification<Transfer> { tr, _, cb ->
   val status = tr.join<Transfer, TransferStatus>(Transfer::status.name, JoinType.INNER)
-  status.get<TransferStatus.Code>(TransferStatus::code.name).`in`(codes)
+  status.get<TransferStatus.Code>(TransferStatus::code.name).`in`(codes.map { it.name })
 }
 
 fun transferReasonCodeIn(codes: Set<String>) = Specification<Transfer> { tr, _, cb ->

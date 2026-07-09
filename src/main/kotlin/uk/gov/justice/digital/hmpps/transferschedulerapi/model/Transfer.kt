@@ -18,7 +18,7 @@ data class Transfer(
   val movement: Movement?,
 )
 
-data class Person(val identifier: String)
+data class Person(val identifier: String, val firstName: String, val lastName: String)
 
 data class Plan(val requestedOn: LocalDate, val priority: CodedDescription, val comments: String?)
 

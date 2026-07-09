@@ -15,7 +15,6 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.transferReasonCo
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.transferStatusCodeIn
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.prisonersearch.Prisoner
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.prisonregister.PrisonRegisterClient
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Prison
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged.PageMetadata
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged.TransferPrisonSearchRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged.TransferSearchRequest
@@ -51,8 +50,9 @@ class SearchTransfers(
     ).reduce(Specification<Transfer>::and)
 
   private fun Page<Transfer>.asSearchResponse(): TransferSearchResponse {
-    val prisons = prisonRegister.findPrisons(map { it.prisonCode }.toSet()).block()!!.associateBy { it.code }
-    return map { item -> item.asModel { prisons[it] ?: Prison.default(it) } }.asResponse()
+    val prisonCodes: Set<String> = map { listOfNotNull(it.prisonCode, it.destinationCode) }.flatten().toSet()
+    val prisons = prisonRegister.prisonProvider(prisonCodes)
+    return map { item -> item.asModel(prisons::get) }.asResponse()
   }
 
   private fun Page<uk.gov.justice.digital.hmpps.transferschedulerapi.model.Transfer>.asResponse() = TransferSearchResponse(content, PageMetadata(totalElements))

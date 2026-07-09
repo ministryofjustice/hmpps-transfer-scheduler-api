@@ -156,7 +156,7 @@ class TransferPrisonSearchIntTest(
     start: LocalDate = LocalDate.now(),
     end: LocalDate = start.plusDays(30),
     query: String? = null,
-    statuses: Set<TransferStatus.Code> = emptySet(),
+    statuses: Set<TransferStatus.Code> = setOf(TransferStatus.Code.SCHEDULED, TransferStatus.Code.IN_TRANSIT, TransferStatus.Code.COMPLETED),
     reasons: Set<String> = emptySet(),
     destinations: Set<String> = emptySet(),
     logistics: Set<String> = emptySet(),

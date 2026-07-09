@@ -39,7 +39,7 @@ fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer.asModel(pr
   movement(),
 )
 
-private fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer.person() = Person(person.identifier)
+private fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer.person() = Person(person.identifier, person.firstName, person.lastName)
 private fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer.plan(): Plan? = with(plan) {
   this?.let { Plan(requestedOn, priority.asCodedDescription(), comments) }
 }
