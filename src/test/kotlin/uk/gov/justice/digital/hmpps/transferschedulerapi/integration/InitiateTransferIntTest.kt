@@ -12,6 +12,9 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.HmppsDomainEvent
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Plan
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Schedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.publication
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.PLANNING
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.READY_TO_SCHEDULE
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.SCHEDULED
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferPlanned
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferScheduled
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.personIdentifier
@@ -87,6 +90,7 @@ class InitiateTransferIntTest(
       .successResponse<Transfer>(HttpStatus.CREATED)
 
     val saved = requireNotNull(findTransfer(res.id))
+    assertThat(saved.status.code).isEqualTo(READY_TO_SCHEDULE.name)
     saved verifyAgainst request
     res verifyAgainst saved
 
@@ -97,7 +101,7 @@ class InitiateTransferIntTest(
       SchedulerContext.get().copy(username = username, caseloadId = prison.code),
     )
 
-    verifyEventPublications(saved, setOf(TransferScheduled(person.prisonerNumber, saved.id).publication(saved.id)))
+    verifyEventPublications(saved, setOf(TransferPlanned(person.prisonerNumber, saved.id).publication(saved.id)))
   }
 
   @Test
@@ -108,11 +112,12 @@ class InitiateTransferIntTest(
     prisonRegister.givenPrisons(setOf(prison, destination))
 
     val username = username()
-    val request = transferRequest(destinationCode = destination.code, schedule = null)
+    val request = transferRequest(destinationCode = destination.code, logisticsCode = null, schedule = null)
     val res = initiateTransfer(person.prisonerNumber, request, username, prison.code)
       .successResponse<Transfer>(HttpStatus.CREATED)
 
     val saved = requireNotNull(findTransfer(res.id))
+    assertThat(saved.status.code).isEqualTo(PLANNING.name)
     saved verifyAgainst request
     res verifyAgainst saved
 
@@ -139,6 +144,7 @@ class InitiateTransferIntTest(
       .successResponse<Transfer>(HttpStatus.CREATED)
 
     val saved = requireNotNull(findTransfer(res.id))
+    assertThat(saved.status.code).isEqualTo(SCHEDULED.name)
     saved verifyAgainst request
     res verifyAgainst saved
 
