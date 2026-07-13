@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.hmpps.transferschedulerapi.model
 
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
 import java.time.LocalDate
 import java.time.LocalDateTime
 
@@ -9,6 +10,8 @@ interface TransferRequest {
   val logisticsCode: String?
   val plan: CreatePlanRequest?
   val schedule: CreateScheduleRequest?
+
+  fun initialStatusCode(): TransferStatus.Code
 }
 
 interface PlanRequest {

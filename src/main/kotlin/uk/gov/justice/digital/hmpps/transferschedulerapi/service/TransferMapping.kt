@@ -4,7 +4,6 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.PersonSummary
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.PrisonProvider
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.RdProvider
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferLogistics
-import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferReason
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Movement
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Person
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Plan
@@ -17,14 +16,14 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.NumericLegacyIdReq
 fun TransferRequest.asEntity(person: PersonSummary, rdProvider: RdProvider) = uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer(
   person,
   requireNotNull(person.prisonCode),
-  rdProvider.get<TransferReason>(reasonCode),
+  rdProvider.get(reasonCode),
+  rdProvider.get(initialStatusCode().name),
   destinationCode,
   logisticsCode?.let { rdProvider.get<TransferLogistics>(it) },
   if (this is NumericLegacyIdRequest) legacyId else null,
 )
   .withPlan(plan, rdProvider)
   .withSchedule(schedule)
-  .calculateStatus(rdProvider)
 
 fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer.asModel(prisonProvider: PrisonProvider) = Transfer(
   id,
@@ -40,6 +39,7 @@ fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer.asModel(pr
 )
 
 private fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer.person() = Person(person.identifier, person.firstName, person.lastName)
+
 private fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer.plan(): Plan? = with(plan) {
   this?.let { Plan(requestedOn, priority.asCodedDescription(), comments) }
 }

@@ -8,8 +8,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.TransferRepository
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.RdProvider
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.ReferenceDataRepository
-import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferLogistics
-import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferReason
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.personIdentifier
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.prisonCode
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.word
@@ -57,6 +56,7 @@ class TransferOperationsImpl(
       personIdentifier: String = personIdentifier(),
       prisonCode: String = prisonCode(),
       reasonCode: String = TransferReasonCode.randomCode(),
+      statusCode: TransferStatus.Code = TransferStatus.Code.SCHEDULED,
       destinationCode: String? = prisonCode(),
       logisticsCode: String? = TransferLogisticsCode.randomCode(),
       plan: PlanRequest? = plan(),
@@ -68,16 +68,16 @@ class TransferOperationsImpl(
       Transfer(
         pp(personIdentifier, prisonCode),
         prisonCode,
-        rd.get<TransferReason>(reasonCode),
+        rd.get(reasonCode),
+        rd.get(statusCode.name),
         destinationCode,
-        logisticsCode?.let { rd.get<TransferLogistics>(it) },
+        logisticsCode?.let { rd.get(it) },
         legacyId,
         id,
       )
         .withPlan(plan, rd)
         .withSchedule(schedule)
         .withMovement(movement)
-        .calculateStatus(rd)
     }
 
     fun plan(

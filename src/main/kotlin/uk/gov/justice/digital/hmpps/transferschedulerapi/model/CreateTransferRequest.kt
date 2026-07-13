@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.hmpps.transferschedulerapi.model
 
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
 import java.time.LocalDate
 import java.time.LocalDateTime
 
@@ -10,7 +11,13 @@ data class CreateTransferRequest(
   override val logisticsCode: String?,
   override val plan: CreatePlanRequest?,
   override val schedule: CreateScheduleRequest?,
-) : TransferRequest
+) : TransferRequest {
+  override fun initialStatusCode(): TransferStatus.Code = when {
+    plan == null -> TransferStatus.Code.SCHEDULED
+    destinationCode != null && logisticsCode != null -> TransferStatus.Code.READY_TO_SCHEDULE
+    else -> TransferStatus.Code.PLANNING
+  }
+}
 
 data class CreatePlanRequest(
   override val requestedOn: LocalDate,

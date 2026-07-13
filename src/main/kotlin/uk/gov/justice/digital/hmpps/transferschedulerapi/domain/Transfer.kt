@@ -43,6 +43,7 @@ final class Transfer(
   person: PersonSummary,
   prisonCode: String,
   reason: TransferReason,
+  status: TransferStatus,
   destinationCode: String?,
   logistics: TransferLogistics?,
   legacyId: Long?,
@@ -76,7 +77,7 @@ final class Transfer(
   @NotNull
   @ManyToOne(optional = false)
   @JoinColumn(name = "status_id", nullable = false)
-  lateinit var status: TransferStatus
+  var status: TransferStatus = status
     private set
 
   @Fetch(FetchMode.JOIN)
@@ -152,22 +153,5 @@ final class Transfer(
   fun withMovement(request: MovementRequest?) = apply {
     val slid = if (request is StringLegacyIdRequest) request.legacyId else null
     movement = request?.let { Movement(this, request.occurredAt, request.comments, slid) }
-  }
-
-  fun calculateStatus(rdProvider: RdProvider) = apply {
-    val statusCode: TransferStatus.Code = when {
-      ::status.isInitialized && status.code == TransferStatus.Code.COMPLETED.name -> TransferStatus.Code.COMPLETED
-      movement != null -> TransferStatus.Code.IN_TRANSIT
-      ::status.isInitialized &&
-        status.code in setOf(
-          TransferStatus.Code.CANCELLED.name,
-          TransferStatus.Code.EXPIRED.name,
-        ) -> TransferStatus.Code.valueOf(status.code)
-
-      schedule != null -> TransferStatus.Code.SCHEDULED
-      plan != null -> TransferStatus.Code.READY_TO_SCHEDULE
-      else -> TransferStatus.Code.PLANNING
-    }
-    status = rdProvider.get<TransferStatus>(statusCode.name)
   }
 }

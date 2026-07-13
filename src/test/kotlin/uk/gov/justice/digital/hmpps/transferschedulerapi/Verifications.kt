@@ -13,11 +13,14 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Plan as PlanModel
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Schedule as ScheduleModel
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Transfer as TransferModel
 
-infix fun TransferModel.verifyAgainst(transfer: TransferEntity) {
+infix fun TransferModel.verifyAgainst(
+  transfer: TransferEntity,
+) {
   assertThat(id).isEqualTo(transfer.id)
   assertThat(person.identifier).isEqualTo(transfer.person.identifier)
   assertThat(status.code).isEqualTo(transfer.status.code)
   assertThat(reason.code).isEqualTo(transfer.reason.code)
+  assertThat(prison.code).isEqualTo(transfer.prisonCode)
   assertThat(destination?.code).isEqualTo(transfer.destinationCode)
   assertThat(logistics?.code).isEqualTo(transfer.logistics?.code)
   check(nullStateIsEqual(plan, transfer.plan)) { "Invalid plan state" }

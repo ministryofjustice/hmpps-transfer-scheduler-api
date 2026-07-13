@@ -14,10 +14,14 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.Pers
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperations
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.schedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.transfer
+import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.referencedata.TransferLogisticsCode
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.referencedata.TransferReasonCode
+import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.wiremock.PrisonRegisterMockServer.Companion.prison
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.wiremock.PrisonerRegisterExtension.Companion.prisonRegister
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged.TransferPrisonSearchRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged.TransferSearchResponse
+import uk.gov.justice.digital.hmpps.transferschedulerapi.verifyAgainst
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -78,23 +82,52 @@ class TransferPrisonSearchIntTest(
 
   @Test
   fun `can filter transfers by prison code`() {
-    val prison = prisonRegister.givenPrison()
+    val prison = prison()
+    val destination = prison()
+    prisonRegister.givenPrisons(setOf(prison, destination))
 
-    val toFind = givenTransfer(transfer(prisonCode = prison.code))
+    val toFind = givenTransfer(transfer(prisonCode = prison.code, destinationCode = destination.code))
     givenTransfer(transfer())
 
     val res = searchTransfers(prison.code, searchRequest()).successResponse<TransferSearchResponse>()
 
     assertThat(res.content).hasSize(1)
     assertThat(res.metadata.totalElements).isEqualTo(1)
-    assertThat(res.content.single().id).isEqualTo(toFind.id)
+    with(res.content.single()) {
+      this verifyAgainst toFind
+      assertThat(this.prison.code).isEqualTo(prison.code)
+      assertThat(this.destination?.code).isEqualTo(destination.code)
+    }
+  }
+
+  @Test
+  fun `can filter transfers by destination code`() {
+    val prison = prison()
+    val destination = prison()
+    prisonRegister.givenPrisons(setOf(prison, destination))
+
+    val toFind = givenTransfer(transfer(prisonCode = prison.code, destinationCode = destination.code))
+    givenTransfer(transfer(prisonCode = prison.code))
+
+    val res = searchTransfers(prison.code, searchRequest(destinations = setOf(destination.code)))
+      .successResponse<TransferSearchResponse>()
+
+    assertThat(res.content).hasSize(1)
+    assertThat(res.metadata.totalElements).isEqualTo(1)
+    with(res.content.single()) {
+      this verifyAgainst toFind
+      assertThat(this.prison.code).isEqualTo(prison.code)
+      assertThat(this.destination?.code).isEqualTo(destination.code)
+    }
   }
 
   @Test
   fun `can filter transfers by person identifier`() {
-    val prison = prisonRegister.givenPrison()
+    val prison = prison()
+    val destination = prison()
+    prisonRegister.givenPrisons(setOf(prison, destination))
 
-    val toFind = givenTransfer(transfer(prisonCode = prison.code))
+    val toFind = givenTransfer(transfer(prisonCode = prison.code, destinationCode = destination.code))
     givenTransfer(transfer(prisonCode = prison.code))
 
     val res = searchTransfers(prison.code, searchRequest(query = toFind.person.identifier))
@@ -102,14 +135,20 @@ class TransferPrisonSearchIntTest(
 
     assertThat(res.content).hasSize(1)
     assertThat(res.metadata.totalElements).isEqualTo(1)
-    assertThat(res.content.single().id).isEqualTo(toFind.id)
+    with(res.content.single()) {
+      this verifyAgainst toFind
+      assertThat(this.prison.code).isEqualTo(prison.code)
+      assertThat(this.destination?.code).isEqualTo(destination.code)
+    }
   }
 
   @Test
   fun `can filter transfers by person name`() {
-    val prison = prisonRegister.givenPrison()
+    val prison = prison()
+    val destination = prison()
+    prisonRegister.givenPrisons(setOf(prison, destination))
 
-    val toFind = givenTransfer(transfer(prisonCode = prison.code))
+    val toFind = givenTransfer(transfer(prisonCode = prison.code, destinationCode = destination.code))
     givenTransfer(transfer(prisonCode = prison.code))
 
     toFind.person.nameFormats().forEach {
@@ -118,7 +157,11 @@ class TransferPrisonSearchIntTest(
 
       assertThat(res.content).hasSize(1)
       assertThat(res.metadata.totalElements).isEqualTo(1)
-      assertThat(res.content.single().id).isEqualTo(toFind.id)
+      with(res.content.single()) {
+        this verifyAgainst toFind
+        assertThat(this.prison.code).isEqualTo(prison.code)
+        assertThat(this.destination?.code).isEqualTo(destination.code)
+      }
     }
   }
 
@@ -152,16 +195,113 @@ class TransferPrisonSearchIntTest(
     }
   }
 
+  @Test
+  fun `can filter transfers by reason code`() {
+    val prison = prison()
+    val destination = prison()
+    prisonRegister.givenPrisons(setOf(prison, destination))
+    val reasonCode = TransferReasonCode.randomCode()
+    val anotherCode = generateSequence { TransferReasonCode.randomCode() }.first { it != reasonCode }
+
+    val toFind =
+      givenTransfer(transfer(prisonCode = prison.code, destinationCode = destination.code, reasonCode = reasonCode))
+    givenTransfer(transfer(prisonCode = prison.code, destinationCode = destination.code, reasonCode = anotherCode))
+
+    val res = searchTransfers(prison.code, searchRequest(reasons = setOf(reasonCode)))
+      .successResponse<TransferSearchResponse>()
+
+    assertThat(res.content).hasSize(1)
+    assertThat(res.metadata.totalElements).isEqualTo(1)
+    with(res.content.single()) {
+      this verifyAgainst toFind
+      assertThat(this.prison.code).isEqualTo(prison.code)
+      assertThat(this.destination?.code).isEqualTo(destination.code)
+    }
+  }
+
+  @Test
+  fun `can filter transfers by logistics code`() {
+    val prison = prison()
+    val destination = prison()
+    prisonRegister.givenPrisons(setOf(prison, destination))
+    val logisticsCode = TransferLogisticsCode.randomCode()
+    val anotherCode = generateSequence { TransferLogisticsCode.randomCode() }.first { it != logisticsCode }
+
+    val toFind = givenTransfer(
+      transfer(
+        prisonCode = prison.code,
+        destinationCode = destination.code,
+        logisticsCode = logisticsCode,
+      ),
+    )
+    givenTransfer(transfer(prisonCode = prison.code, destinationCode = destination.code, logisticsCode = anotherCode))
+
+    val res = searchTransfers(prison.code, searchRequest(logistics = setOf(logisticsCode)))
+      .successResponse<TransferSearchResponse>()
+
+    assertThat(res.content).hasSize(1)
+    assertThat(res.metadata.totalElements).isEqualTo(1)
+    with(res.content.single()) {
+      this verifyAgainst toFind
+      assertThat(this.prison.code).isEqualTo(prison.code)
+      assertThat(this.destination?.code).isEqualTo(destination.code)
+    }
+  }
+
+  @Test
+  fun `can filter transfers by stage`() {
+    val prison = prison()
+    val destination = prison()
+    prisonRegister.givenPrisons(setOf(prison, destination))
+
+    val planning = givenTransfer(
+      transfer(
+        prisonCode = prison.code,
+        destinationCode = destination.code,
+        statusCode = TransferStatus.Code.READY_TO_SCHEDULE,
+      ),
+    )
+    assertThat(planning.status.code).isEqualTo(TransferStatus.Code.READY_TO_SCHEDULE.name)
+    val scheduled = givenTransfer(transfer(prisonCode = prison.code, destinationCode = destination.code))
+    assertThat(scheduled.status.code).isEqualTo(TransferStatus.Code.SCHEDULED.name)
+
+    val res1 = searchTransfers(prison.code, searchRequest(stage = TransferStage.PLANNING))
+      .successResponse<TransferSearchResponse>()
+
+    assertThat(res1.content).hasSize(1)
+    assertThat(res1.metadata.totalElements).isEqualTo(1)
+    with(res1.content.single()) {
+      this verifyAgainst planning
+      assertThat(this.prison.code).isEqualTo(prison.code)
+      assertThat(this.destination?.code).isEqualTo(destination.code)
+    }
+
+    val res2 = searchTransfers(prison.code, searchRequest(stage = TransferStage.SCHEDULED))
+      .successResponse<TransferSearchResponse>()
+
+    assertThat(res2.content).hasSize(1)
+    assertThat(res2.metadata.totalElements).isEqualTo(1)
+    with(res2.content.single()) {
+      this verifyAgainst scheduled
+      assertThat(this.prison.code).isEqualTo(prison.code)
+      assertThat(this.destination?.code).isEqualTo(destination.code)
+    }
+  }
+
   private fun searchRequest(
     start: LocalDate = LocalDate.now(),
     end: LocalDate = start.plusDays(30),
     query: String? = null,
-    statuses: Set<TransferStatus.Code> = setOf(TransferStatus.Code.SCHEDULED, TransferStatus.Code.IN_TRANSIT, TransferStatus.Code.COMPLETED),
+    statuses: Set<TransferStatus.Code> = setOf(
+      TransferStatus.Code.SCHEDULED,
+      TransferStatus.Code.IN_TRANSIT,
+      TransferStatus.Code.COMPLETED,
+    ),
     reasons: Set<String> = emptySet(),
     destinations: Set<String> = emptySet(),
     logistics: Set<String> = emptySet(),
     priority: TransferPriority.Code? = null,
-    includeTransferred: Boolean = false,
+    stage: TransferStage? = null,
     page: Int = 1,
     size: Int = 10,
     sort: String = "start,asc",
@@ -174,7 +314,7 @@ class TransferPrisonSearchIntTest(
     destinations,
     logistics,
     priority,
-    includeTransferred,
+    stage,
     page,
     size,
     sort,

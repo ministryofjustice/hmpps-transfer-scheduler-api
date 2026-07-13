@@ -1,7 +1,5 @@
 package uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged
 
-import io.sentry.MonitorConfig.JsonKeys.SCHEDULE
-import io.sentry.clientreport.DiscardedEvent.JsonKeys.REASON
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.media.Schema.RequiredMode.NOT_REQUIRED
 import jakarta.validation.Constraint
