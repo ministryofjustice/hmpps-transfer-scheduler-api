@@ -98,3 +98,47 @@ data class TransferScheduled(
     )
   }
 }
+
+data class TransferRecategorised(
+  override val additionalInformation: TransferAppearanceInformation,
+  override val personReference: PersonReference,
+) : DomainEvent<TransferAppearanceInformation> {
+  override val eventType: String = EVENT_TYPE
+  override val description: String = DESCRIPTION
+  override val detailUrl: String = transferUrl(id)
+
+  companion object {
+    const val EVENT_TYPE = "person.transfer.recategorised"
+    const val DESCRIPTION = "The reason for a transfer has been changed"
+    operator fun invoke(
+      personIdentifier: String,
+      id: UUID,
+      dataSource: DataSource = SchedulerContext.get().source,
+    ) = TransferRecategorised(
+      TransferAppearanceInformation(id, dataSource),
+      PersonReference.withIdentifier(personIdentifier),
+    )
+  }
+}
+
+data class TransferRelocated(
+  override val additionalInformation: TransferAppearanceInformation,
+  override val personReference: PersonReference,
+) : DomainEvent<TransferAppearanceInformation> {
+  override val eventType: String = EVENT_TYPE
+  override val description: String = DESCRIPTION
+  override val detailUrl: String = transferUrl(id)
+
+  companion object {
+    const val EVENT_TYPE = "person.transfer.relocated"
+    const val DESCRIPTION = "The destination of a transfer has been changed"
+    operator fun invoke(
+      personIdentifier: String,
+      id: UUID,
+      dataSource: DataSource = SchedulerContext.get().source,
+    ) = TransferRelocated(
+      TransferAppearanceInformation(id, dataSource),
+      PersonReference.withIdentifier(personIdentifier),
+    )
+  }
+}

@@ -33,32 +33,42 @@ class TransferHistoryService(
 ) {
 
   fun changes(id: UUID): AuditHistory {
-    val audited = getAuditedChanges(id)
+    val audited = getAuditedChanges(id, null)
     if (audited.isEmpty()) {
       throw NotFoundException("History not found")
     }
-    val revisions = audited.keys.associateBy { it.id!! }
+    return AuditHistory(audited.history(id))
+  }
+
+  fun changesForRevision(id: UUID, revisionId: Long): AuditedAction? {
+    val audited = getAuditedChanges(id, revisionId)
+    return when (audited.size) {
+      0 -> throw NotFoundException("History not found")
+      1 -> null
+      else -> audited.history(id).lastOrNull()
+    }
+  }
+
+  private fun Map<AuditRevision, List<AuditedAction.Change>>.history(id: UUID): List<AuditedAction> {
+    val revisions = keys.associateBy { it.id!! }
     val users = managerUsers.getUsersDetails(revisions.values.mapNotNull { it.username }.toSet())
       .associateBy { it.username }
     val domainEvents = getDomainEvents(id, revisions.keys)
-    val changes = audited.map { it.key.id to it.value }.toMap()
-
-    return AuditHistory(
-      revisions.keys.toList().sortedDescending().actions(
-        { requireNotNull(revisions[it]) },
-        { requireNotNull(users[it]) },
-        { domainEvents[it] ?: emptyList() },
-        { changes[it] ?: emptyList() },
-      ),
+    val changes = map { it.key.id to it.value }.toMap()
+    return revisions.keys.toList().sorted().actions(
+      { requireNotNull(revisions[it]) },
+      { requireNotNull(users[it]) },
+      { domainEvents[it] ?: emptyList() },
+      { changes[it] ?: emptyList() },
     )
   }
 
-  private fun getAuditedChanges(id: UUID): Map<AuditRevision, List<AuditedAction.Change>> {
+  private fun getAuditedChanges(id: UUID, revisionId: Long?): Map<AuditRevision, List<AuditedAction.Change>> {
     val auditReader = AuditReaderFactory.get(entityManager)
-    val transferChanges = auditReader.getRevisions(Transfer::class, id).changes()
-    val planChanges = auditReader.getRevisions(Plan::class, id).changes()
-    val scheduleChanges = auditReader.getRevisions(Schedule::class, id).changes()
-    val movementChanges = auditReader.getRevisions(Movement::class, id).changes()
+    val transferChanges = auditReader.getRevisions(Transfer::class, id, revisionId).changes()
+    val planChanges = auditReader.getRevisions(Plan::class, id, revisionId).changes()
+    val scheduleChanges = auditReader.getRevisions(Schedule::class, id, revisionId).changes()
+    val movementChanges = auditReader.getRevisions(Movement::class, id, revisionId).changes()
     val all: List<Pair<AuditRevision, List<AuditedAction.Change>>> =
       (transferChanges + planChanges + scheduleChanges + movementChanges)
     val revisions = all.associate { it.first.id!! to it.first }
@@ -66,11 +76,15 @@ class TransferHistoryService(
     return revisions.keys.associate { revisions[it]!! to (revisionChanges[it] ?: emptyList()) }
   }
 
-  private fun AuditReader.getRevisions(clazz: KClass<*>, id: UUID): List<AuditedEntity> = createQuery()
-    .forRevisionsOfEntity(clazz.java, false, false)
-    .add(AuditEntity.id().eq(id))
-    .resultList.filterIsInstance<Array<*>>()
-    .map { it.asAuditedEntity() }
+  private fun AuditReader.getRevisions(clazz: KClass<*>, id: UUID, revisionId: Long?): List<AuditedEntity> {
+    val history = createQuery()
+      .forRevisionsOfEntity(clazz.java, false, false)
+      .add(AuditEntity.id().eq(id))
+      .resultList.filterIsInstance<Array<*>>()
+      .map { it.asAuditedEntity() }
+      .sortedByDescending { it.revision.id }
+    return (revisionId?.let { rev -> history.dropWhile { it.revision.id!! > rev }.take(2) } ?: history).reversed()
+  }
 
   private fun Array<*>.asAuditedEntity(): AuditedEntity {
     val revision = this[1] as AuditRevision

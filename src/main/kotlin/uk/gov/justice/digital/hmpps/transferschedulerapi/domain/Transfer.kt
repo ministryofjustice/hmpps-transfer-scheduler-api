@@ -33,6 +33,8 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferScheduled
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.MovementRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.PlanRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.ScheduleRequest
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ApplyDestination
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ApplyReason
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.TransferAction
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.StringLegacyIdRequest
 import java.util.UUID
@@ -142,6 +144,10 @@ final class Transfer(
     setOf(event.publication(id))
   }
 
+  override fun domainEvents(): Set<DomainEventPublication> = appliedActions.mapNotNull {
+    it.domainEvent(this)?.publication(id)
+  }.toSet()
+
   fun withPlan(request: PlanRequest?, rdProvider: RdProvider) = apply {
     plan = request?.let {
       Plan(
@@ -160,6 +166,20 @@ final class Transfer(
   fun withMovement(request: MovementRequest?) = apply {
     val slid = if (request is StringLegacyIdRequest) request.legacyId else null
     movement = request?.let { Movement(this, request.occurredAt, request.comments, slid) }
+  }
+
+  fun applyDestination(action: ApplyDestination) = apply {
+    if (destinationCode != action.destinationCode) {
+      destinationCode = action.destinationCode
+      appliedActions += action
+    }
+  }
+
+  fun applyReason(action: ApplyReason, rdProvider: RdProvider) = apply {
+    if (reason.code != action.reasonCode) {
+      reason = rdProvider.get(action.reasonCode)
+      appliedActions += action
+    }
   }
 
   companion object {

@@ -16,6 +16,7 @@ import org.hibernate.envers.RevisionNumber
 import org.hibernate.envers.RevisionTimestamp
 import org.hibernate.envers.RevisionType
 import org.hibernate.type.SqlTypes
+import uk.gov.justice.digital.hmpps.transferschedulerapi.context.AuditContext
 import uk.gov.justice.digital.hmpps.transferschedulerapi.context.SchedulerContext
 import java.time.LocalDateTime
 
@@ -49,7 +50,7 @@ class AuditRevision {
 }
 
 class AuditRevisionEntityListener : EntityTrackingRevisionListener {
-  override fun newRevision(revision: Any?) {
+  override fun newRevision(revision: Any) {
     (revision as AuditRevision).apply {
       val context = SchedulerContext.get()
       timestamp = context.requestAt
@@ -57,6 +58,7 @@ class AuditRevisionEntityListener : EntityTrackingRevisionListener {
       source = context.source
       reason = context.reason
       caseloadId = context.caseloadId
+      AuditContext.get()?.also { it.currentRevision = this }
     }
   }
 
