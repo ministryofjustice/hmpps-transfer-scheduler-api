@@ -61,7 +61,7 @@ class TransferOperationsImpl(
       logisticsCode: String? = TransferLogisticsCode.randomCode(),
       plan: PlanRequest? = plan(),
       schedule: ScheduleRequest? = schedule(),
-      movement: MovementRequest? = movement(),
+      movement: MovementRequest? = null,
       legacyId: Long? = null,
       id: UUID = newUuid(),
     ): TransferProvider = { pp, rd ->

@@ -52,4 +52,11 @@ final class Movement(
   @Column(name = "legacy_id", length = 32)
   var legacyId: String? = legacyId
     private set
+
+  companion object {
+    fun auditedProperties() = listOf(
+      Movement::occurredAt,
+      Movement::comments,
+    )
+  }
 }

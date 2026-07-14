@@ -45,4 +45,11 @@ final class Schedule(
   @Column(name = "comments")
   var comments: String? = comments
     private set
+
+  companion object {
+    fun auditedProperties() = listOf(
+      Schedule::start,
+      Schedule::comments,
+    )
+  }
 }

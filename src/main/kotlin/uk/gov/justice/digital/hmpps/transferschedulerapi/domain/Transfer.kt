@@ -25,6 +25,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.Tr
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferPriority
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferReason
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.READY_TO_SCHEDULE
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferMigrated
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferPlanned
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferRecorded
@@ -78,7 +79,13 @@ final class Transfer(
   @ManyToOne(optional = false)
   @JoinColumn(name = "status_id", nullable = false)
   var status: TransferStatus = status
-    private set
+    private set(value) {
+      if (value == field) return
+      when (value.code) {
+        READY_TO_SCHEDULE.name -> check(listOfNotNull(destinationCode, logistics, plan).isNotEmpty())
+      }
+      field = value
+    }
 
   @Fetch(FetchMode.JOIN)
   @Audited(targetAuditMode = NOT_AUDITED)
@@ -128,7 +135,7 @@ final class Transfer(
     setOf(TransferMigrated(person.identifier, id).publication(id))
   } else {
     val event = when (TransferStatus.Code.valueOf(status.code)) {
-      TransferStatus.Code.PLANNING, TransferStatus.Code.READY_TO_SCHEDULE -> TransferPlanned(person.identifier, id)
+      TransferStatus.Code.PLANNING, READY_TO_SCHEDULE -> TransferPlanned(person.identifier, id)
       TransferStatus.Code.SCHEDULED -> TransferScheduled(person.identifier, id)
       else -> TransferRecorded(person.identifier, id)
     }
@@ -153,5 +160,14 @@ final class Transfer(
   fun withMovement(request: MovementRequest?) = apply {
     val slid = if (request is StringLegacyIdRequest) request.legacyId else null
     movement = request?.let { Movement(this, request.occurredAt, request.comments, slid) }
+  }
+
+  companion object {
+    fun auditedProperties() = listOf(
+      Transfer::reason,
+      Transfer::status,
+      Transfer::destinationCode,
+      Transfer::logistics,
+    )
   }
 }
