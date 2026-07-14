@@ -29,6 +29,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.DomainEventPubli
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.HmppsDomainEvent
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Identifiable
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.publication
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.ReferenceDataRepository
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.DomainEvent
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TestConfig
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.container.LocalStackContainer
@@ -70,6 +71,9 @@ abstract class IntegrationTestBase {
 
   @Autowired
   protected lateinit var transactionTemplate: TransactionTemplate
+
+  @Autowired
+  protected lateinit var rdRepository: ReferenceDataRepository
 
   @Autowired
   protected lateinit var entityManager: EntityManager
