@@ -12,11 +12,6 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.retryOnTran
 
 @Component
 class ManageUsersClient(@Qualifier("manageUsersWebClient") private val webClient: WebClient) {
-
-  fun getUserDetails(username: String): UserDetails = getUsersDetails(setOf(username)).first {
-    it.username == username
-  }
-
   fun getUsersDetails(usernames: Set<String>): List<UserDetails> = if (usernames.isEmpty()) {
     emptyList()
   } else {
@@ -27,7 +22,7 @@ class ManageUsersClient(@Qualifier("manageUsersWebClient") private val webClient
       .block()!!
   }
 
-  fun findUserDetails(username: String): Mono<UserDetails> = if (username == SYSTEM_USERNAME) {
+  private fun findUserDetails(username: String): Mono<UserDetails> = if (username == SYSTEM_USERNAME) {
     Mono.just(SYSTEM_USERNAME.asSystemUser())
   } else {
     webClient
