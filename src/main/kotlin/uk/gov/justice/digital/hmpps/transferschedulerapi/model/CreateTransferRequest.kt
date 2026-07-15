@@ -17,6 +17,11 @@ data class CreateTransferRequest(
     destinationCode != null && logisticsCode != null -> TransferStatus.Code.READY_TO_SCHEDULE
     else -> TransferStatus.Code.PLANNING
   }
+
+  override fun initialStage(): TransferStage = when {
+    plan == null -> TransferStage.SCHEDULED
+    else -> TransferStage.PLANNING
+  }
 }
 
 data class CreatePlanRequest(

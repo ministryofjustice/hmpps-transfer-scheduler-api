@@ -7,7 +7,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.TransferRepository
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.destinationCodeIn
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.logisticsCodeIn
-import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.matchesStage
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.startsBetween
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.transferMatchesPersonIdentifier
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.transferMatchesPersonName
@@ -18,7 +18,6 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.transferStatusCo
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.prisonersearch.Prisoner
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.prisonregister.PrisonRegisterClient
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.StageRequest
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged.PageMetadata
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged.TransferPrisonSearchRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged.TransferSearchRequest
@@ -32,16 +31,14 @@ class SearchTransfers(
   fun findForPrison(prisonCode: String, request: TransferPrisonSearchRequest): TransferSearchResponse = transferRepository.findAll(request.asSpecification(prisonCode), request.pageable()).asSearchResponse()
 
   private fun TransferSearchRequest.defaults(): List<Specification<Transfer>> = listOfNotNull(
-    statusCodeOverrides().takeIf { it.isNotEmpty() }?.let { transferStatusCodeIn(it) },
+    statusCodes.takeIf { it.isNotEmpty() }?.let { transferStatusCodeIn(it) },
     reasonCodes.takeIf { it.isNotEmpty() }?.let { transferReasonCodeIn(it) },
+    if (this is StageRequest) {
+      this.stage?.let { matchesStage(it) }
+    } else {
+      null
+    },
   )
-
-  private fun TransferSearchRequest.statusCodeOverrides(): Set<TransferStatus.Code> = if (this is StageRequest) {
-    fun Collection<TransferStatus.Code>.filtered() = filter { it !in (INVALID_STATUSES[stage] ?: emptySet()) }.toSet()
-    statusCodes.filtered().takeIf { it.isNotEmpty() } ?: TransferStatus.Code.entries.filtered().toSet()
-  } else {
-    statusCodes
-  }
 
   private fun TransferPrisonSearchRequest.asSpecification(prisonCode: String): Specification<Transfer> = (
     listOfNotNull(
@@ -68,18 +65,4 @@ class SearchTransfers(
   }
 
   private fun Page<uk.gov.justice.digital.hmpps.transferschedulerapi.model.Transfer>.asResponse() = TransferSearchResponse(content, PageMetadata(totalElements))
-
-  companion object {
-    private val INVALID_STATUSES: Map<TransferStage, Set<TransferStatus.Code>> = mapOf(
-      TransferStage.SCHEDULED to setOf(
-        TransferStatus.Code.PLANNING,
-        TransferStatus.Code.READY_TO_SCHEDULE,
-      ),
-      TransferStage.PLANNING to setOf(
-        TransferStatus.Code.SCHEDULED,
-        TransferStatus.Code.IN_TRANSIT,
-        TransferStatus.Code.COMPLETED,
-      ),
-    )
-  }
 }

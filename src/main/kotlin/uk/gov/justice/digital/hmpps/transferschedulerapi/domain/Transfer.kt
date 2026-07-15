@@ -3,6 +3,8 @@ package uk.gov.justice.digital.hmpps.transferschedulerapi.domain
 import jakarta.persistence.CascadeType
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
 import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
@@ -15,6 +17,8 @@ import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Size
 import org.hibernate.annotations.Fetch
 import org.hibernate.annotations.FetchMode
+import org.hibernate.annotations.JdbcType
+import org.hibernate.dialect.type.PostgreSQLEnumJdbcType
 import org.hibernate.envers.Audited
 import org.hibernate.envers.NotAudited
 import org.hibernate.envers.RelationTargetAuditMode.NOT_AUDITED
@@ -36,6 +40,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.exception.ConflictExcep
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.MovementRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.PlanRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.ScheduleRequest
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ApplyDestination
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ApplyLogistics
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ApplyReason
@@ -56,6 +61,7 @@ final class Transfer(
   status: TransferStatus,
   destinationCode: String?,
   logistics: TransferLogistics?,
+  stage: TransferStage,
   legacyId: Long?,
   @Id
   @Column(name = "id", nullable = false)
@@ -124,14 +130,23 @@ final class Transfer(
   @NotAudited
   @OneToOne(mappedBy = "transfer", cascade = [CascadeType.ALL])
   var plan: Plan? = null
+    private set
 
   @NotAudited
   @OneToOne(mappedBy = "transfer", cascade = [CascadeType.ALL])
   var schedule: Schedule? = null
+    private set
 
   @NotAudited
   @OneToOne(mappedBy = "transfer", cascade = [CascadeType.ALL])
   var movement: Movement? = null
+    private set
+
+  @Enumerated(EnumType.STRING)
+  @JdbcType(PostgreSQLEnumJdbcType::class)
+  @Column(name = "stage", columnDefinition = "transfer_stage", nullable = false)
+  var stage: TransferStage = stage
+    private set
 
   @Transient
   private var appliedActions: List<TransferAction> = listOf()
@@ -194,6 +209,7 @@ final class Transfer(
     if (action changes plan) {
       withPlan(action, rdProvider)
       status = rdProvider.get(READY_TO_SCHEDULE.name)
+      stage = TransferStage.PLANNING
       appliedActions += action
     }
   }
@@ -202,6 +218,7 @@ final class Transfer(
     if (action changes schedule) {
       withSchedule(action)
       status = rdProvider.get(SCHEDULED.name)
+      stage = TransferStage.SCHEDULED
       appliedActions += action
     }
   }

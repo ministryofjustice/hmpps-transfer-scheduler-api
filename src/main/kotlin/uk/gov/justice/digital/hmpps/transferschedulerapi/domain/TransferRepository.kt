@@ -1,7 +1,6 @@
 package uk.gov.justice.digital.hmpps.transferschedulerapi.domain
 
 import jakarta.persistence.criteria.JoinType
-import org.hibernate.action.internal.BulkOperationCleanupAction.schedule
 import org.springframework.data.jpa.domain.Specification
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor
@@ -80,4 +79,8 @@ fun destinationCodeIn(codes: Set<String>) = Specification<Transfer> { tr, _, _ -
 fun logisticsCodeIn(codes: Set<String>) = Specification<Transfer> { tr, _, _ ->
   val logistics = tr.join<Transfer, TransferLogistics>(Transfer::logistics.name, JoinType.LEFT)
   logistics.get<String>(TransferReason::code.name).`in`(codes)
+}
+
+fun matchesStage(stage: TransferStage) = Specification<Transfer> { tr, _, cb ->
+  cb.equal(tr.get<TransferStage>(Transfer::stage.name), stage)
 }

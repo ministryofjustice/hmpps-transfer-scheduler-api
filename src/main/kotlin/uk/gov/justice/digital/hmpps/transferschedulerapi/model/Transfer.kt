@@ -16,6 +16,7 @@ data class Transfer(
   val plan: Plan?,
   val schedule: Schedule?,
   val movement: Movement?,
+  val stage: TransferStage,
 )
 
 data class Person(val identifier: String, val firstName: String, val lastName: String)

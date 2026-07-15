@@ -20,6 +20,7 @@ fun TransferRequest.asEntity(person: PersonSummary, rdProvider: RdProvider) = uk
   rdProvider.get(initialStatusCode().name),
   destinationCode,
   logisticsCode?.let { rdProvider.get<TransferLogistics>(it) },
+  initialStage(),
   if (this is NumericLegacyIdRequest) legacyId else null,
 )
   .withPlan(plan, rdProvider)
@@ -36,6 +37,7 @@ fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer.asModel(pr
   plan(),
   schedule(),
   movement(),
+  stage,
 )
 
 private fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer.person() = Person(person.identifier, person.firstName, person.lastName)

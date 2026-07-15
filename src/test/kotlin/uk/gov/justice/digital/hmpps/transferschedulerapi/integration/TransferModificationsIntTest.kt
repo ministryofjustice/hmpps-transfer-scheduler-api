@@ -39,6 +39,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.wiremock.Pr
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.AuditHistory
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.AuditedAction
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Movement
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ApplyDestination
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ApplyLogistics
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ApplyReason
@@ -264,6 +265,7 @@ class TransferModificationsIntTest(
 
     val saved = requireNotNull(findTransfer(transfer.id))
     assertThat(saved.status.code).isEqualTo(READY_TO_SCHEDULE.name)
+    assertThat(saved.stage).isEqualTo(TransferStage.PLANNING)
     assertThat(saved.plan).isNotNull
     saved.plan!! verifyAgainst action
 
@@ -311,6 +313,7 @@ class TransferModificationsIntTest(
 
     val saved = requireNotNull(findTransfer(transfer.id))
     assertThat(saved.status.code).isEqualTo(READY_TO_SCHEDULE.name)
+    assertThat(saved.stage).isEqualTo(TransferStage.PLANNING)
     assertThat(saved.plan).isNotNull
     saved.plan!! verifyAgainst action
 
@@ -367,6 +370,7 @@ class TransferModificationsIntTest(
 
     val saved = requireNotNull(findTransfer(transfer.id))
     assertThat(saved.status.code).isEqualTo(SCHEDULED.name)
+    assertThat(saved.stage).isEqualTo(TransferStage.SCHEDULED)
     assertThat(saved.schedule).isNotNull
     saved.schedule!! verifyAgainst action
 
@@ -386,7 +390,7 @@ class TransferModificationsIntTest(
   }
 
   @Test
-  fun `200 - can cancel a transfer`() {
+  fun `200 - can cancel a scheduled transfer`() {
     val transfer = givenTransfer(transfer())
     val action = CancelTransfer
     val username = username()
@@ -407,6 +411,7 @@ class TransferModificationsIntTest(
 
     val saved = requireNotNull(findTransfer(transfer.id))
     assertThat(saved.status.code).isEqualTo(TransferStatus.Code.CANCELLED.name)
+    assertThat(saved.stage).isEqualTo(TransferStage.SCHEDULED)
 
     verifyAudit(
       saved,
@@ -421,6 +426,61 @@ class TransferModificationsIntTest(
         TransferCancelled(saved.person.identifier, saved.id).publication(saved.id),
       ),
     )
+  }
+
+  @Test
+  fun `200 - can cancel a planned transfer`() {
+    val transfer = givenTransfer(transfer(schedule = null, statusCode = READY_TO_SCHEDULE))
+    val action = CancelTransfer
+    val username = username()
+    val givenReason = word(20)
+
+    val res = applyAction(transfer.id, action, givenReason, username).successResponse<AuditHistory>()
+    with(res.content.single()) {
+      assertThat(domainEvents).containsExactly(TransferCancelled.EVENT_TYPE)
+      assertThat(reason).isEqualTo(givenReason)
+      assertThat(changes).containsExactly(
+        AuditedAction.Change(
+          Transfer::status.name,
+          "Ready to schedule",
+          "Cancelled",
+        ),
+      )
+    }
+
+    val saved = requireNotNull(findTransfer(transfer.id))
+    assertThat(saved.status.code).isEqualTo(TransferStatus.Code.CANCELLED.name)
+    assertThat(saved.stage).isEqualTo(TransferStage.PLANNING)
+
+    verifyAudit(
+      saved,
+      RevisionType.MOD,
+      setOf(HmppsDomainEvent::class.simpleName!!, Transfer::class.simpleName!!),
+      SchedulerContext.get().copy(username = username, reason = givenReason),
+    )
+
+    verifyEventPublications(
+      saved,
+      setOf(
+        TransferCancelled(saved.person.identifier, saved.id).publication(saved.id),
+      ),
+    )
+  }
+
+  @Test
+  fun `409 - cannot cancel in transit`() {
+    val transfer = givenTransfer(transfer(statusCode = IN_TRANSIT, movement = movement()))
+    val action = CancelTransfer
+    val username = username()
+    val givenReason = word(10)
+
+    val res = applyAction(transfer.id, action, givenReason, username).errorResponse(HttpStatus.CONFLICT)
+    assertThat(res.status).isEqualTo(HttpStatus.CONFLICT.value())
+    assertThat(res.userMessage).isEqualTo("A conflict has been detected")
+
+    val saved = requireNotNull(findTransfer(transfer.id))
+    assertThat(saved.status.code).isEqualTo(IN_TRANSIT.name)
+    assertThat(saved.version).isEqualTo(transfer.version)
   }
 
   private fun applyAction(

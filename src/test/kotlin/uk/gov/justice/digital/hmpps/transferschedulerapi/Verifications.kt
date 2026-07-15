@@ -23,6 +23,7 @@ infix fun TransferModel.verifyAgainst(
   assertThat(prison.code).isEqualTo(transfer.prisonCode)
   assertThat(destination?.code).isEqualTo(transfer.destinationCode)
   assertThat(logistics?.code).isEqualTo(transfer.logistics?.code)
+  assertThat(stage).isEqualTo(transfer.stage)
   check(nullStateIsEqual(plan, transfer.plan)) { "Invalid plan state" }
   check(nullStateIsEqual(schedule, transfer.schedule)) { "Invalid plan state" }
   plan?.also { it verifyAgainst transfer.plan!! }

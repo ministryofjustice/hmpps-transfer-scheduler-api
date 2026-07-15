@@ -12,6 +12,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.Integration
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.PersonSummaryOperations
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.PersonSummaryOperations.Companion.personSummary
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperations
+import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.movement
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.schedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.referencedata.TransferLogisticsCode
@@ -69,11 +70,13 @@ class TransferPrisonSearchIntTest(
           prisonCode = prison.code,
           schedule = if (it == 4) null else schedule(startDateTime),
           reasonCode = TransferReasonCode.randomCode(),
+          statusCode = TransferStatus.Code.READY_TO_SCHEDULE,
+          stage = TransferStage.PLANNING,
         ),
       )
     }
 
-    val res = searchTransfers(prison.code, searchRequest(start = start, end = end))
+    val res = searchTransfers(prison.code, searchRequest(start = start, end = end, stage = TransferStage.PLANNING))
       .successResponse<TransferSearchResponse>()
     assertThat(res.content).hasSize(4)
     assertThat(res.metadata.totalElements).isEqualTo(4)
@@ -288,20 +291,57 @@ class TransferPrisonSearchIntTest(
     }
   }
 
+  @Test
+  fun `can filter transfers by status`() {
+    val prison = prison()
+    val destination = prison()
+    prisonRegister.givenPrisons(setOf(prison, destination))
+
+    val inTransit = givenTransfer(
+      transfer(
+        prisonCode = prison.code,
+        destinationCode = destination.code,
+        movement = movement(),
+        statusCode = TransferStatus.Code.IN_TRANSIT,
+      ),
+    )
+    assertThat(inTransit.status.code).isEqualTo(TransferStatus.Code.IN_TRANSIT.name)
+    val scheduled = givenTransfer(transfer(prisonCode = prison.code, destinationCode = destination.code))
+    assertThat(scheduled.status.code).isEqualTo(TransferStatus.Code.SCHEDULED.name)
+
+    val res1 = searchTransfers(prison.code, searchRequest(statuses = setOf(TransferStatus.Code.IN_TRANSIT)))
+      .successResponse<TransferSearchResponse>()
+
+    assertThat(res1.content).hasSize(1)
+    assertThat(res1.metadata.totalElements).isEqualTo(1)
+    with(res1.content.single()) {
+      this verifyAgainst inTransit
+      assertThat(this.prison.code).isEqualTo(prison.code)
+      assertThat(this.destination?.code).isEqualTo(destination.code)
+    }
+
+    val res2 = searchTransfers(prison.code, searchRequest(statuses = setOf(TransferStatus.Code.SCHEDULED)))
+      .successResponse<TransferSearchResponse>()
+
+    assertThat(res2.content).hasSize(1)
+    assertThat(res2.metadata.totalElements).isEqualTo(1)
+    with(res2.content.single()) {
+      this verifyAgainst scheduled
+      assertThat(this.prison.code).isEqualTo(prison.code)
+      assertThat(this.destination?.code).isEqualTo(destination.code)
+    }
+  }
+
   private fun searchRequest(
     start: LocalDate = LocalDate.now(),
     end: LocalDate = start.plusDays(30),
     query: String? = null,
-    statuses: Set<TransferStatus.Code> = setOf(
-      TransferStatus.Code.SCHEDULED,
-      TransferStatus.Code.IN_TRANSIT,
-      TransferStatus.Code.COMPLETED,
-    ),
+    statuses: Set<TransferStatus.Code> = setOf(),
     reasons: Set<String> = emptySet(),
     destinations: Set<String> = emptySet(),
     logistics: Set<String> = emptySet(),
     priority: TransferPriority.Code? = null,
-    stage: TransferStage? = null,
+    stage: TransferStage = TransferStage.SCHEDULED,
     page: Int = 1,
     size: Int = 10,
     sort: String = "start,asc",

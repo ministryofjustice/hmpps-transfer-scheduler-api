@@ -33,6 +33,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.model.CreatePlanRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.CreateScheduleRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.CreateTransferRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Transfer
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
 import uk.gov.justice.digital.hmpps.transferschedulerapi.verifyAgainst
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -91,6 +92,7 @@ class InitiateTransferIntTest(
 
     val saved = requireNotNull(findTransfer(res.id))
     assertThat(saved.status.code).isEqualTo(READY_TO_SCHEDULE.name)
+    assertThat(saved.stage).isEqualTo(TransferStage.PLANNING)
     saved verifyAgainst request
     res verifyAgainst saved
 
@@ -105,7 +107,7 @@ class InitiateTransferIntTest(
   }
 
   @Test
-  fun `201 created - transfer is initiated with plan`() {
+  fun `201 created - transfer is initiated in planning`() {
     val prison = prison()
     val destination = prison()
     val person = prisonerSearch.givenPrisoner(prisoner(prison.code))
@@ -118,6 +120,35 @@ class InitiateTransferIntTest(
 
     val saved = requireNotNull(findTransfer(res.id))
     assertThat(saved.status.code).isEqualTo(PLANNING.name)
+    assertThat(saved.stage).isEqualTo(TransferStage.PLANNING)
+    saved verifyAgainst request
+    res verifyAgainst saved
+
+    verifyAudit(
+      saved,
+      RevisionType.ADD,
+      setOf(HmppsDomainEvent::class.simpleName!!, Transfer::class.simpleName!!, Plan::class.simpleName!!),
+      SchedulerContext.get().copy(username = username, caseloadId = prison.code),
+    )
+
+    verifyEventPublications(saved, setOf(TransferPlanned(person.prisonerNumber, saved.id).publication(saved.id)))
+  }
+
+  @Test
+  fun `201 created - transfer is initiated ready to schedule`() {
+    val prison = prison()
+    val destination = prison()
+    val person = prisonerSearch.givenPrisoner(prisoner(prison.code))
+    prisonRegister.givenPrisons(setOf(prison, destination))
+
+    val username = username()
+    val request = transferRequest(destinationCode = destination.code, schedule = null)
+    val res = initiateTransfer(person.prisonerNumber, request, username, prison.code)
+      .successResponse<Transfer>(HttpStatus.CREATED)
+
+    val saved = requireNotNull(findTransfer(res.id))
+    assertThat(saved.status.code).isEqualTo(READY_TO_SCHEDULE.name)
+    assertThat(saved.stage).isEqualTo(TransferStage.PLANNING)
     saved verifyAgainst request
     res verifyAgainst saved
 
@@ -145,6 +176,7 @@ class InitiateTransferIntTest(
 
     val saved = requireNotNull(findTransfer(res.id))
     assertThat(saved.status.code).isEqualTo(SCHEDULED.name)
+    assertThat(saved.stage).isEqualTo(TransferStage.SCHEDULED)
     saved verifyAgainst request
     res verifyAgainst saved
 
