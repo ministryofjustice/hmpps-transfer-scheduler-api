@@ -467,6 +467,22 @@ class TransferModificationsIntTest(
     )
   }
 
+  @Test
+  fun `409 - cannot cancel in transit`() {
+    val transfer = givenTransfer(transfer(statusCode = IN_TRANSIT, movement = movement()))
+    val action = CancelTransfer
+    val username = username()
+    val givenReason = word(10)
+
+    val res = applyAction(transfer.id, action, givenReason, username).errorResponse(HttpStatus.CONFLICT)
+    assertThat(res.status).isEqualTo(HttpStatus.CONFLICT.value())
+    assertThat(res.userMessage).isEqualTo("A conflict has been detected")
+
+    val saved = requireNotNull(findTransfer(transfer.id))
+    assertThat(saved.status.code).isEqualTo(IN_TRANSIT.name)
+    assertThat(saved.version).isEqualTo(transfer.version)
+  }
+
   private fun applyAction(
     id: UUID,
     action: TransferAction,
