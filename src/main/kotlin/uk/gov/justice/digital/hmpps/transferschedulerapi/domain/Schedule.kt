@@ -10,6 +10,7 @@ import jakarta.persistence.Table
 import jakarta.persistence.Version
 import jakarta.validation.constraints.NotNull
 import org.hibernate.envers.Audited
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.ScheduleRequest
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -45,6 +46,11 @@ final class Schedule(
   @Column(name = "comments")
   var comments: String? = comments
     private set
+
+  fun match(request: ScheduleRequest) = apply {
+    start = request.start
+    comments = request.comments
+  }
 
   companion object {
     fun auditedProperties() = listOf(

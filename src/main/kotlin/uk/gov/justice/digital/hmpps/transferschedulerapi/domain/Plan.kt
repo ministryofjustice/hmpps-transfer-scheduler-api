@@ -12,7 +12,9 @@ import jakarta.persistence.Version
 import jakarta.validation.constraints.NotNull
 import org.hibernate.envers.Audited
 import org.hibernate.envers.RelationTargetAuditMode.NOT_AUDITED
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.RdProvider
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferPriority
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.PlanRequest
 import java.time.LocalDate
 import java.util.UUID
 
@@ -56,6 +58,12 @@ final class Plan(
   @Column(name = "comments")
   var comments: String? = comments
     private set
+
+  fun match(request: PlanRequest, rdProvider: RdProvider) = apply {
+    requestedOn = request.requestedOn
+    priority = rdProvider.get(request.priorityCode)
+    comments = request.comments
+  }
 
   companion object {
     fun auditedProperties() = listOf(

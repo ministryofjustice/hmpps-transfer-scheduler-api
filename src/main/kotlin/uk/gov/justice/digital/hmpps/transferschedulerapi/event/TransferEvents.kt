@@ -99,6 +99,28 @@ data class TransferScheduled(
   }
 }
 
+data class TransferCancelled(
+  override val additionalInformation: TransferAppearanceInformation,
+  override val personReference: PersonReference,
+) : DomainEvent<TransferAppearanceInformation> {
+  override val eventType: String = EVENT_TYPE
+  override val description: String = DESCRIPTION
+  override val detailUrl: String = transferUrl(id)
+
+  companion object {
+    const val EVENT_TYPE = "person.transfer.cancelled"
+    const val DESCRIPTION = "A transfer has been cancelled"
+    operator fun invoke(
+      personIdentifier: String,
+      id: UUID,
+      dataSource: DataSource = SchedulerContext.get().source,
+    ) = TransferCancelled(
+      TransferAppearanceInformation(id, dataSource),
+      PersonReference.withIdentifier(personIdentifier),
+    )
+  }
+}
+
 data class TransferRecategorised(
   override val additionalInformation: TransferAppearanceInformation,
   override val personReference: PersonReference,
@@ -137,6 +159,50 @@ data class TransferRelocated(
       id: UUID,
       dataSource: DataSource = SchedulerContext.get().source,
     ) = TransferRelocated(
+      TransferAppearanceInformation(id, dataSource),
+      PersonReference.withIdentifier(personIdentifier),
+    )
+  }
+}
+
+data class TransferLogisticsChanged(
+  override val additionalInformation: TransferAppearanceInformation,
+  override val personReference: PersonReference,
+) : DomainEvent<TransferAppearanceInformation> {
+  override val eventType: String = EVENT_TYPE
+  override val description: String = DESCRIPTION
+  override val detailUrl: String = transferUrl(id)
+
+  companion object {
+    const val EVENT_TYPE = "person.transfer.logistics-changed"
+    const val DESCRIPTION = "The logistics of a transfer have changed"
+    operator fun invoke(
+      personIdentifier: String,
+      id: UUID,
+      dataSource: DataSource = SchedulerContext.get().source,
+    ) = TransferLogisticsChanged(
+      TransferAppearanceInformation(id, dataSource),
+      PersonReference.withIdentifier(personIdentifier),
+    )
+  }
+}
+
+data class TransferMovedToPlanning(
+  override val additionalInformation: TransferAppearanceInformation,
+  override val personReference: PersonReference,
+) : DomainEvent<TransferAppearanceInformation> {
+  override val eventType: String = EVENT_TYPE
+  override val description: String = DESCRIPTION
+  override val detailUrl: String = transferUrl(id)
+
+  companion object {
+    const val EVENT_TYPE = "person.transfer.moved-to-planning"
+    const val DESCRIPTION = "A scheduled transfer has been moved to planning"
+    operator fun invoke(
+      personIdentifier: String,
+      id: UUID,
+      dataSource: DataSource = SchedulerContext.get().source,
+    ) = TransferMovedToPlanning(
       TransferAppearanceInformation(id, dataSource),
       PersonReference.withIdentifier(personIdentifier),
     )
