@@ -22,19 +22,26 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.context.SchedulerContex
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.IdGenerator.newUuid
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.RdProvider
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferLogistics
-import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferPriority
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferReason
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.CANCELLED
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.PLANNING
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.READY_TO_SCHEDULE
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.SCHEDULED
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferMigrated
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferPlanned
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferRecorded
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferScheduled
+import uk.gov.justice.digital.hmpps.transferschedulerapi.exception.ConflictException
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.MovementRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.PlanRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.ScheduleRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ApplyDestination
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ApplyLogistics
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ApplyReason
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.CancelTransfer
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.PlanTransfer
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ScheduleTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.TransferAction
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.StringLegacyIdRequest
 import java.util.UUID
@@ -83,8 +90,9 @@ final class Transfer(
   var status: TransferStatus = status
     private set(value) {
       if (value == field) return
+      val readyToSchedule = listOfNotNull(destinationCode, logistics, plan).isNotEmpty()
       when (value.code) {
-        READY_TO_SCHEDULE.name -> check(listOfNotNull(destinationCode, logistics, plan).isNotEmpty())
+        READY_TO_SCHEDULE.name if !readyToSchedule -> throw ConflictException("Not ready to schedule")
       }
       field = value
     }
@@ -137,8 +145,8 @@ final class Transfer(
     setOf(TransferMigrated(person.identifier, id).publication(id))
   } else {
     val event = when (TransferStatus.Code.valueOf(status.code)) {
-      TransferStatus.Code.PLANNING, READY_TO_SCHEDULE -> TransferPlanned(person.identifier, id)
-      TransferStatus.Code.SCHEDULED -> TransferScheduled(person.identifier, id)
+      PLANNING, READY_TO_SCHEDULE -> TransferPlanned(person.identifier, id)
+      SCHEDULED -> TransferScheduled(person.identifier, id)
       else -> TransferRecorded(person.identifier, id)
     }
     setOf(event.publication(id))
@@ -149,18 +157,11 @@ final class Transfer(
   }.toSet()
 
   fun withPlan(request: PlanRequest?, rdProvider: RdProvider) = apply {
-    plan = request?.let {
-      Plan(
-        this,
-        request.requestedOn,
-        rdProvider.get<TransferPriority>(request.priorityCode),
-        request.comments,
-      )
-    }
+    plan = request?.let { plan?.match(it, rdProvider) ?: it.createNewPlan(this, rdProvider) }
   }
 
   fun withSchedule(request: ScheduleRequest?) = apply {
-    schedule = request?.let { Schedule(this, request.start, request.comments) }
+    schedule = request?.let { schedule?.match(it) ?: it.createNewSchedule(this) }
   }
 
   fun withMovement(request: MovementRequest?) = apply {
@@ -181,6 +182,40 @@ final class Transfer(
       appliedActions += action
     }
   }
+
+  fun applyLogistics(action: ApplyLogistics, rdProvider: RdProvider) = apply {
+    if (logistics?.code != action.logisticsCode) {
+      logistics = action.logisticsCode?.let { rdProvider.get(it) }
+      appliedActions += action
+    }
+  }
+
+  fun applyPlan(action: PlanTransfer, rdProvider: RdProvider) = apply {
+    if (action changes plan) {
+      withPlan(action, rdProvider)
+      status = rdProvider.get(READY_TO_SCHEDULE.name)
+      appliedActions += action
+    }
+  }
+
+  fun applySchedule(action: ScheduleTransfer, rdProvider: RdProvider) = apply {
+    if (action changes schedule) {
+      withSchedule(action)
+      status = rdProvider.get(SCHEDULED.name)
+      appliedActions += action
+    }
+  }
+
+  fun cancel(action: CancelTransfer, rdProvider: RdProvider) = apply {
+    if (status.code != CANCELLED.name) {
+      status = rdProvider.get(CANCELLED.name)
+      appliedActions += action
+    }
+  }
+
+  private fun PlanRequest.createNewPlan(transfer: Transfer, rdProvider: RdProvider) = Plan(transfer, requestedOn, rdProvider.get(priorityCode), comments)
+
+  private fun ScheduleRequest.createNewSchedule(transfer: Transfer) = Schedule(transfer, start, comments)
 
   companion object {
     fun auditedProperties() = listOf(
