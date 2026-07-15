@@ -19,6 +19,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.referenceda
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.MovementRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.PlanRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.ScheduleRequest
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
@@ -62,6 +63,11 @@ class TransferOperationsImpl(
       plan: PlanRequest? = plan(),
       schedule: ScheduleRequest? = schedule(),
       movement: MovementRequest? = null,
+      stage: TransferStage = when (statusCode) {
+        TransferStatus.Code.SCHEDULED, TransferStatus.Code.IN_TRANSIT, TransferStatus.Code.COMPLETED -> TransferStage.SCHEDULED
+        TransferStatus.Code.PLANNING, TransferStatus.Code.READY_TO_SCHEDULE -> TransferStage.PLANNING
+        else -> throw IllegalStateException("No default for transfer status $statusCode")
+      },
       legacyId: Long? = null,
       id: UUID = newUuid(),
     ): TransferProvider = { pp, rd ->
@@ -72,6 +78,7 @@ class TransferOperationsImpl(
         rd.get(statusCode.name),
         destinationCode,
         logisticsCode?.let { rd.get(it) },
+        stage,
         legacyId,
         id,
       )

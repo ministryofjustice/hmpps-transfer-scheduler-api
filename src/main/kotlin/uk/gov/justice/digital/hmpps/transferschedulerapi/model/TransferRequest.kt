@@ -12,6 +12,7 @@ interface TransferRequest {
   val schedule: CreateScheduleRequest?
 
   fun initialStatusCode(): TransferStatus.Code
+  fun initialStage(): TransferStage
 }
 
 interface PlanRequest {
