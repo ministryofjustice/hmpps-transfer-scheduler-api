@@ -29,6 +29,9 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.Tr
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferReason
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.CANCELLED
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.COMPLETED
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.EXPIRED
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.IN_TRANSIT
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.PLANNING
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.READY_TO_SCHEDULE
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.SCHEDULED
@@ -44,7 +47,10 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ApplyDestination
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ApplyLogistics
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ApplyReason
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ApplyTransit
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.CancelTransfer
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.CompleteTransfer
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ExpireTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.PlanTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ScheduleTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.TransferAction
@@ -184,6 +190,11 @@ final class Transfer(
     movement = request?.let { Movement(this, request.occurredAt, request.comments, slid) }
   }
 
+  fun movePerson(person: PersonSummary, prisonCode: String) = apply {
+    this.person = person
+    this.prisonCode = prisonCode
+  }
+
   fun applyDestination(action: ApplyDestination) = apply {
     if (destinationCode != action.destinationCode) {
       destinationCode = action.destinationCode
@@ -208,26 +219,62 @@ final class Transfer(
   fun applyPlan(action: PlanTransfer, rdProvider: RdProvider) = apply {
     if (action changes plan) {
       withPlan(action, rdProvider)
-      status = rdProvider.get(READY_TO_SCHEDULE.name)
-      stage = TransferStage.PLANNING
-      appliedActions += action
+      if (applyStatus(READY_TO_SCHEDULE, rdProvider)) {
+        stage = TransferStage.PLANNING
+        appliedActions += action
+      }
     }
   }
 
   fun applySchedule(action: ScheduleTransfer, rdProvider: RdProvider) = apply {
     if (action changes schedule) {
       withSchedule(action)
-      status = rdProvider.get(SCHEDULED.name)
-      stage = TransferStage.SCHEDULED
+      if (applyStatus(SCHEDULED, rdProvider)) {
+        stage = TransferStage.SCHEDULED
+        appliedActions += action
+      }
+    }
+  }
+
+  fun applyTransit(action: ApplyTransit, rdProvider: RdProvider) = apply {
+    if (action changes movement) {
+      withMovement(action)
+      if (applyStatus(IN_TRANSIT, rdProvider)) {
+        if (schedule == null) {
+          stage = TransferStage.UNSCHEDULED
+        }
+        appliedActions += action
+      }
+    }
+  }
+
+  fun complete(action: CompleteTransfer, rdProvider: RdProvider) = apply {
+    if (applyStatus(COMPLETED, rdProvider)) {
+      if (schedule == null) {
+        stage = TransferStage.UNSCHEDULED
+      }
       appliedActions += action
     }
   }
 
   fun cancel(action: CancelTransfer, rdProvider: RdProvider) = apply {
-    if (status.code != CANCELLED.name) {
-      status = rdProvider.get(CANCELLED.name)
+    if (applyStatus(CANCELLED, rdProvider)) {
       appliedActions += action
     }
+  }
+
+  fun expire(action: ExpireTransfer, rdProvider: RdProvider) = apply {
+    if (applyStatus(EXPIRED, rdProvider)) {
+      appliedActions += action
+    }
+  }
+
+  fun applyStatus(code: TransferStatus.Code, rdProvider: RdProvider): Boolean {
+    val statusChange = status.code != code.name
+    if (statusChange) {
+      status = rdProvider.get(code.name)
+    }
+    return statusChange
   }
 
   private fun PlanRequest.createNewPlan(transfer: Transfer, rdProvider: RdProvider) = Plan(transfer, requestedOn, rdProvider.get(priorityCode), comments)

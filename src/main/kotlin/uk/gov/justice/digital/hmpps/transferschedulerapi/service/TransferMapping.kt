@@ -3,7 +3,6 @@ package uk.gov.justice.digital.hmpps.transferschedulerapi.service
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.PersonSummary
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.PrisonProvider
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.RdProvider
-import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferLogistics
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Movement
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Person
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Plan
@@ -19,12 +18,13 @@ fun TransferRequest.asEntity(person: PersonSummary, rdProvider: RdProvider) = uk
   rdProvider.get(reasonCode),
   rdProvider.get(initialStatusCode().name),
   destinationCode,
-  logisticsCode?.let { rdProvider.get<TransferLogistics>(it) },
+  logisticsCode?.let { rdProvider.get(it) },
   initialStage(),
   if (this is NumericLegacyIdRequest) legacyId else null,
 )
   .withPlan(plan, rdProvider)
   .withSchedule(schedule)
+  .withMovement(movement)
 
 fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer.asModel(prisonProvider: PrisonProvider) = Transfer(
   id,

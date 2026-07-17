@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus
 import uk.gov.justice.digital.hmpps.transferschedulerapi.access.Roles
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.IdGenerator.newUuid
-import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.personIdentifier
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperations
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.wiremock.PrisonRegisterMockServer.Companion.prison
@@ -23,7 +22,7 @@ class RetrieveTransferIntTest(
   fun `401 unauthorised without a valid token`() {
     webTestClient
       .get()
-      .uri(RETRIEVE_TRANSFER_URL, personIdentifier())
+      .uri(RETRIEVE_TRANSFER_URL, newUuid())
       .exchange()
       .expectStatus()
       .isUnauthorized

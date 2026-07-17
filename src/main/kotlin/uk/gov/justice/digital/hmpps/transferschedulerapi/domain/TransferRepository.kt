@@ -15,7 +15,9 @@ import java.util.UUID
 
 interface TransferRepository :
   JpaRepository<Transfer, UUID>,
-  JpaSpecificationExecutor<Transfer>
+  JpaSpecificationExecutor<Transfer> {
+  fun findByLegacyId(legacyId: Long): Transfer?
+}
 
 fun TransferRepository.getTransfer(id: UUID): Transfer = findByIdOrNull(id) ?: throw NotFoundException("Transfer not found")
 

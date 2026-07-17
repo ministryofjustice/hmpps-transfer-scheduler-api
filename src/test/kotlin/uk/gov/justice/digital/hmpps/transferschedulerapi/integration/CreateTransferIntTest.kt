@@ -38,7 +38,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.verifyAgainst
 import java.time.LocalDate
 import java.time.LocalDateTime
 
-class InitiateTransferIntTest(
+class CreateTransferIntTest(
   @Autowired transferOps: TransferOperations,
 ) : IntegrationTestBase(),
   TransferOperations by transferOps {
@@ -54,12 +54,12 @@ class InitiateTransferIntTest(
 
   @Test
   fun `403 forbidden without correct role`() {
-    initiateTransfer(personIdentifier(), role = "ROLE_ANY__OTHER").expectStatus().isForbidden
+    createTransfer(personIdentifier(), role = "ROLE_ANY__OTHER").expectStatus().isForbidden
   }
 
   @Test
   fun `400 - bad request if neither plan nor schedule provided`() {
-    val res = initiateTransfer(personIdentifier(), transferRequest(plan = null, schedule = null))
+    val res = createTransfer(personIdentifier(), transferRequest(plan = null, schedule = null))
       .errorResponse(HttpStatus.BAD_REQUEST)
 
     assertThat(res.status).isEqualTo(HttpStatus.BAD_REQUEST.value())
@@ -70,7 +70,7 @@ class InitiateTransferIntTest(
   fun `400 - bad request if destination is not a valid prison`() {
     val person = prisonerSearch.givenPrisoner(prisoner(prisonCode()))
     prisonRegister.givenPrison(prison(code = person.lastPrisonId!!))
-    val res = initiateTransfer(person.prisonerNumber, transferRequest(destinationCode = "UNK"))
+    val res = createTransfer(person.prisonerNumber, transferRequest(destinationCode = "UNK"))
       .errorResponse(HttpStatus.BAD_REQUEST)
 
     assertThat(res.status).isEqualTo(HttpStatus.BAD_REQUEST.value())
@@ -87,7 +87,7 @@ class InitiateTransferIntTest(
 
     val username = username()
     val request = transferRequest(destinationCode = destination.code)
-    val res = initiateTransfer(person.prisonerNumber, request, username, prison.code)
+    val res = createTransfer(person.prisonerNumber, request, username, prison.code)
       .successResponse<Transfer>(HttpStatus.CREATED)
 
     val saved = requireNotNull(findTransfer(res.id))
@@ -115,7 +115,7 @@ class InitiateTransferIntTest(
 
     val username = username()
     val request = transferRequest(destinationCode = destination.code, logisticsCode = null, schedule = null)
-    val res = initiateTransfer(person.prisonerNumber, request, username, prison.code)
+    val res = createTransfer(person.prisonerNumber, request, username, prison.code)
       .successResponse<Transfer>(HttpStatus.CREATED)
 
     val saved = requireNotNull(findTransfer(res.id))
@@ -143,7 +143,7 @@ class InitiateTransferIntTest(
 
     val username = username()
     val request = transferRequest(destinationCode = destination.code, schedule = null)
-    val res = initiateTransfer(person.prisonerNumber, request, username, prison.code)
+    val res = createTransfer(person.prisonerNumber, request, username, prison.code)
       .successResponse<Transfer>(HttpStatus.CREATED)
 
     val saved = requireNotNull(findTransfer(res.id))
@@ -171,7 +171,7 @@ class InitiateTransferIntTest(
 
     val username = username()
     val request = transferRequest(destinationCode = destination.code, plan = null)
-    val res = initiateTransfer(person.prisonerNumber, request, username, prison.code)
+    val res = createTransfer(person.prisonerNumber, request, username, prison.code)
       .successResponse<Transfer>(HttpStatus.CREATED)
 
     val saved = requireNotNull(findTransfer(res.id))
@@ -209,7 +209,7 @@ class InitiateTransferIntTest(
     schedule: CreateScheduleRequest? = scheduleRequest(),
   ) = CreateTransferRequest(reasonCode, destinationCode, logisticsCode, plan, schedule)
 
-  private fun initiateTransfer(
+  private fun createTransfer(
     personIdentifier: String,
     request: CreateTransferRequest = transferRequest(),
     username: String = DEFAULT_USERNAME,
