@@ -1,0 +1,1 @@
+alter type transfer_stage add value 'UNSCHEDULED';
