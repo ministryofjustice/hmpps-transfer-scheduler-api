@@ -13,12 +13,18 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.HmppsDomainEvent
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.publication
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
-import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferPlanned.Companion.invoke
+import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferLogisticsChanged
+import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferRecategorised
+import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferRelocated
+import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferRescheduled
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferScheduled
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.personIdentifier
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.prisonCode
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.IntegrationTestBase
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperations
+import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.transfer
+import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.referencedata.TransferLogisticsCode
+import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.referencedata.TransferReasonCode
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.wiremock.PrisonerSearchExtension.Companion.prisonerSearch
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.wiremock.PrisonerSearchServer.Companion.prisoner
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Schedule
@@ -26,7 +32,10 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncTransferResponse
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncUser
+import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.internal.syncSchedule
+import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.internal.toSyncModel
 import uk.gov.justice.digital.hmpps.transferschedulerapi.verifyAgainst
+import java.time.LocalDateTime
 
 class SyncScheduledTransferIntTest(
   @Autowired transferOps: TransferOperations,
@@ -73,10 +82,126 @@ class SyncScheduledTransferIntTest(
       saved,
       RevisionType.ADD,
       setOf(HmppsDomainEvent::class.simpleName!!, Transfer::class.simpleName!!, Schedule::class.simpleName!!),
-      SchedulerContext.get().copy(username = user.username, caseloadId = user.activeCaseloadId, source = DataSource.NOMIS),
+      SchedulerContext.get()
+        .copy(username = user.username, caseloadId = user.activeCaseloadId, source = DataSource.NOMIS),
     )
 
-    verifyEventPublications(saved, setOf(TransferScheduled(prisoner.prisonerNumber, saved.id, DataSource.NOMIS).publication(saved.id)))
+    verifyEventPublications(
+      saved,
+      setOf(TransferScheduled(prisoner.prisonerNumber, saved.id, DataSource.NOMIS).publication(saved.id)),
+    )
+  }
+
+  @Test
+  fun `200 - can relocate a scheduled transfer`() {
+    val transfer = givenTransfer(transfer())
+    val newDestination = prisonCode()
+
+    val request =
+      transfer.toSyncModel().copy(syncSchedule = transfer.syncSchedule()!!.copy(toAgyLocId = newDestination))
+    val user = syncUser()
+    val res = sendTransfer(transfer.person.identifier, request, user).successResponse<SyncTransferResponse>()
+
+    val saved = requireNotNull(findTransfer(res.dpsId))
+    assertThat(saved.status.code).isEqualTo(TransferStatus.Code.SCHEDULED.name)
+    assertThat(saved.stage).isEqualTo(TransferStage.SCHEDULED)
+    saved verifyAgainst request
+
+    verifyAudit(
+      saved,
+      RevisionType.MOD,
+      setOf(HmppsDomainEvent::class.simpleName!!, Transfer::class.simpleName!!),
+      SchedulerContext.get()
+        .copy(username = user.username, caseloadId = user.activeCaseloadId, source = DataSource.NOMIS),
+    )
+
+    verifyEventPublications(
+      saved,
+      setOf(TransferRelocated(transfer.person.identifier, saved.id, DataSource.NOMIS).publication(saved.id)),
+    )
+  }
+
+  @Test
+  fun `200 - can recategorise a scheduled transfer`() {
+    val transfer = givenTransfer(transfer())
+    val newReason = generateSequence { TransferReasonCode.randomCode() }.first { it != transfer.reason.code }
+
+    val request = transfer.toSyncModel().copy(syncSchedule = transfer.syncSchedule()!!.copy(eventSubType = newReason))
+    val user = syncUser()
+    val res = sendTransfer(transfer.person.identifier, request, user).successResponse<SyncTransferResponse>()
+
+    val saved = requireNotNull(findTransfer(res.dpsId))
+    assertThat(saved.status.code).isEqualTo(TransferStatus.Code.SCHEDULED.name)
+    assertThat(saved.stage).isEqualTo(TransferStage.SCHEDULED)
+    saved verifyAgainst request
+
+    verifyAudit(
+      saved,
+      RevisionType.MOD,
+      setOf(HmppsDomainEvent::class.simpleName!!, Transfer::class.simpleName!!),
+      SchedulerContext.get()
+        .copy(username = user.username, caseloadId = user.activeCaseloadId, source = DataSource.NOMIS),
+    )
+
+    verifyEventPublications(
+      saved,
+      setOf(TransferRecategorised(transfer.person.identifier, saved.id, DataSource.NOMIS).publication(saved.id)),
+    )
+  }
+
+  @Test
+  fun `200 - can change scheduled transfer logistics`() {
+    val transfer = givenTransfer(transfer())
+    val newLogistics = generateSequence { TransferLogisticsCode.randomCode() }.first { it != transfer.logistics?.code }
+
+    val request = transfer.toSyncModel().copy(syncSchedule = transfer.syncSchedule()!!.copy(escortCode = newLogistics))
+    val user = syncUser()
+    val res = sendTransfer(transfer.person.identifier, request, user).successResponse<SyncTransferResponse>()
+
+    val saved = requireNotNull(findTransfer(res.dpsId))
+    assertThat(saved.status.code).isEqualTo(TransferStatus.Code.SCHEDULED.name)
+    assertThat(saved.stage).isEqualTo(TransferStage.SCHEDULED)
+    saved verifyAgainst request
+
+    verifyAudit(
+      saved,
+      RevisionType.MOD,
+      setOf(HmppsDomainEvent::class.simpleName!!, Transfer::class.simpleName!!),
+      SchedulerContext.get()
+        .copy(username = user.username, caseloadId = user.activeCaseloadId, source = DataSource.NOMIS),
+    )
+
+    verifyEventPublications(
+      saved,
+      setOf(TransferLogisticsChanged(transfer.person.identifier, saved.id, DataSource.NOMIS).publication(saved.id)),
+    )
+  }
+
+  @Test
+  fun `200 - can reschedule a transfer`() {
+    val transfer = givenTransfer(transfer())
+
+    val request = transfer.toSyncModel().copy(syncSchedule = transfer.syncSchedule()!!.copy(start = LocalDateTime.now().plusDays(7)))
+    val user = syncUser()
+    val res = sendTransfer(transfer.person.identifier, request, user).successResponse<SyncTransferResponse>()
+
+    val saved = requireNotNull(findTransfer(res.dpsId))
+    assertThat(saved.status.code).isEqualTo(TransferStatus.Code.SCHEDULED.name)
+    assertThat(saved.stage).isEqualTo(TransferStage.SCHEDULED)
+    saved verifyAgainst request
+
+    verifyAudit(
+      saved.schedule!!,
+      RevisionType.MOD,
+      setOf(HmppsDomainEvent::class.simpleName!!, Schedule::class.simpleName!!),
+      SchedulerContext.get()
+        .copy(username = user.username, caseloadId = user.activeCaseloadId, source = DataSource.NOMIS),
+    )
+
+    verifyEventPublications(
+      saved.schedule!!,
+      setOf(TransferRescheduled(transfer.person.identifier, saved.id, DataSource.NOMIS).publication(saved.id)),
+    )
   }
 
   private fun sendTransfer(

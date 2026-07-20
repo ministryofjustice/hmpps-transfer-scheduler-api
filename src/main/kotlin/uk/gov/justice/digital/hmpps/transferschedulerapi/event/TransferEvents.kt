@@ -5,16 +5,16 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.DataSource
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.IntegrationUrlBuilder.transferUrl
 import java.util.UUID
 
-data class TransferAppearanceInformation(
+data class TransferInformation(
   override val id: UUID,
   override val source: DataSource,
 ) : SourceInformation,
   IdInformation
 
 data class TransferMigrated(
-  override val additionalInformation: TransferAppearanceInformation,
+  override val additionalInformation: TransferInformation,
   override val personReference: PersonReference,
-) : DomainEvent<TransferAppearanceInformation> {
+) : DomainEvent<TransferInformation> {
   override val eventType: String = EVENT_TYPE
   override val description: String = DESCRIPTION
   override val detailUrl: String = transferUrl(id)
@@ -27,16 +27,16 @@ data class TransferMigrated(
       id: UUID,
       dataSource: DataSource = SchedulerContext.get().source,
     ) = TransferMigrated(
-      TransferAppearanceInformation(id, dataSource),
+      TransferInformation(id, dataSource),
       PersonReference.withIdentifier(personIdentifier),
     )
   }
 }
 
 data class TransferRecorded(
-  override val additionalInformation: TransferAppearanceInformation,
+  override val additionalInformation: TransferInformation,
   override val personReference: PersonReference,
-) : DomainEvent<TransferAppearanceInformation> {
+) : DomainEvent<TransferInformation> {
   override val eventType: String = EVENT_TYPE
   override val description: String = DESCRIPTION
   override val detailUrl: String = transferUrl(id)
@@ -49,16 +49,16 @@ data class TransferRecorded(
       id: UUID,
       dataSource: DataSource = SchedulerContext.get().source,
     ) = TransferRecorded(
-      TransferAppearanceInformation(id, dataSource),
+      TransferInformation(id, dataSource),
       PersonReference.withIdentifier(personIdentifier),
     )
   }
 }
 
 data class TransferPlanned(
-  override val additionalInformation: TransferAppearanceInformation,
+  override val additionalInformation: TransferInformation,
   override val personReference: PersonReference,
-) : DomainEvent<TransferAppearanceInformation> {
+) : DomainEvent<TransferInformation> {
   override val eventType: String = EVENT_TYPE
   override val description: String = DESCRIPTION
   override val detailUrl: String = transferUrl(id)
@@ -71,16 +71,16 @@ data class TransferPlanned(
       id: UUID,
       dataSource: DataSource = SchedulerContext.get().source,
     ) = TransferPlanned(
-      TransferAppearanceInformation(id, dataSource),
+      TransferInformation(id, dataSource),
       PersonReference.withIdentifier(personIdentifier),
     )
   }
 }
 
 data class TransferScheduled(
-  override val additionalInformation: TransferAppearanceInformation,
+  override val additionalInformation: TransferInformation,
   override val personReference: PersonReference,
-) : DomainEvent<TransferAppearanceInformation> {
+) : DomainEvent<TransferInformation> {
   override val eventType: String = EVENT_TYPE
   override val description: String = DESCRIPTION
   override val detailUrl: String = transferUrl(id)
@@ -93,16 +93,16 @@ data class TransferScheduled(
       id: UUID,
       dataSource: DataSource = SchedulerContext.get().source,
     ) = TransferScheduled(
-      TransferAppearanceInformation(id, dataSource),
+      TransferInformation(id, dataSource),
       PersonReference.withIdentifier(personIdentifier),
     )
   }
 }
 
 data class TransferCancelled(
-  override val additionalInformation: TransferAppearanceInformation,
+  override val additionalInformation: TransferInformation,
   override val personReference: PersonReference,
-) : DomainEvent<TransferAppearanceInformation> {
+) : DomainEvent<TransferInformation> {
   override val eventType: String = EVENT_TYPE
   override val description: String = DESCRIPTION
   override val detailUrl: String = transferUrl(id)
@@ -115,16 +115,16 @@ data class TransferCancelled(
       id: UUID,
       dataSource: DataSource = SchedulerContext.get().source,
     ) = TransferCancelled(
-      TransferAppearanceInformation(id, dataSource),
+      TransferInformation(id, dataSource),
       PersonReference.withIdentifier(personIdentifier),
     )
   }
 }
 
 data class TransferExpired(
-  override val additionalInformation: TransferAppearanceInformation,
+  override val additionalInformation: TransferInformation,
   override val personReference: PersonReference,
-) : DomainEvent<TransferAppearanceInformation> {
+) : DomainEvent<TransferInformation> {
   override val eventType: String = EVENT_TYPE
   override val description: String = DESCRIPTION
   override val detailUrl: String = transferUrl(id)
@@ -137,16 +137,16 @@ data class TransferExpired(
       id: UUID,
       dataSource: DataSource = SchedulerContext.get().source,
     ) = TransferExpired(
-      TransferAppearanceInformation(id, dataSource),
+      TransferInformation(id, dataSource),
       PersonReference.withIdentifier(personIdentifier),
     )
   }
 }
 
 data class TransferCompleted(
-  override val additionalInformation: TransferAppearanceInformation,
+  override val additionalInformation: TransferInformation,
   override val personReference: PersonReference,
-) : DomainEvent<TransferAppearanceInformation> {
+) : DomainEvent<TransferInformation> {
   override val eventType: String = EVENT_TYPE
   override val description: String = DESCRIPTION
   override val detailUrl: String = transferUrl(id)
@@ -159,16 +159,16 @@ data class TransferCompleted(
       id: UUID,
       dataSource: DataSource = SchedulerContext.get().source,
     ) = TransferCompleted(
-      TransferAppearanceInformation(id, dataSource),
+      TransferInformation(id, dataSource),
       PersonReference.withIdentifier(personIdentifier),
     )
   }
 }
 
 data class TransferRecategorised(
-  override val additionalInformation: TransferAppearanceInformation,
+  override val additionalInformation: TransferInformation,
   override val personReference: PersonReference,
-) : DomainEvent<TransferAppearanceInformation> {
+) : DomainEvent<TransferInformation> {
   override val eventType: String = EVENT_TYPE
   override val description: String = DESCRIPTION
   override val detailUrl: String = transferUrl(id)
@@ -181,16 +181,16 @@ data class TransferRecategorised(
       id: UUID,
       dataSource: DataSource = SchedulerContext.get().source,
     ) = TransferRecategorised(
-      TransferAppearanceInformation(id, dataSource),
+      TransferInformation(id, dataSource),
       PersonReference.withIdentifier(personIdentifier),
     )
   }
 }
 
 data class TransferRelocated(
-  override val additionalInformation: TransferAppearanceInformation,
+  override val additionalInformation: TransferInformation,
   override val personReference: PersonReference,
-) : DomainEvent<TransferAppearanceInformation> {
+) : DomainEvent<TransferInformation> {
   override val eventType: String = EVENT_TYPE
   override val description: String = DESCRIPTION
   override val detailUrl: String = transferUrl(id)
@@ -203,16 +203,60 @@ data class TransferRelocated(
       id: UUID,
       dataSource: DataSource = SchedulerContext.get().source,
     ) = TransferRelocated(
-      TransferAppearanceInformation(id, dataSource),
+      TransferInformation(id, dataSource),
+      PersonReference.withIdentifier(personIdentifier),
+    )
+  }
+}
+
+data class TransferRescheduled(
+  override val additionalInformation: TransferInformation,
+  override val personReference: PersonReference,
+) : DomainEvent<TransferInformation> {
+  override val eventType: String = EVENT_TYPE
+  override val description: String = DESCRIPTION
+  override val detailUrl: String = transferUrl(id)
+
+  companion object {
+    const val EVENT_TYPE = "person.transfer.rescheduled"
+    const val DESCRIPTION = "A transfer has been rescheduled"
+    operator fun invoke(
+      personIdentifier: String,
+      id: UUID,
+      dataSource: DataSource = SchedulerContext.get().source,
+    ) = TransferRescheduled(
+      TransferInformation(id, dataSource),
+      PersonReference.withIdentifier(personIdentifier),
+    )
+  }
+}
+
+data class TransferReprioritised(
+  override val additionalInformation: TransferInformation,
+  override val personReference: PersonReference,
+) : DomainEvent<TransferInformation> {
+  override val eventType: String = EVENT_TYPE
+  override val description: String = DESCRIPTION
+  override val detailUrl: String = transferUrl(id)
+
+  companion object {
+    const val EVENT_TYPE = "person.transfer.reprioritised"
+    const val DESCRIPTION = "A transfer has been reprioritised"
+    operator fun invoke(
+      personIdentifier: String,
+      id: UUID,
+      dataSource: DataSource = SchedulerContext.get().source,
+    ) = TransferReprioritised(
+      TransferInformation(id, dataSource),
       PersonReference.withIdentifier(personIdentifier),
     )
   }
 }
 
 data class TransferLogisticsChanged(
-  override val additionalInformation: TransferAppearanceInformation,
+  override val additionalInformation: TransferInformation,
   override val personReference: PersonReference,
-) : DomainEvent<TransferAppearanceInformation> {
+) : DomainEvent<TransferInformation> {
   override val eventType: String = EVENT_TYPE
   override val description: String = DESCRIPTION
   override val detailUrl: String = transferUrl(id)
@@ -225,16 +269,16 @@ data class TransferLogisticsChanged(
       id: UUID,
       dataSource: DataSource = SchedulerContext.get().source,
     ) = TransferLogisticsChanged(
-      TransferAppearanceInformation(id, dataSource),
+      TransferInformation(id, dataSource),
       PersonReference.withIdentifier(personIdentifier),
     )
   }
 }
 
 data class TransferMovedToPlanning(
-  override val additionalInformation: TransferAppearanceInformation,
+  override val additionalInformation: TransferInformation,
   override val personReference: PersonReference,
-) : DomainEvent<TransferAppearanceInformation> {
+) : DomainEvent<TransferInformation> {
   override val eventType: String = EVENT_TYPE
   override val description: String = DESCRIPTION
   override val detailUrl: String = transferUrl(id)
@@ -247,16 +291,16 @@ data class TransferMovedToPlanning(
       id: UUID,
       dataSource: DataSource = SchedulerContext.get().source,
     ) = TransferMovedToPlanning(
-      TransferAppearanceInformation(id, dataSource),
+      TransferInformation(id, dataSource),
       PersonReference.withIdentifier(personIdentifier),
     )
   }
 }
 
 data class TransferInTransit(
-  override val additionalInformation: TransferAppearanceInformation,
+  override val additionalInformation: TransferInformation,
   override val personReference: PersonReference,
-) : DomainEvent<TransferAppearanceInformation> {
+) : DomainEvent<TransferInformation> {
   override val eventType: String = EVENT_TYPE
   override val description: String = DESCRIPTION
   override val detailUrl: String = transferUrl(id)
@@ -269,7 +313,7 @@ data class TransferInTransit(
       id: UUID,
       dataSource: DataSource = SchedulerContext.get().source,
     ) = TransferInTransit(
-      TransferAppearanceInformation(id, dataSource),
+      TransferInformation(id, dataSource),
       PersonReference.withIdentifier(personIdentifier),
     )
   }

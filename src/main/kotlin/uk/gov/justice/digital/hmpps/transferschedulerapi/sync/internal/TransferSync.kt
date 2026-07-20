@@ -2,6 +2,7 @@ package uk.gov.justice.digital.hmpps.transferschedulerapi.sync.internal
 
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.transferschedulerapi.context.SchedulerContext
 import uk.gov.justice.digital.hmpps.transferschedulerapi.context.set
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer
@@ -12,6 +13,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.service.asEntity
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncTransferRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncTransferResponse
 
+@Transactional
 @Service
 class TransferSync(
   private val rdRepository: ReferenceDataRepository,

@@ -2,9 +2,14 @@ package uk.gov.justice.digital.hmpps.transferschedulerapi.sync.internal
 
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Movement
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.PersonSummary
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.StatusValidator.Companion.PRE_SCHEDULED_STATUSES
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.RdProvider
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.PLANNING
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.READY_TO_SCHEDULE
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.SCHEDULED
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ApplyDestination
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ApplyLogistics
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ApplyReason
@@ -21,16 +26,17 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncWaitlist
 import java.time.LocalDate
 
 fun Transfer.updateFrom(request: SyncTransfer, personSummary: PersonSummary, rdProvider: RdProvider): Transfer = apply {
+  applyLegacyId(legacyId)
   movePerson(personSummary, requireNotNull(request.syncSchedule?.agyLocId ?: request.syncMovement?.fromAgyLocId))
   applyDestination(ApplyDestination(request.destinationCode))
   applyLogistics(ApplyLogistics(request.logisticsCode), rdProvider)
   applyReason(ApplyReason(request.reasonCode), rdProvider)
-  if (plan == null && request.plan != null) {
+  if (status.code == SCHEDULED.name && request.plan != null && request.syncSchedule?.isPending == true) {
     with(request.plan) { applyPlan(PlanTransfer(requestedOn, priorityCode, comments), rdProvider) }
   } else {
     withPlan(request.plan, rdProvider)
   }
-  if (schedule == null && request.schedule != null) {
+  if (request.syncSchedule?.isScheduled == true && request.schedule != null && status.code in PRE_SCHEDULED_STATUSES.map { it.name }) {
     with(request.schedule) { applySchedule(ScheduleTransfer(start, comments), rdProvider) }
   } else {
     withSchedule(request.schedule)
@@ -40,10 +46,13 @@ fun Transfer.updateFrom(request: SyncTransfer, personSummary: PersonSummary, rdP
   } else {
     withMovement(request.movement)
   }
+
   when {
     request.isCompleted -> complete(CompleteTransfer, rdProvider)
     request.isCancelled -> cancel(CancelTransfer, rdProvider)
     request.isExpired -> expire(ExpireTransfer, rdProvider)
+    request.isReadyToSchedule && status.code == PLANNING.name -> applyStatus(READY_TO_SCHEDULE, rdProvider)
+    !request.isReadyToSchedule && status.code == READY_TO_SCHEDULE.name -> applyStatus(PLANNING, rdProvider)
   }
 }
 
@@ -71,24 +80,28 @@ fun Transfer.syncWaitList() = plan?.let {
     statusForWaitlist(),
     LocalDate.now(),
     it.priority.code,
-    status.code == TransferStatus.Code.SCHEDULED.name,
+    status.code == SCHEDULED.name,
     null,
     null,
     it.comments,
   )
 }
 
-fun Transfer.syncSchedule() = SyncSchedule(
-  schedule?.start,
-  reason.code,
-  statusForSchedule(),
-  schedule?.comments,
-  null,
-  prisonCode,
-  destinationCode,
-  null,
-  logistics?.code,
-)
+fun Transfer.syncSchedule() = if (stage == TransferStage.UNSCHEDULED) {
+  null
+} else {
+  SyncSchedule(
+    schedule?.start,
+    reason.code,
+    statusForSchedule(),
+    schedule?.comments,
+    null,
+    prisonCode,
+    destinationCode,
+    null,
+    logistics?.code,
+  )
+}
 
 fun Transfer.syncMovement(): SyncMovement? = movement?.let {
   val legacyIdParts = it.syncIdsFromLegacyId()
@@ -107,7 +120,7 @@ fun Transfer.syncMovement(): SyncMovement? = movement?.let {
 
 fun Transfer.statusForWaitlist(): String = when (TransferStatus.Code.valueOf(status.code)) {
   TransferStatus.Code.CANCELLED -> SyncWaitlist.CANCELLED
-  TransferStatus.Code.SCHEDULED -> SyncWaitlist.CONFIRMED
+  SCHEDULED -> SyncWaitlist.CONFIRMED
   else -> SyncWaitlist.PENDING
 }
 
@@ -115,6 +128,6 @@ fun Transfer.statusForSchedule(): String = when (TransferStatus.Code.valueOf(sta
   TransferStatus.Code.COMPLETED -> SyncSchedule.COMPLETED
   TransferStatus.Code.CANCELLED -> SyncSchedule.CANCELLED
   TransferStatus.Code.EXPIRED -> SyncSchedule.EXPIRED
-  TransferStatus.Code.SCHEDULED -> SyncSchedule.SCHEDULED
+  SCHEDULED -> SyncSchedule.SCHEDULED
   else -> SyncSchedule.PENDING
 }

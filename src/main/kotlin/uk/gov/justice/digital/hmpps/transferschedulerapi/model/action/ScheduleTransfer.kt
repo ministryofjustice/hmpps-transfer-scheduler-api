@@ -9,6 +9,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferScheduled
 import uk.gov.justice.digital.hmpps.transferschedulerapi.exception.ConflictException
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.ScheduleRequest
 import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
 
 data class ScheduleTransfer(
   override val start: LocalDateTime,
@@ -28,5 +29,5 @@ data class ScheduleTransfer(
 
   override fun domainEvent(entity: Transfer) = TransferScheduled(entity.person.identifier, entity.id)
 
-  infix fun changes(schedule: Schedule?): Boolean = (schedule?.start != start) || (schedule.comments != comments)
+  infix fun changes(schedule: Schedule?): Boolean = (schedule?.start?.truncatedTo(ChronoUnit.SECONDS) != start.truncatedTo(ChronoUnit.SECONDS)) || (schedule.comments != comments)
 }
