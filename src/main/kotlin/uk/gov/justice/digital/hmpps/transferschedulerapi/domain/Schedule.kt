@@ -6,13 +6,18 @@ import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.MapsId
 import jakarta.persistence.OneToOne
+import jakarta.persistence.PostLoad
 import jakarta.persistence.Table
+import jakarta.persistence.Transient
 import jakarta.persistence.Version
 import jakarta.validation.constraints.NotNull
 import org.hibernate.envers.Audited
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.ScheduleRequest
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.RescheduleTransfer
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.TransferAction
 import java.time.LocalDateTime
 import java.util.UUID
+import kotlin.collections.mapNotNull
 
 @Audited
 @Entity
@@ -47,9 +52,28 @@ final class Schedule(
   var comments: String? = comments
     private set
 
+  @Transient
+  private var appliedActions: List<TransferAction> = listOf()
+
+  @PostLoad
+  private fun load() {
+    appliedActions = listOf()
+  }
+
+  override fun domainEvents(): Set<DomainEventPublication> = appliedActions.mapNotNull {
+    it.domainEvent(transfer)?.publication(id)
+  }.toSet()
+
   fun match(request: ScheduleRequest) = apply {
-    start = request.start
+    reschedule(RescheduleTransfer(request.start))
     comments = request.comments
+  }
+
+  fun reschedule(action: RescheduleTransfer) = apply {
+    if (action changes this) {
+      start = action.start
+      appliedActions += action
+    }
   }
 
   companion object {

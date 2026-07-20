@@ -47,9 +47,6 @@ import uk.gov.justice.hmpps.test.kotlin.auth.JwtAuthorisationHelper
 import java.time.Duration
 import java.time.Instant.now
 import java.util.concurrent.TimeUnit
-import kotlin.collections.map
-import kotlin.jvm.java
-import kotlin.text.clear
 
 @Import(TestConfig::class)
 @ExtendWith(

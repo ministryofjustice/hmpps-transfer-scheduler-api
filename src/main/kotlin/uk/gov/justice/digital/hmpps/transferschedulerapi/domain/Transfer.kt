@@ -39,7 +39,6 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferMigrated
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferPlanned
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferRecorded
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferScheduled
-import uk.gov.justice.digital.hmpps.transferschedulerapi.exception.ConflictException
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.MovementRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.PlanRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.ScheduleRequest
@@ -102,11 +101,7 @@ final class Transfer(
   var status: TransferStatus = status
     private set(value) {
       if (value == field) return
-      val readyToSchedule = listOfNotNull(destinationCode, logistics, plan).isNotEmpty()
-      when (value.code) {
-        READY_TO_SCHEDULE.name if !readyToSchedule -> throw ConflictException("Not ready to schedule")
-      }
-      field = value
+      field = StatusValidator(this) valid value
     }
 
   @Fetch(FetchMode.JOIN)
@@ -177,6 +172,8 @@ final class Transfer(
     it.domainEvent(this)?.publication(id)
   }.toSet()
 
+  fun isReadyToSchedule(): Boolean = listOfNotNull(destinationCode, logistics, plan).isNotEmpty()
+
   fun withPlan(request: PlanRequest?, rdProvider: RdProvider) = apply {
     plan = request?.let { plan?.match(it, rdProvider) ?: it.createNewPlan(this, rdProvider) }
   }
@@ -186,8 +183,7 @@ final class Transfer(
   }
 
   fun withMovement(request: MovementRequest?) = apply {
-    val slid = if (request is StringLegacyIdRequest) request.legacyId else null
-    movement = request?.let { Movement(this, request.occurredAt, request.comments, slid) }
+    movement = request?.let { movement?.match(request) ?: it.createNewMovement(this) }
   }
 
   fun movePerson(person: PersonSummary, prisonCode: String) = apply {
@@ -219,20 +215,20 @@ final class Transfer(
   fun applyPlan(action: PlanTransfer, rdProvider: RdProvider) = apply {
     if (action changes plan) {
       withPlan(action, rdProvider)
-      if (applyStatus(READY_TO_SCHEDULE, rdProvider)) {
-        stage = TransferStage.PLANNING
-        appliedActions += action
-      }
+    }
+    if (applyStatus(READY_TO_SCHEDULE, rdProvider)) {
+      stage = TransferStage.PLANNING
+      appliedActions += action
     }
   }
 
   fun applySchedule(action: ScheduleTransfer, rdProvider: RdProvider) = apply {
     if (action changes schedule) {
       withSchedule(action)
-      if (applyStatus(SCHEDULED, rdProvider)) {
-        stage = TransferStage.SCHEDULED
-        appliedActions += action
-      }
+    }
+    if (applyStatus(SCHEDULED, rdProvider)) {
+      stage = TransferStage.SCHEDULED
+      appliedActions += action
     }
   }
 
@@ -277,9 +273,15 @@ final class Transfer(
     return statusChange
   }
 
+  fun applyLegacyId(legacyId: Long?) = apply {
+    this.legacyId = legacyId
+  }
+
   private fun PlanRequest.createNewPlan(transfer: Transfer, rdProvider: RdProvider) = Plan(transfer, requestedOn, rdProvider.get(priorityCode), comments)
 
   private fun ScheduleRequest.createNewSchedule(transfer: Transfer) = Schedule(transfer, start, comments)
+
+  private fun MovementRequest.createNewMovement(transfer: Transfer) = Movement(transfer, occurredAt, comments, if (this is StringLegacyIdRequest) legacyId else null)
 
   companion object {
     fun auditedProperties() = listOf(

@@ -118,6 +118,9 @@ data class SyncSchedule(
   val escortCode: String?,
 ) {
   @JsonIgnore
+  val isPending = eventSubType == PENDING
+
+  @JsonIgnore
   val isCancelled = eventStatus == CANCELLED
 
   @JsonIgnore

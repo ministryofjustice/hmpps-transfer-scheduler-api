@@ -14,6 +14,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Schedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.publication
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferLogistics
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferPriority
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferReason
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.IN_TRANSIT
@@ -25,6 +26,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferLogistics
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferMovedToPlanning
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferRecategorised
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferRelocated
+import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferReprioritised
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferScheduled
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.personIdentifier
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.username
@@ -34,6 +36,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.Tran
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.plan
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.referencedata.TransferLogisticsCode
+import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.referencedata.TransferPriorityCode
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.referencedata.TransferReasonCode
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.wiremock.PrisonRegisterMockServer.Companion.prison
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.AuditHistory
@@ -42,6 +45,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Movement
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ApplyDestination
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ApplyLogistics
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ApplyPriority
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ApplyReason
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.CancelTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.PlanTransfer
@@ -199,6 +203,48 @@ class TransferModificationsIntTest(
   }
 
   @Test
+  fun `200 - can change the priority of a transfer`() {
+    val transfer = givenTransfer(transfer(schedule = null, statusCode = READY_TO_SCHEDULE))
+    assertThat(transfer.status.code).isEqualTo(READY_TO_SCHEDULE.name)
+    val newPriority =
+      generateSequence { TransferPriorityCode.randomCode() }.first { it != transfer.plan?.priority?.code }
+    val action = ApplyPriority(newPriority)
+    val username = username()
+    val givenReason = word(20)
+
+    val res = applyAction(transfer.id, action, givenReason, username).successResponse<AuditHistory>()
+    val rdPriority = rdRepository.rdProvider().get<TransferPriority>(action.priorityCode)
+    with(res.content.single()) {
+      assertThat(domainEvents).containsExactly(TransferReprioritised.EVENT_TYPE)
+      assertThat(reason).isEqualTo(givenReason)
+      assertThat(changes).containsExactly(
+        AuditedAction.Change(
+          Plan::priority.name,
+          transfer.plan!!.priority.description,
+          rdPriority.description,
+        ),
+      )
+    }
+
+    val saved = requireNotNull(findTransfer(transfer.id)?.plan)
+    assertThat(saved.priority.description).isEqualTo(rdPriority.description)
+
+    verifyAudit(
+      saved,
+      RevisionType.MOD,
+      setOf(HmppsDomainEvent::class.simpleName!!, Plan::class.simpleName!!),
+      SchedulerContext.get().copy(username = username, reason = givenReason),
+    )
+
+    verifyEventPublications(
+      saved,
+      setOf(
+        TransferReprioritised(saved.transfer.person.identifier, saved.id).publication(saved.id),
+      ),
+    )
+  }
+
+  @Test
   fun `409 - not in a state for ready to schedule`() {
     val transfer = givenTransfer(transfer(plan = null, logisticsCode = null, statusCode = PLANNING))
     val action = PlanTransfer(LocalDate.now(), "3", word(10))
@@ -293,7 +339,7 @@ class TransferModificationsIntTest(
 
     val res = applyAction(transfer.id, action, givenReason, username).successResponse<AuditHistory>()
     with(res.content.single()) {
-      assertThat(domainEvents).containsExactly(TransferMovedToPlanning.EVENT_TYPE)
+      assertThat(domainEvents).containsExactlyInAnyOrder(TransferMovedToPlanning.EVENT_TYPE, TransferReprioritised.EVENT_TYPE)
       assertThat(reason).isEqualTo(givenReason)
       assertThat(changes).containsExactlyInAnyOrder(
         AuditedAction.Change(
@@ -328,6 +374,7 @@ class TransferModificationsIntTest(
       saved,
       setOf(
         TransferMovedToPlanning(saved.person.identifier, saved.id).publication(saved.id),
+        TransferReprioritised(saved.person.identifier, saved.id).publication(saved.id),
       ),
     )
   }

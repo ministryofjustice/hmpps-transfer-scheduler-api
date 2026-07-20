@@ -63,10 +63,14 @@ class TransferOperationsImpl(
       plan: PlanRequest? = plan(),
       schedule: ScheduleRequest? = schedule(),
       movement: MovementRequest? = null,
-      stage: TransferStage = when (statusCode) {
-        TransferStatus.Code.SCHEDULED, TransferStatus.Code.IN_TRANSIT, TransferStatus.Code.COMPLETED -> TransferStage.SCHEDULED
-        TransferStatus.Code.PLANNING, TransferStatus.Code.READY_TO_SCHEDULE -> TransferStage.PLANNING
-        else -> throw IllegalStateException("No default for transfer status $statusCode")
+      stage: TransferStage = if (plan == null && schedule == null) {
+        TransferStage.UNSCHEDULED
+      } else {
+        when (statusCode) {
+          TransferStatus.Code.SCHEDULED, TransferStatus.Code.IN_TRANSIT, TransferStatus.Code.COMPLETED -> TransferStage.SCHEDULED
+          TransferStatus.Code.PLANNING, TransferStatus.Code.READY_TO_SCHEDULE -> TransferStage.PLANNING
+          else -> throw IllegalStateException("No default for transfer status $statusCode")
+        }
       },
       legacyId: Long? = null,
       id: UUID = newUuid(),
