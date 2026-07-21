@@ -25,7 +25,7 @@ class TransferSync(
       requestAt = occurredAt,
       username = syncUser.username,
       caseloadId = syncUser.activeCaseloadId,
-      reason = request.transfer.syncWaitlist?.takeIf { it.isCancelled }?.outcomeReasonCode,
+      reason = request.transfer.syncWaitlist?.cancellationReason,
     ).set()
     val person = personSummaryService.getWithSave(personIdentifier)
     val saved: Transfer = (

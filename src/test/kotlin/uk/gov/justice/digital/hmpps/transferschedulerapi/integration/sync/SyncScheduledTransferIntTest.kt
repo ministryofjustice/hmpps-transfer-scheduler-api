@@ -123,7 +123,7 @@ class SyncScheduledTransferIntTest(
   @Test
   fun `200 - can recategorise a scheduled transfer`() {
     val transfer = givenTransfer(transfer())
-    val newReason = generateSequence { TransferReasonCode.randomCode() }.first { it != transfer.reason.code }
+    val newReason = generateSequence { TransferReasonCode.randomCode() }.first { it != transfer.reason?.code }
 
     val request = transfer.toTestSyncModel().copy(syncSchedule = transfer.syncSchedule()!!.copy(eventSubType = newReason))
     val user = syncUser()

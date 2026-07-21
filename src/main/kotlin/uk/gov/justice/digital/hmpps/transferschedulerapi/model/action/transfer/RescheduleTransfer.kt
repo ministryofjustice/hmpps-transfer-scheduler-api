@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.hmpps.transferschedulerapi.model.action
+package uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer
 
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Schedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer

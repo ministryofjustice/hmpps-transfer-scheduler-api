@@ -56,7 +56,7 @@ class TransferOperationsImpl(
     fun transfer(
       personIdentifier: String = personIdentifier(),
       prisonCode: String = prisonCode(),
-      reasonCode: String = TransferReasonCode.randomCode(),
+      reasonCode: String? = TransferReasonCode.randomCode(),
       statusCode: TransferStatus.Code = TransferStatus.Code.SCHEDULED,
       destinationCode: String? = prisonCode(),
       logisticsCode: String? = TransferLogisticsCode.randomCode(),
@@ -78,7 +78,7 @@ class TransferOperationsImpl(
       Transfer(
         pp(personIdentifier, prisonCode),
         prisonCode,
-        rd.get(reasonCode),
+        reasonCode?.let { rd.get(it) },
         rd.get(statusCode.name),
         destinationCode,
         logisticsCode?.let { rd.get(it) },
@@ -88,7 +88,7 @@ class TransferOperationsImpl(
       )
         .withPlan(plan, rd)
         .withSchedule(schedule)
-        .withMovement(movement)
+        .withMovement(movement, rd)
     }
 
     fun plan(
@@ -111,9 +111,15 @@ class TransferOperationsImpl(
 
     fun movement(
       occurredAt: LocalDateTime = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS),
+      destinationCode: String = prisonCode(),
+      reasonCode: String = TransferReasonCode.randomCode(),
+      logisticsCode: String = TransferLogisticsCode.randomCode(),
       comments: String? = word(30),
     ) = object : MovementRequest {
       override val occurredAt: LocalDateTime = occurredAt
+      override val destinationCode: String = destinationCode
+      override val reasonCode: String = reasonCode
+      override val logisticsCode: String = logisticsCode
       override val comments: String? = comments
     }
   }

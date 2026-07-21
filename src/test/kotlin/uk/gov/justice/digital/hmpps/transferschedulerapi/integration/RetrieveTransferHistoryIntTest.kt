@@ -27,8 +27,8 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.wiremock.Pr
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.wiremock.PrisonerRegisterExtension.Companion.prisonRegister
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.AuditHistory
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.AuditedAction
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ApplyDestination
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ApplyReason
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyDestination
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyReason
 import java.util.UUID
 
 class RetrieveTransferHistoryIntTest(

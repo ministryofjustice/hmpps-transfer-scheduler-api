@@ -15,7 +15,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.NumericLegacyIdReq
 fun TransferRequest.asEntity(person: PersonSummary, rdProvider: RdProvider) = uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer(
   person,
   requireNotNull(person.prisonCode),
-  rdProvider.get(reasonCode),
+  reasonCode?.let { rdProvider.get(it) },
   rdProvider.get(initialStatusCode().name),
   destinationCode,
   logisticsCode?.let { rdProvider.get(it) },
@@ -24,19 +24,19 @@ fun TransferRequest.asEntity(person: PersonSummary, rdProvider: RdProvider) = uk
 )
   .withPlan(plan, rdProvider)
   .withSchedule(schedule)
-  .withMovement(movement)
+  .withMovement(movement, rdProvider)
 
 fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer.asModel(prisonProvider: PrisonProvider) = Transfer(
   id,
   person(),
   prisonProvider(prisonCode),
   status.asCodedDescription(),
-  reason.asCodedDescription(),
+  requireNotNull(reason).asCodedDescription(),
   destinationCode?.let { prisonProvider(it) },
   logistics?.asCodedDescription(),
   plan(),
   schedule(),
-  movement(),
+  movement(prisonProvider),
   stage,
 )
 
@@ -50,6 +50,6 @@ private fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer.sc
   this?.let { Schedule(start, comments) }
 }
 
-private fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer.movement(): Movement? = with(movement) {
-  this?.let { Movement(occurredAt, comments) }
+private fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer.movement(prisonProvider: PrisonProvider): Movement? = with(movement) {
+  this?.let { Movement(occurredAt, prisonProvider(destinationCode), reason.asCodedDescription(), logistics.asCodedDescription(), comments) }
 }

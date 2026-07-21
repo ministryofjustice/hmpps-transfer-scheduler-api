@@ -43,16 +43,16 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.model.MovementRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.PlanRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.ScheduleRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ApplyDestination
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ApplyLogistics
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ApplyReason
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ApplyTransit
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.CancelTransfer
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.CompleteTransfer
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ExpireTransfer
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.PlanTransfer
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ScheduleTransfer
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.TransferAction
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyDestination
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyLogistics
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyReason
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyTransit
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.CancelTransfer
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.CompleteTransfer
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ExpireTransfer
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.PlanTransfer
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ScheduleTransfer
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.TransferAction
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.StringLegacyIdRequest
 import java.util.UUID
 
@@ -62,7 +62,7 @@ import java.util.UUID
 final class Transfer(
   person: PersonSummary,
   prisonCode: String,
-  reason: TransferReason,
+  reason: TransferReason?,
   status: TransferStatus,
   destinationCode: String?,
   logistics: TransferLogistics?,
@@ -106,10 +106,9 @@ final class Transfer(
 
   @Fetch(FetchMode.JOIN)
   @Audited(targetAuditMode = NOT_AUDITED)
-  @NotNull
-  @ManyToOne(optional = false)
-  @JoinColumn(name = "reason_id", nullable = false)
-  var reason: TransferReason = reason
+  @ManyToOne
+  @JoinColumn(name = "reason_id")
+  var reason: TransferReason? = reason
     private set
 
   @Size(max = 6)
@@ -182,8 +181,8 @@ final class Transfer(
     schedule = request?.let { schedule?.match(it) ?: it.createNewSchedule(this) }
   }
 
-  fun withMovement(request: MovementRequest?) = apply {
-    movement = request?.let { movement?.match(request) ?: it.createNewMovement(this) }
+  fun withMovement(request: MovementRequest?, rdProvider: RdProvider) = apply {
+    movement = request?.let { movement?.match(request, rdProvider) ?: it.createNewMovement(this, rdProvider) }
   }
 
   fun movePerson(person: PersonSummary, prisonCode: String) = apply {
@@ -199,8 +198,8 @@ final class Transfer(
   }
 
   fun applyReason(action: ApplyReason, rdProvider: RdProvider) = apply {
-    if (reason.code != action.reasonCode) {
-      reason = rdProvider.get(action.reasonCode)
+    if (reason?.code != action.reasonCode) {
+      reason = action.reasonCode?.let { rdProvider.get(it) }
       appliedActions += action
     }
   }
@@ -234,7 +233,7 @@ final class Transfer(
 
   fun applyTransit(action: ApplyTransit, rdProvider: RdProvider) = apply {
     if (action changes movement) {
-      withMovement(action)
+      withMovement(action, rdProvider)
       if (applyStatus(IN_TRANSIT, rdProvider)) {
         if (schedule == null) {
           stage = TransferStage.UNSCHEDULED
@@ -281,7 +280,15 @@ final class Transfer(
 
   private fun ScheduleRequest.createNewSchedule(transfer: Transfer) = Schedule(transfer, start, comments)
 
-  private fun MovementRequest.createNewMovement(transfer: Transfer) = Movement(transfer, occurredAt, comments, if (this is StringLegacyIdRequest) legacyId else null)
+  private fun MovementRequest.createNewMovement(transfer: Transfer, rdProvider: RdProvider) = Movement(
+    transfer,
+    occurredAt,
+    destinationCode,
+    rdProvider.get(reasonCode),
+    rdProvider.get(logisticsCode),
+    comments,
+    if (this is StringLegacyIdRequest) legacyId else null,
+  )
 
   companion object {
     fun auditedProperties() = listOf(

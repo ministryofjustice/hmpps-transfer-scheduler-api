@@ -6,7 +6,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 
 interface TransferRequest {
-  val reasonCode: String
+  val reasonCode: String?
   val destinationCode: String?
   val logisticsCode: String?
   val plan: PlanRequest?
@@ -33,5 +33,8 @@ interface ScheduleRequest {
 
 interface MovementRequest {
   val occurredAt: LocalDateTime
+  val reasonCode: String
+  val destinationCode: String
+  val logisticsCode: String
   val comments: String?
 }

@@ -13,8 +13,8 @@ import jakarta.persistence.Version
 import jakarta.validation.constraints.NotNull
 import org.hibernate.envers.Audited
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.ScheduleRequest
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.RescheduleTransfer
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.TransferAction
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.RescheduleTransfer
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.TransferAction
 import java.time.LocalDateTime
 import java.util.UUID
 import kotlin.collections.mapNotNull

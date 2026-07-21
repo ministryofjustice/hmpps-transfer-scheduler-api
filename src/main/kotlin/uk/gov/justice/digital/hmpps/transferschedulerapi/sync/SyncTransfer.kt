@@ -28,13 +28,13 @@ data class SyncTransfer(
   override val legacyId: Long? = eventId
 
   @get:JsonIgnore
-  override val reasonCode: String = syncSchedule?.eventSubType ?: syncMovement?.movementReasonCode ?: TRANSFER_REASON
+  override val reasonCode: String? = syncSchedule?.eventSubType
 
   @get:JsonIgnore
-  override val destinationCode: String? = syncSchedule?.toAgyLocId ?: syncMovement?.toAgyLocId
+  override val destinationCode: String? = syncSchedule?.toAgyLocId
 
   @get:JsonIgnore
-  override val logisticsCode: String? = syncSchedule?.escortCode ?: syncMovement?.escortCode
+  override val logisticsCode: String? = syncSchedule?.escortCode
 
   @get:JsonIgnore
   override val plan: PlanRequest? = syncWaitlist?.let {
@@ -77,10 +77,6 @@ data class SyncTransfer(
 
   override fun initialStage(): TransferStage = syncSchedule?.takeIf { it.isScheduled || it.isExpired || it.isCancelled || it.isCompleted }
     ?.let { TransferStage.SCHEDULED } ?: syncMovement?.let { TransferStage.UNSCHEDULED } ?: TransferStage.PLANNING
-
-  companion object {
-    private const val TRANSFER_REASON = "TRN"
-  }
 }
 
 data class SyncWaitlist(
@@ -90,18 +86,27 @@ data class SyncWaitlist(
   val transferPriority: String,
   val approved: Boolean,
   val approvedUsername: String?,
-  val outcomeReasonCode: String?,
+  val outcomeReasonCode: OutcomeReasonCode?,
   val commentText1: String?,
 ) {
   @JsonIgnore
   val isCancelled = waitListStatus == CANCELLED
 
+  @JsonIgnore
+  val cancellationReason = outcomeReasonCode?.takeIf { isCancelled }?.let {
+    "${it.name} - ${it.description}"
+  }
+
+  enum class OutcomeReasonCode(val description: String) {
+    OIC("Offence In Custody"),
+    ADMI("Administrative"),
+    TRANS("Insufficient Transport"),
+  }
+
   companion object {
     const val CANCELLED = "CAN"
     const val CONFIRMED = "CON"
     const val PENDING = "PEN"
-
-    const val CANCELLED_OUTCOME = "ADMI"
   }
 }
 
@@ -153,6 +158,10 @@ data class SyncMovement(
   override val comments: String?,
 ) : StringLegacyIdRequest,
   MovementRequest {
+  override val reasonCode: String = movementReasonCode
+  override val destinationCode: String = toAgyLocId
+  override val logisticsCode: String = escortCode
+
   @JsonIgnore
   override val legacyId: String? =
     if (offenderBookId == null || movementSeq == null) null else "${offenderBookId}_$movementSeq"

@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.hmpps.transferschedulerapi.model.action
+package uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer
 
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Movement
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer
@@ -12,6 +12,9 @@ import java.time.LocalDateTime
 
 data class ApplyTransit(
   override val occurredAt: LocalDateTime,
+  override val destinationCode: String,
+  override val reasonCode: String,
+  override val logisticsCode: String,
   override val comments: String?,
 ) : TransferAction,
   MovementRequest {

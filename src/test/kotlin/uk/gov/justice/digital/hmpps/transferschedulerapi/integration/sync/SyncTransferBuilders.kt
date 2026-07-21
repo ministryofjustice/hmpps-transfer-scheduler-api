@@ -28,7 +28,7 @@ fun syncWaitList(
   transferPriority: String = TransferPriorityCode.randomCode(),
   approved: Boolean = Random.nextBoolean(),
   approvedStaffId: String? = null,
-  outcomeReasonCode: String? = null,
+  outcomeReasonCode: SyncWaitlist.OutcomeReasonCode? = null,
   commentText1: String? = word(25),
 ) = SyncWaitlist(
   requestDate,
