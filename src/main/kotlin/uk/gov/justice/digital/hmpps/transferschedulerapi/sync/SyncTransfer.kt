@@ -89,13 +89,10 @@ data class SyncWaitlist(
   val statusDate: LocalDate,
   val transferPriority: String,
   val approved: Boolean,
-  val approvedStaffId: Long?,
+  val approvedUsername: String?,
   val outcomeReasonCode: String?,
   val commentText1: String?,
 ) {
-  @JsonIgnore
-  val isApprovedAndConfirmed = approved && waitListStatus == CONFIRMED
-
   @JsonIgnore
   val isCancelled = waitListStatus == CANCELLED
 
@@ -103,6 +100,8 @@ data class SyncWaitlist(
     const val CANCELLED = "CAN"
     const val CONFIRMED = "CON"
     const val PENDING = "PEN"
+
+    const val CANCELLED_OUTCOME = "ADMI"
   }
 }
 

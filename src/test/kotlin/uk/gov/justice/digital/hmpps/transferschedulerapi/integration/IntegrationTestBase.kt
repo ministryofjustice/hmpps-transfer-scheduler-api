@@ -195,7 +195,6 @@ abstract class IntegrationTestBase {
     private val pgContainer = PostgresContainer.instance
     private val localStackContainer = LocalStackContainer.instance
     const val DEFAULT_USERNAME = "TR4N5CH3DU13R"
-    const val DEFAULT_NAME = "Transfer Scheduler"
 
     @JvmStatic
     @DynamicPropertySource

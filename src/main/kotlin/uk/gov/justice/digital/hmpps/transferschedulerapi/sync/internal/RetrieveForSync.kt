@@ -4,11 +4,15 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.TransferRepository
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.getTransfer
+import uk.gov.justice.digital.hmpps.transferschedulerapi.service.history.TransferHistoryService
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncTransfer
 import java.util.UUID
 
 @Transactional(readOnly = true)
 @Service
-class RetrieveForSync(private val transferRepository: TransferRepository) {
-  fun transfer(id: UUID): SyncTransfer = transferRepository.getTransfer(id).toSyncModel()
+class RetrieveForSync(
+  private val transferRepository: TransferRepository,
+  private val transferHistoryService: TransferHistoryService,
+) {
+  fun transfer(id: UUID): SyncTransfer = transferRepository.getTransfer(id).toSyncModel(transferHistoryService::getStatusChanges)
 }

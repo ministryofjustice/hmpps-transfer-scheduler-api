@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.hmpps.transferschedulerapi.integration.sync
 
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.newId
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.prisonCode
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.username
@@ -13,6 +14,8 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncTransferRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncUser
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncWaitlist
+import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.internal.syncSchedule
+import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.internal.toSyncModel
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.UUID
@@ -24,7 +27,7 @@ fun syncWaitList(
   statusDate: LocalDate = LocalDate.now(),
   transferPriority: String = TransferPriorityCode.randomCode(),
   approved: Boolean = Random.nextBoolean(),
-  approvedStaffId: Long? = null,
+  approvedStaffId: String? = null,
   outcomeReasonCode: String? = null,
   commentText1: String? = word(25),
 ) = SyncWaitlist(
@@ -101,3 +104,5 @@ fun syncTransferRequest(
   syncUser = syncUser,
   occurredAt = occurredAt,
 )
+
+fun Transfer.toTestSyncModel(): SyncTransfer = toSyncModel { _ -> emptyList() }

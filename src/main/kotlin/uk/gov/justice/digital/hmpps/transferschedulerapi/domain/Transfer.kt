@@ -172,7 +172,7 @@ final class Transfer(
     it.domainEvent(this)?.publication(id)
   }.toSet()
 
-  fun isReadyToSchedule(): Boolean = listOfNotNull(destinationCode, logistics, plan).isNotEmpty()
+  fun isReadyToSchedule(): Boolean = plan != null && logistics != null && destinationCode != null && schedule != null
 
   fun withPlan(request: PlanRequest?, rdProvider: RdProvider) = apply {
     plan = request?.let { plan?.match(it, rdProvider) ?: it.createNewPlan(this, rdProvider) }
