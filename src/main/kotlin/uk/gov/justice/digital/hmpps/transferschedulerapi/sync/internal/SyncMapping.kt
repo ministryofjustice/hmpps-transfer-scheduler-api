@@ -10,15 +10,15 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.Tr
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.READY_TO_SCHEDULE
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.SCHEDULED
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ApplyDestination
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ApplyLogistics
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ApplyReason
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ApplyTransit
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.CancelTransfer
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.CompleteTransfer
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ExpireTransfer
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.PlanTransfer
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ScheduleTransfer
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyDestination
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyLogistics
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyReason
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyTransit
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.CancelTransfer
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.CompleteTransfer
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ExpireTransfer
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.PlanTransfer
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ScheduleTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.service.history.StatusChanged
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncMovement
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncSchedule
@@ -43,15 +43,15 @@ fun Transfer.updateFrom(request: SyncTransfer, personSummary: PersonSummary, rdP
     withSchedule(request.schedule)
   }
   if (movement == null && request.movement != null) {
-    with(request.movement) { applyTransit(ApplyTransit(occurredAt, comments), rdProvider) }
+    with(request.movement) { applyTransit(ApplyTransit(occurredAt, destinationCode, reasonCode, logisticsCode, comments), rdProvider) }
   } else {
-    withMovement(request.movement)
+    withMovement(request.movement, rdProvider)
   }
 
   when {
-    request.isCompleted -> complete(CompleteTransfer, rdProvider)
     request.isCancelled -> cancel(CancelTransfer, rdProvider)
     request.isExpired -> expire(ExpireTransfer, rdProvider)
+    request.isCompleted || (request.syncSchedule == null && request.syncMovement?.active != true) -> complete(CompleteTransfer, rdProvider)
     request.isReadyToSchedule && status.code == PLANNING.name -> applyStatus(READY_TO_SCHEDULE, rdProvider)
     !request.isReadyToSchedule && status.code == READY_TO_SCHEDULE.name -> applyStatus(PLANNING, rdProvider)
   }
@@ -91,7 +91,7 @@ fun Transfer.syncWaitList(
     it.priority.code,
     status.code == SCHEDULED.name,
     approvedBy?.username,
-    if (status.code == TransferStatus.Code.CANCELLED.name) SyncWaitlist.CANCELLED_OUTCOME else null,
+    if (status.code == TransferStatus.Code.CANCELLED.name) SyncWaitlist.OutcomeReasonCode.ADMI else null,
     it.comments,
   )
 }
@@ -101,7 +101,7 @@ fun Transfer.syncSchedule() = if (stage == TransferStage.UNSCHEDULED) {
 } else {
   SyncSchedule(
     schedule?.start,
-    reason.code,
+    requireNotNull(reason).code,
     statusForSchedule(),
     schedule?.comments,
     null,
@@ -118,10 +118,10 @@ fun Transfer.syncMovement(): SyncMovement? = movement?.let {
     legacyIdParts?.first,
     legacyIdParts?.second,
     it.occurredAt,
-    reason.code,
-    requireNotNull(logistics?.code),
+    it.reason.code,
+    it.logistics.code,
     prisonCode,
-    requireNotNull(destinationCode),
+    it.destinationCode,
     null,
     it.comments,
   )

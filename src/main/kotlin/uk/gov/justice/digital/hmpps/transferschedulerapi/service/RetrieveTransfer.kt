@@ -16,7 +16,13 @@ class RetrieveTransfer(
 ) {
   fun byId(id: UUID): Transfer {
     val transfer = transferRepository.getTransfer(id)
-    val prisons = prisonRegister.prisonProvider(setOfNotNull(transfer.prisonCode, transfer.destinationCode))
+    val prisons = prisonRegister.prisonProvider(
+      setOfNotNull(
+        transfer.prisonCode,
+        transfer.destinationCode,
+        transfer.movement?.destinationCode,
+      ),
+    )
     return transfer.asModel(prisons::get)
   }
 }

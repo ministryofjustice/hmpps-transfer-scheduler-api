@@ -9,7 +9,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.TransferReposito
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.getTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.ReferenceDataRepository
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.AuditHistory
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.TransferActions
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.TransferActions
 import uk.gov.justice.digital.hmpps.transferschedulerapi.service.history.TransferHistoryService
 import java.util.UUID
 

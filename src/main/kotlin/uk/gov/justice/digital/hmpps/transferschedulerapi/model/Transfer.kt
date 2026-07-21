@@ -25,4 +25,10 @@ data class Plan(val requestedOn: LocalDate, val priority: CodedDescription, val 
 
 data class Schedule(val start: LocalDateTime, val comments: String?)
 
-data class Movement(val occurredAt: LocalDateTime, val comments: String?)
+data class Movement(
+  val occurredAt: LocalDateTime,
+  val destination: Prison,
+  val reason: CodedDescription,
+  val logistics: CodedDescription,
+  val comments: String?,
+)

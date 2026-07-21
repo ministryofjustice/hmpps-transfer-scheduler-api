@@ -43,15 +43,15 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.model.AuditHistory
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.AuditedAction
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Movement
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ApplyDestination
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ApplyLogistics
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ApplyPriority
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ApplyReason
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.CancelTransfer
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.PlanTransfer
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ScheduleTransfer
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.TransferAction
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.TransferActions
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyDestination
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyLogistics
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyPriority
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyReason
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.CancelTransfer
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.PlanTransfer
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ScheduleTransfer
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.TransferAction
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.TransferActions
 import uk.gov.justice.digital.hmpps.transferschedulerapi.verifyAgainst
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -124,27 +124,27 @@ class TransferModificationsIntTest(
   @Test
   fun `200 - can change the reason for a transfer`() {
     val transfer = givenTransfer(transfer())
-    val newReasonCode = generateSequence { TransferReasonCode.randomCode() }.first { it != transfer.reason.code }
+    val newReasonCode = generateSequence { TransferReasonCode.randomCode() }.first { it != transfer.reason?.code }
     val action = ApplyReason(newReasonCode)
     val username = username()
     val givenReason = word(20)
 
     val res = applyAction(transfer.id, action, givenReason, username).successResponse<AuditHistory>()
-    val rdReason = rdRepository.rdProvider().get<TransferReason>(action.reasonCode)
+    val rdReason = rdRepository.rdProvider().get<TransferReason>(action.reasonCode!!)
     with(res.content.single()) {
       assertThat(domainEvents).containsExactly(TransferRecategorised.EVENT_TYPE)
       assertThat(reason).isEqualTo(givenReason)
       assertThat(changes).containsExactly(
         AuditedAction.Change(
           Transfer::reason.name,
-          transfer.reason.description,
+          transfer.reason?.description,
           rdReason.description,
         ),
       )
     }
 
     val saved = requireNotNull(findTransfer(transfer.id))
-    assertThat(saved.reason.description).isEqualTo(rdReason.description)
+    assertThat(saved.reason?.description).isEqualTo(rdReason.description)
 
     verifyAudit(
       saved,

@@ -1,8 +1,9 @@
-package uk.gov.justice.digital.hmpps.transferschedulerapi.model.action
+package uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer
 
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.RdProvider
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferLogisticsChanged
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.PreScheduleStatusAction
 
 data class ApplyLogistics(val logisticsCode: String?) :
   TransferAction,

@@ -18,7 +18,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.config.OpenApiTags
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.AuditHistory
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.CreateTransferRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Transfer
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.TransferActions
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.TransferActions
 import uk.gov.justice.digital.hmpps.transferschedulerapi.service.InitiateTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.service.RetrieveTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.service.TransferModifications

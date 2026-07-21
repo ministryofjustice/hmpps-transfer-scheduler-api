@@ -17,8 +17,8 @@ import org.hibernate.envers.RelationTargetAuditMode.NOT_AUDITED
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.RdProvider
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferPriority
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.PlanRequest
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ApplyPriority
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.TransferAction
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyPriority
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.TransferAction
 import java.time.LocalDate
 import java.util.UUID
 

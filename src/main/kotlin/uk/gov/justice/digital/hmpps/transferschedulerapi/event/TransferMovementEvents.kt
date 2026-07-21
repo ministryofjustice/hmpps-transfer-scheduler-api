@@ -48,3 +48,69 @@ data class TransferMovementRecorded(
     )
   }
 }
+
+data class TransferMovementLogisticsChanged(
+  override val additionalInformation: TransferInformation,
+  override val personReference: PersonReference,
+) : DomainEvent<TransferInformation> {
+  override val eventType: String = EVENT_TYPE
+  override val description: String = DESCRIPTION
+  override val detailUrl: String = transferUrl(id)
+
+  companion object {
+    const val EVENT_TYPE = "person.transfer-movement.logistics-changed"
+    const val DESCRIPTION = "The logistics of a transfer movement have changed"
+    operator fun invoke(
+      personIdentifier: String,
+      id: UUID,
+      dataSource: DataSource = SchedulerContext.get().source,
+    ) = TransferMovementLogisticsChanged(
+      TransferInformation(id, dataSource),
+      PersonReference.withIdentifier(personIdentifier),
+    )
+  }
+}
+
+data class TransferMovementRecategorised(
+  override val additionalInformation: TransferInformation,
+  override val personReference: PersonReference,
+) : DomainEvent<TransferInformation> {
+  override val eventType: String = EVENT_TYPE
+  override val description: String = DESCRIPTION
+  override val detailUrl: String = transferUrl(id)
+
+  companion object {
+    const val EVENT_TYPE = "person.transfer-movement.recategorised"
+    const val DESCRIPTION = "The reason for a transfer movement has been changed"
+    operator fun invoke(
+      personIdentifier: String,
+      id: UUID,
+      dataSource: DataSource = SchedulerContext.get().source,
+    ) = TransferMovementRecategorised(
+      TransferInformation(id, dataSource),
+      PersonReference.withIdentifier(personIdentifier),
+    )
+  }
+}
+
+data class TransferMovementRelocated(
+  override val additionalInformation: TransferInformation,
+  override val personReference: PersonReference,
+) : DomainEvent<TransferInformation> {
+  override val eventType: String = EVENT_TYPE
+  override val description: String = DESCRIPTION
+  override val detailUrl: String = transferUrl(id)
+
+  companion object {
+    const val EVENT_TYPE = "person.transfer-movement.relocated"
+    const val DESCRIPTION = "The destination of a transfer movement has been changed"
+    operator fun invoke(
+      personIdentifier: String,
+      id: UUID,
+      dataSource: DataSource = SchedulerContext.get().source,
+    ) = TransferMovementRelocated(
+      TransferInformation(id, dataSource),
+      PersonReference.withIdentifier(personIdentifier),
+    )
+  }
+}

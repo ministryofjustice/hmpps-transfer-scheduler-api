@@ -15,6 +15,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Schedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.publication
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
+import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferCancelled
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferLogisticsChanged
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferPlanned
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferRecategorised
@@ -36,7 +37,9 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncSchedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncTransferResponse
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncUser
+import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncWaitlist
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.internal.syncSchedule
+import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.internal.syncWaitList
 import uk.gov.justice.digital.hmpps.transferschedulerapi.verifyAgainst
 import java.time.LocalDateTime
 
@@ -90,7 +93,12 @@ class SyncWaitingListTransferIntTest(
     verifyAudit(
       saved,
       RevisionType.ADD,
-      setOf(HmppsDomainEvent::class.simpleName!!, Transfer::class.simpleName!!, Plan::class.simpleName!!, Schedule::class.simpleName!!),
+      setOf(
+        HmppsDomainEvent::class.simpleName!!,
+        Transfer::class.simpleName!!,
+        Plan::class.simpleName!!,
+        Schedule::class.simpleName!!,
+      ),
       SchedulerContext.get()
         .copy(username = user.username, caseloadId = user.activeCaseloadId, source = DataSource.NOMIS),
     )
@@ -161,9 +169,10 @@ class SyncWaitingListTransferIntTest(
   @Test
   fun `200 - can recategorise a planned transfer`() {
     val transfer = givenTransfer(transfer(statusCode = TransferStatus.Code.READY_TO_SCHEDULE))
-    val newReason = generateSequence { TransferReasonCode.randomCode() }.first { it != transfer.reason.code }
+    val newReason = generateSequence { TransferReasonCode.randomCode() }.first { it != transfer.reason?.code }
 
-    val request = transfer.toTestSyncModel().copy(syncSchedule = transfer.syncSchedule()!!.copy(eventSubType = newReason))
+    val request =
+      transfer.toTestSyncModel().copy(syncSchedule = transfer.syncSchedule()!!.copy(eventSubType = newReason))
     val user = syncUser()
     val res = sendTransfer(transfer.person.identifier, request, user).successResponse<SyncTransferResponse>()
 
@@ -193,7 +202,8 @@ class SyncWaitingListTransferIntTest(
     assertThat(transfer.status.code).isEqualTo(TransferStatus.Code.PLANNING.name)
     val newLogistics = TransferLogisticsCode.randomCode()
 
-    val request = transfer.toTestSyncModel().copy(syncSchedule = transfer.syncSchedule()!!.copy(escortCode = newLogistics))
+    val request =
+      transfer.toTestSyncModel().copy(syncSchedule = transfer.syncSchedule()!!.copy(escortCode = newLogistics))
     assertThat(request.isReadyToSchedule).isTrue
     val user = syncUser()
     val res = sendTransfer(transfer.person.identifier, request, user).successResponse<SyncTransferResponse>()
@@ -247,7 +257,8 @@ class SyncWaitingListTransferIntTest(
   @Test
   fun `200 - can reprioritise a planned transfer`() {
     val transfer = givenTransfer(transfer(statusCode = TransferStatus.Code.READY_TO_SCHEDULE))
-    val newPriority = generateSequence { TransferPriorityCode.randomCode() }.first { it != transfer.plan?.priority?.code }
+    val newPriority =
+      generateSequence { TransferPriorityCode.randomCode() }.first { it != transfer.plan?.priority?.code }
 
     val request = transfer.toTestSyncModel().copy(syncWaitlist = syncWaitList(transferPriority = newPriority))
     val user = syncUser()
@@ -300,6 +311,39 @@ class SyncWaitingListTransferIntTest(
     verifyEventPublications(
       saved,
       setOf(TransferScheduled(transfer.person.identifier, saved.id, DataSource.NOMIS).publication(saved.id)),
+    )
+  }
+
+  @Test
+  fun `200 - can cancel a planned transfer`() {
+    val transfer = givenTransfer(transfer(statusCode = TransferStatus.Code.READY_TO_SCHEDULE, schedule = null))
+    assertThat(transfer.status.code).isEqualTo(TransferStatus.Code.READY_TO_SCHEDULE.name)
+
+    val request = transfer.toTestSyncModel().copy(
+      syncSchedule = transfer.syncSchedule()!!
+        .copy(start = LocalDateTime.now().plusDays(5), eventStatus = SyncSchedule.CANCELLED),
+      syncWaitlist = transfer.syncWaitList { _ -> emptyList() }!!
+        .copy(outcomeReasonCode = SyncWaitlist.OutcomeReasonCode.OIC, waitListStatus = SyncWaitlist.CANCELLED),
+    )
+    val user = syncUser()
+    val res = sendTransfer(transfer.person.identifier, request, user).successResponse<SyncTransferResponse>()
+
+    val saved = requireNotNull(findTransfer(res.dpsId))
+    assertThat(saved.status.code).isEqualTo(TransferStatus.Code.CANCELLED.name)
+    assertThat(saved.stage).isEqualTo(TransferStage.PLANNING)
+    saved verifyAgainst request
+
+    verifyAudit(
+      saved,
+      RevisionType.MOD,
+      setOf(HmppsDomainEvent::class.simpleName!!, Transfer::class.simpleName!!, Schedule::class.simpleName!!),
+      SchedulerContext.get()
+        .copy(username = user.username, caseloadId = user.activeCaseloadId, source = DataSource.NOMIS, reason = "OIC - Offence In Custody"),
+    )
+
+    verifyEventPublications(
+      saved,
+      setOf(TransferCancelled(transfer.person.identifier, saved.id, DataSource.NOMIS).publication(saved.id)),
     )
   }
 

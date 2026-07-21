@@ -13,12 +13,14 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.HmppsDomainEvent
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Movement
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.publication
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.COMPLETED
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.IN_TRANSIT
-import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferLogisticsChanged
+import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferCompleted
+import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferMovementLogisticsChanged
+import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferMovementRecategorised
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferMovementRecorded
-import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferRecategorised
+import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferMovementRelocated
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferRecorded
-import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferRelocated
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.personIdentifier
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.prisonCode
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.IntegrationTestBase
@@ -76,12 +78,18 @@ class SyncTransferMovementIntTest(
     assertThat(saved.status.code).isEqualTo(IN_TRANSIT.name)
     assertThat(saved.stage).isEqualTo(TransferStage.UNSCHEDULED)
     saved verifyAgainst request
+    assertThat(saved.plan).isNull()
+    assertThat(saved.schedule).isNull()
+    assertThat(saved.reason).isNull()
+    assertThat(saved.logistics).isNull()
+    assertThat(saved.destinationCode).isNull()
 
     verifyAudit(
       saved,
       RevisionType.ADD,
       setOf(HmppsDomainEvent::class.simpleName!!, Transfer::class.simpleName!!, Movement::class.simpleName!!),
-      SchedulerContext.get().copy(username = user.username, caseloadId = user.activeCaseloadId, source = DataSource.NOMIS),
+      SchedulerContext.get()
+        .copy(username = user.username, caseloadId = user.activeCaseloadId, source = DataSource.NOMIS),
     )
 
     verifyEventPublications(
@@ -95,74 +103,150 @@ class SyncTransferMovementIntTest(
 
   @Test
   fun `200 - can relocate an unscheduled transfer`() {
-    val transfer = givenTransfer(transfer(statusCode = IN_TRANSIT, plan = null, schedule = null, movement = movement()))
+    val transfer = givenTransfer(
+      transfer(
+        statusCode = COMPLETED,
+        reasonCode = null,
+        logisticsCode = null,
+        destinationCode = null,
+        plan = null,
+        schedule = null,
+        movement = movement(),
+      ),
+    )
     val newDestination = prisonCode()
 
-    val request = transfer.toTestSyncModel().copy(syncMovement = transfer.syncMovement()!!.copy(toAgyLocId = newDestination))
+    val request =
+      transfer.toTestSyncModel().copy(syncMovement = transfer.syncMovement()!!.copy(toAgyLocId = newDestination))
     val user = syncUser()
     val res = sendTransfer(transfer.person.identifier, request, user).successResponse<SyncTransferResponse>()
 
     val saved = requireNotNull(findTransfer(res.dpsId))
-    assertThat(saved.status.code).isEqualTo(IN_TRANSIT.name)
+    assertThat(saved.status.code).isEqualTo(COMPLETED.name)
     assertThat(saved.stage).isEqualTo(TransferStage.UNSCHEDULED)
     saved verifyAgainst request
+    assertThat(saved.plan).isNull()
+    assertThat(saved.schedule).isNull()
+    assertThat(saved.reason).isNull()
+    assertThat(saved.logistics).isNull()
+    assertThat(saved.destinationCode).isNull()
 
     verifyAudit(
-      saved,
+      saved.movement!!,
       RevisionType.MOD,
-      setOf(HmppsDomainEvent::class.simpleName!!, Transfer::class.simpleName!!),
-      SchedulerContext.get().copy(username = user.username, caseloadId = user.activeCaseloadId, source = DataSource.NOMIS),
+      setOf(HmppsDomainEvent::class.simpleName!!, Movement::class.simpleName!!),
+      SchedulerContext.get()
+        .copy(username = user.username, caseloadId = user.activeCaseloadId, source = DataSource.NOMIS),
     )
 
-    verifyEventPublications(saved, setOf(TransferRelocated(transfer.person.identifier, saved.id, DataSource.NOMIS).publication(saved.id)))
+    verifyEventPublications(
+      saved.movement!!,
+      setOf(TransferMovementRelocated(transfer.person.identifier, saved.id, DataSource.NOMIS).publication(saved.id)),
+    )
   }
 
   @Test
   fun `200 - can recategorise an unscheduled transfer`() {
-    val transfer = givenTransfer(transfer(statusCode = IN_TRANSIT, plan = null, schedule = null, movement = movement()))
-    val newReason = generateSequence { TransferReasonCode.randomCode() }.first { it != transfer.reason.code }
+    val transfer = givenTransfer(
+      transfer(
+        statusCode = IN_TRANSIT,
+        reasonCode = null,
+        logisticsCode = null,
+        destinationCode = null,
+        plan = null,
+        schedule = null,
+        movement = movement(),
+      ),
+    )
+    val newReason = generateSequence { TransferReasonCode.randomCode() }.first { it != transfer.movement!!.reason.code }
 
-    val request = transfer.toTestSyncModel().copy(syncMovement = transfer.syncMovement()!!.copy(movementReasonCode = newReason))
+    val request = transfer.toTestSyncModel().copy(syncMovement = transfer.syncMovement()!!.copy(movementReasonCode = newReason, active = false))
     val user = syncUser()
     val res = sendTransfer(transfer.person.identifier, request, user).successResponse<SyncTransferResponse>()
 
     val saved = requireNotNull(findTransfer(res.dpsId))
-    assertThat(saved.status.code).isEqualTo(IN_TRANSIT.name)
+    assertThat(saved.status.code).isEqualTo(COMPLETED.name)
     assertThat(saved.stage).isEqualTo(TransferStage.UNSCHEDULED)
     saved verifyAgainst request
+    assertThat(saved.plan).isNull()
+    assertThat(saved.schedule).isNull()
+    assertThat(saved.reason).isNull()
+    assertThat(saved.logistics).isNull()
+    assertThat(saved.destinationCode).isNull()
 
     verifyAudit(
-      saved,
+      saved.movement!!,
       RevisionType.MOD,
-      setOf(HmppsDomainEvent::class.simpleName!!, Transfer::class.simpleName!!),
-      SchedulerContext.get().copy(username = user.username, caseloadId = user.activeCaseloadId, source = DataSource.NOMIS),
+      setOf(HmppsDomainEvent::class.simpleName!!, Transfer::class.simpleName!!, Movement::class.simpleName!!),
+      SchedulerContext.get()
+        .copy(username = user.username, caseloadId = user.activeCaseloadId, source = DataSource.NOMIS),
     )
 
-    verifyEventPublications(saved, setOf(TransferRecategorised(transfer.person.identifier, saved.id, DataSource.NOMIS).publication(saved.id)))
+    verifyEventPublications(
+      saved.movement!!,
+      setOf(
+        TransferMovementRecategorised(
+          transfer.person.identifier,
+          saved.id,
+          DataSource.NOMIS,
+        ).publication(saved.id),
+        TransferCompleted(
+          transfer.person.identifier,
+          saved.id,
+          DataSource.NOMIS,
+        ).publication(saved.id),
+      ),
+    )
   }
 
   @Test
   fun `200 - can change logistics for an unscheduled transfer`() {
-    val transfer = givenTransfer(transfer(statusCode = IN_TRANSIT, plan = null, schedule = null, movement = movement()))
-    val newLogistics = generateSequence { TransferLogisticsCode.randomCode() }.first { it != transfer.logistics?.code }
+    val transfer = givenTransfer(
+      transfer(
+        statusCode = COMPLETED,
+        reasonCode = null,
+        logisticsCode = null,
+        destinationCode = null,
+        plan = null,
+        schedule = null,
+        movement = movement(),
+      ),
+    )
+    val newLogistics = generateSequence { TransferLogisticsCode.randomCode() }.first { it != transfer.movement!!.logistics.code }
 
-    val request = transfer.toTestSyncModel().copy(syncMovement = transfer.syncMovement()!!.copy(escortCode = newLogistics))
+    val request =
+      transfer.toTestSyncModel().copy(syncMovement = transfer.syncMovement()!!.copy(escortCode = newLogistics))
     val user = syncUser()
     val res = sendTransfer(transfer.person.identifier, request, user).successResponse<SyncTransferResponse>()
 
     val saved = requireNotNull(findTransfer(res.dpsId))
-    assertThat(saved.status.code).isEqualTo(IN_TRANSIT.name)
+    assertThat(saved.status.code).isEqualTo(COMPLETED.name)
     assertThat(saved.stage).isEqualTo(TransferStage.UNSCHEDULED)
     saved verifyAgainst request
+    assertThat(saved.plan).isNull()
+    assertThat(saved.schedule).isNull()
+    assertThat(saved.reason).isNull()
+    assertThat(saved.logistics).isNull()
+    assertThat(saved.destinationCode).isNull()
 
     verifyAudit(
-      saved,
+      saved.movement!!,
       RevisionType.MOD,
-      setOf(HmppsDomainEvent::class.simpleName!!, Transfer::class.simpleName!!),
-      SchedulerContext.get().copy(username = user.username, caseloadId = user.activeCaseloadId, source = DataSource.NOMIS),
+      setOf(HmppsDomainEvent::class.simpleName!!, Movement::class.simpleName!!),
+      SchedulerContext.get()
+        .copy(username = user.username, caseloadId = user.activeCaseloadId, source = DataSource.NOMIS),
     )
 
-    verifyEventPublications(saved, setOf(TransferLogisticsChanged(transfer.person.identifier, saved.id, DataSource.NOMIS).publication(saved.id)))
+    verifyEventPublications(
+      saved.movement!!,
+      setOf(
+        TransferMovementLogisticsChanged(
+          transfer.person.identifier,
+          saved.id,
+          DataSource.NOMIS,
+        ).publication(saved.id),
+      ),
+    )
   }
 
   private fun sendTransfer(

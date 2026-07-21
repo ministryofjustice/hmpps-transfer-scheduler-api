@@ -17,8 +17,8 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.Tran
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.referencedata.TransferPriorityCode
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.PlanTransfer
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ScheduleTransfer
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.PlanTransfer
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ScheduleTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncSchedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncWaitlist
@@ -123,7 +123,7 @@ class SyncRetrieveTransferIntTest(
     val res = retrieveTransfer(transfer.id).successResponse<SyncTransfer>()
     transfer verifyAgainst res
     assertThat(res.syncWaitlist?.waitListStatus).isEqualTo(SyncWaitlist.CANCELLED)
-    assertThat(res.syncWaitlist?.outcomeReasonCode).isEqualTo(SyncWaitlist.CANCELLED_OUTCOME)
+    assertThat(res.syncWaitlist?.outcomeReasonCode).isEqualTo(SyncWaitlist.OutcomeReasonCode.ADMI)
     assertThat(res.syncSchedule?.eventStatus).isEqualTo(SyncSchedule.CANCELLED)
   }
 
