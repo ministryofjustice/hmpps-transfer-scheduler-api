@@ -16,6 +16,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Plan
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Schedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.ReferenceData
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
 import uk.gov.justice.digital.hmpps.transferschedulerapi.exception.NotFoundException
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.manageusers.ManageUsersClient
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.manageusers.UserDetails
@@ -47,6 +48,28 @@ class TransferHistoryService(
       1 -> null
       else -> audited.history(id).lastOrNull()
     }
+  }
+
+  fun getStatusChanges(id: UUID): List<StatusChanged> {
+    val auditReader = AuditReaderFactory.get(entityManager)
+    val transferChanges = auditReader.getRevisions(Transfer::class, id, null)
+    val audit = transferChanges.sortedBy { it.revision.timestamp }
+    return audit.mapIndexedNotNull { idx, rev ->
+      if (idx == 0) return@mapIndexedNotNull rev.statusChange(null)
+      val prev = (audit[idx - 1].state as Transfer)
+      val next = (rev.state as Transfer)
+      if (prev.status.code != next.status.code) {
+        rev.statusChange(TransferStatus.Code.valueOf(prev.status.code))
+      } else {
+        null
+      }
+    }
+  }
+
+  private fun AuditedEntity.statusChange(prev: TransferStatus.Code?): StatusChanged? = if (state is Transfer) {
+    StatusChanged(revision.username!!, revision.timestamp!!, prev, TransferStatus.Code.valueOf(state.status.code))
+  } else {
+    null
   }
 
   private fun Map<AuditRevision, List<AuditedAction.Change>>.history(id: UUID): List<AuditedAction> {

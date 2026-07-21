@@ -19,11 +19,12 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.CompleteTr
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ExpireTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.PlanTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.ScheduleTransfer
+import uk.gov.justice.digital.hmpps.transferschedulerapi.service.history.StatusChanged
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncMovement
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncSchedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncWaitlist
-import java.time.LocalDate
+import java.util.UUID
 
 fun Transfer.updateFrom(request: SyncTransfer, personSummary: PersonSummary, rdProvider: RdProvider): Transfer = apply {
   applyLegacyId(legacyId)
@@ -65,24 +66,32 @@ fun Movement.syncIdsFromLegacyId(): Pair<Long, Long>? {
   }
 }
 
-fun Transfer.toSyncModel(): SyncTransfer = SyncTransfer(
+fun Transfer.toSyncModel(statusChanges: (UUID) -> List<StatusChanged>): SyncTransfer = SyncTransfer(
   id,
   legacyId,
-  syncWaitList(),
+  syncWaitList(statusChanges),
   syncSchedule(),
   syncMovement(),
 )
 
-// TODO: status date and approved staff id need information from audit columns
-fun Transfer.syncWaitList() = plan?.let {
+fun Transfer.syncWaitList(
+  statusChanges: (UUID) -> List<StatusChanged>,
+) = plan?.let {
+  val statusChanges = statusChanges(it.id).sortedByDescending { sc -> sc.occurredAt }
+  val mostRecent = statusChanges.firstOrNull { sc -> sc.to in setOf(PLANNING, READY_TO_SCHEDULE, SCHEDULED) }
+  val approvedBy = if (stage == TransferStage.SCHEDULED) {
+    statusChanges.firstOrNull { sc -> sc.to == SCHEDULED }
+  } else {
+    null
+  }
   SyncWaitlist(
     it.requestedOn,
     statusForWaitlist(),
-    LocalDate.now(),
+    mostRecent?.occurredAt?.toLocalDate() ?: it.requestedOn,
     it.priority.code,
     status.code == SCHEDULED.name,
-    null,
-    null,
+    approvedBy?.username,
+    if (status.code == TransferStatus.Code.CANCELLED.name) SyncWaitlist.CANCELLED_OUTCOME else null,
     it.comments,
   )
 }

@@ -21,7 +21,12 @@ class TransferSync(
   private val transferRepository: TransferRepository,
 ) {
   fun sync(personIdentifier: String, request: SyncTransferRequest): SyncTransferResponse = with(request) {
-    SchedulerContext.get().copy(requestAt = occurredAt, username = syncUser.username, caseloadId = syncUser.activeCaseloadId).set()
+    SchedulerContext.get().copy(
+      requestAt = occurredAt,
+      username = syncUser.username,
+      caseloadId = syncUser.activeCaseloadId,
+      reason = request.transfer.syncWaitlist?.takeIf { it.isCancelled }?.outcomeReasonCode,
+    ).set()
     val person = personSummaryService.getWithSave(personIdentifier)
     val saved: Transfer = (
       transfer.dpsId?.let { transferRepository.findByIdOrNull(it) }

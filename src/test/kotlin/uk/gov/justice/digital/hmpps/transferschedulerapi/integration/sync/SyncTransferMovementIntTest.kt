@@ -34,7 +34,6 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncTransferResponse
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncUser
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.internal.syncMovement
-import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.internal.toSyncModel
 import uk.gov.justice.digital.hmpps.transferschedulerapi.verifyAgainst
 
 class SyncTransferMovementIntTest(
@@ -99,7 +98,7 @@ class SyncTransferMovementIntTest(
     val transfer = givenTransfer(transfer(statusCode = IN_TRANSIT, plan = null, schedule = null, movement = movement()))
     val newDestination = prisonCode()
 
-    val request = transfer.toSyncModel().copy(syncMovement = transfer.syncMovement()!!.copy(toAgyLocId = newDestination))
+    val request = transfer.toTestSyncModel().copy(syncMovement = transfer.syncMovement()!!.copy(toAgyLocId = newDestination))
     val user = syncUser()
     val res = sendTransfer(transfer.person.identifier, request, user).successResponse<SyncTransferResponse>()
 
@@ -123,7 +122,7 @@ class SyncTransferMovementIntTest(
     val transfer = givenTransfer(transfer(statusCode = IN_TRANSIT, plan = null, schedule = null, movement = movement()))
     val newReason = generateSequence { TransferReasonCode.randomCode() }.first { it != transfer.reason.code }
 
-    val request = transfer.toSyncModel().copy(syncMovement = transfer.syncMovement()!!.copy(movementReasonCode = newReason))
+    val request = transfer.toTestSyncModel().copy(syncMovement = transfer.syncMovement()!!.copy(movementReasonCode = newReason))
     val user = syncUser()
     val res = sendTransfer(transfer.person.identifier, request, user).successResponse<SyncTransferResponse>()
 
@@ -147,7 +146,7 @@ class SyncTransferMovementIntTest(
     val transfer = givenTransfer(transfer(statusCode = IN_TRANSIT, plan = null, schedule = null, movement = movement()))
     val newLogistics = generateSequence { TransferLogisticsCode.randomCode() }.first { it != transfer.logistics?.code }
 
-    val request = transfer.toSyncModel().copy(syncMovement = transfer.syncMovement()!!.copy(escortCode = newLogistics))
+    val request = transfer.toTestSyncModel().copy(syncMovement = transfer.syncMovement()!!.copy(escortCode = newLogistics))
     val user = syncUser()
     val res = sendTransfer(transfer.person.identifier, request, user).successResponse<SyncTransferResponse>()
 

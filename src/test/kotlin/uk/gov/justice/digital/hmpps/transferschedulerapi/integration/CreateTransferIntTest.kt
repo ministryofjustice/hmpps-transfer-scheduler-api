@@ -3,6 +3,8 @@ package uk.gov.justice.digital.hmpps.transferschedulerapi.integration
 import org.assertj.core.api.Assertions.assertThat
 import org.hibernate.envers.RevisionType
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.MethodSource
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus
 import uk.gov.justice.digital.hmpps.transferschedulerapi.access.Roles
@@ -99,22 +101,32 @@ class CreateTransferIntTest(
     verifyAudit(
       saved,
       RevisionType.ADD,
-      setOf(HmppsDomainEvent::class.simpleName!!, Transfer::class.simpleName!!, Plan::class.simpleName!!, Schedule::class.simpleName!!),
+      setOf(
+        HmppsDomainEvent::class.simpleName!!,
+        Transfer::class.simpleName!!,
+        Plan::class.simpleName!!,
+        Schedule::class.simpleName!!,
+      ),
       SchedulerContext.get().copy(username = username, caseloadId = prison.code),
     )
 
     verifyEventPublications(saved, setOf(TransferPlanned(person.prisonerNumber, saved.id).publication(saved.id)))
   }
 
-  @Test
-  fun `201 created - transfer is initiated in planning`() {
+  @ParameterizedTest
+  @MethodSource("plannedTransfers")
+  fun `201 created - transfer is initiated in planning`(request: CreateTransferRequest) {
     val prison = prison()
-    val destination = prison()
+    val destination = prison(DESTINATION_CODE)
     val person = prisonerSearch.givenPrisoner(prisoner(prison.code))
-    prisonRegister.givenPrisons(setOf(prison, destination))
+    prisonRegister.givenPrisons(
+      buildSet {
+        add(prison)
+        if (request.destinationCode == DESTINATION_CODE) add(destination)
+      },
+    )
 
     val username = username()
-    val request = transferRequest(destinationCode = destination.code, logisticsCode = null, schedule = null)
     val res = createTransfer(person.prisonerNumber, request, username, prison.code)
       .successResponse<Transfer>(HttpStatus.CREATED)
 
@@ -124,10 +136,20 @@ class CreateTransferIntTest(
     saved verifyAgainst request
     res verifyAgainst saved
 
+    val affectedEntities = if (request.schedule == null) {
+      setOf(HmppsDomainEvent::class.simpleName!!, Transfer::class.simpleName!!, Plan::class.simpleName!!)
+    } else {
+      setOf(
+        HmppsDomainEvent::class.simpleName!!,
+        Transfer::class.simpleName!!,
+        Plan::class.simpleName!!,
+        Schedule::class.simpleName!!,
+      )
+    }
     verifyAudit(
       saved,
       RevisionType.ADD,
-      setOf(HmppsDomainEvent::class.simpleName!!, Transfer::class.simpleName!!, Plan::class.simpleName!!),
+      affectedEntities,
       SchedulerContext.get().copy(username = username, caseloadId = prison.code),
     )
 
@@ -142,7 +164,7 @@ class CreateTransferIntTest(
     prisonRegister.givenPrisons(setOf(prison, destination))
 
     val username = username()
-    val request = transferRequest(destinationCode = destination.code, schedule = null)
+    val request = transferRequest(destinationCode = destination.code, schedule = scheduleRequest(comments = null))
     val res = createTransfer(person.prisonerNumber, request, username, prison.code)
       .successResponse<Transfer>(HttpStatus.CREATED)
 
@@ -155,7 +177,12 @@ class CreateTransferIntTest(
     verifyAudit(
       saved,
       RevisionType.ADD,
-      setOf(HmppsDomainEvent::class.simpleName!!, Transfer::class.simpleName!!, Plan::class.simpleName!!),
+      setOf(
+        HmppsDomainEvent::class.simpleName!!,
+        Transfer::class.simpleName!!,
+        Plan::class.simpleName!!,
+        Schedule::class.simpleName!!,
+      ),
       SchedulerContext.get().copy(username = username, caseloadId = prison.code),
     )
 
@@ -190,25 +217,6 @@ class CreateTransferIntTest(
     verifyEventPublications(saved, setOf(TransferScheduled(person.prisonerNumber, saved.id).publication(saved.id)))
   }
 
-  private fun planRequest(
-    requestedOn: LocalDate = LocalDate.now(),
-    priorityCode: String = TransferPriorityCode.randomCode(),
-    comments: String? = word(30),
-  ) = CreatePlanRequest(requestedOn, priorityCode, comments)
-
-  private fun scheduleRequest(
-    start: LocalDateTime = LocalDate.now().plusDays(7).atTime(10, 0),
-    comments: String? = word(20),
-  ) = CreateScheduleRequest(start, comments)
-
-  private fun transferRequest(
-    reasonCode: String = TransferReasonCode.randomCode(),
-    destinationCode: String? = prisonCode(),
-    logisticsCode: String? = TransferLogisticsCode.randomCode(),
-    plan: CreatePlanRequest? = planRequest(),
-    schedule: CreateScheduleRequest? = scheduleRequest(),
-  ) = CreateTransferRequest(reasonCode, destinationCode, logisticsCode, plan, schedule)
-
   private fun createTransfer(
     personIdentifier: String,
     request: CreateTransferRequest = transferRequest(),
@@ -225,5 +233,32 @@ class CreateTransferIntTest(
 
   companion object {
     const val INITIATE_TRANSFER_URL = "/transfers/{personIdentifier}"
+    private val DESTINATION_CODE = prisonCode()
+
+    private fun planRequest(
+      requestedOn: LocalDate = LocalDate.now(),
+      priorityCode: String = TransferPriorityCode.randomCode(),
+      comments: String? = word(30),
+    ) = CreatePlanRequest(requestedOn, priorityCode, comments)
+
+    private fun scheduleRequest(
+      start: LocalDateTime = LocalDate.now().plusDays(7).atTime(10, 0),
+      comments: String? = word(20),
+    ) = CreateScheduleRequest(start, comments)
+
+    private fun transferRequest(
+      reasonCode: String = TransferReasonCode.randomCode(),
+      destinationCode: String? = prisonCode(),
+      logisticsCode: String? = TransferLogisticsCode.randomCode(),
+      plan: CreatePlanRequest? = planRequest(),
+      schedule: CreateScheduleRequest? = scheduleRequest(),
+    ) = CreateTransferRequest(reasonCode, destinationCode, logisticsCode, plan, schedule)
+
+    @JvmStatic
+    fun plannedTransfers() = listOf(
+      transferRequest(destinationCode = DESTINATION_CODE, logisticsCode = null),
+      transferRequest(destinationCode = DESTINATION_CODE, schedule = null),
+      transferRequest(destinationCode = null),
+    )
   }
 }

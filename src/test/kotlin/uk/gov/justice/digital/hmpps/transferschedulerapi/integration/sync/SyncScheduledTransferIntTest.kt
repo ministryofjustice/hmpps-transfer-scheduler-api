@@ -33,7 +33,6 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncTransferResponse
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncUser
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.internal.syncSchedule
-import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.internal.toSyncModel
 import uk.gov.justice.digital.hmpps.transferschedulerapi.verifyAgainst
 import java.time.LocalDateTime
 
@@ -98,7 +97,7 @@ class SyncScheduledTransferIntTest(
     val newDestination = prisonCode()
 
     val request =
-      transfer.toSyncModel().copy(syncSchedule = transfer.syncSchedule()!!.copy(toAgyLocId = newDestination))
+      transfer.toTestSyncModel().copy(syncSchedule = transfer.syncSchedule()!!.copy(toAgyLocId = newDestination))
     val user = syncUser()
     val res = sendTransfer(transfer.person.identifier, request, user).successResponse<SyncTransferResponse>()
 
@@ -126,7 +125,7 @@ class SyncScheduledTransferIntTest(
     val transfer = givenTransfer(transfer())
     val newReason = generateSequence { TransferReasonCode.randomCode() }.first { it != transfer.reason.code }
 
-    val request = transfer.toSyncModel().copy(syncSchedule = transfer.syncSchedule()!!.copy(eventSubType = newReason))
+    val request = transfer.toTestSyncModel().copy(syncSchedule = transfer.syncSchedule()!!.copy(eventSubType = newReason))
     val user = syncUser()
     val res = sendTransfer(transfer.person.identifier, request, user).successResponse<SyncTransferResponse>()
 
@@ -154,7 +153,7 @@ class SyncScheduledTransferIntTest(
     val transfer = givenTransfer(transfer())
     val newLogistics = generateSequence { TransferLogisticsCode.randomCode() }.first { it != transfer.logistics?.code }
 
-    val request = transfer.toSyncModel().copy(syncSchedule = transfer.syncSchedule()!!.copy(escortCode = newLogistics))
+    val request = transfer.toTestSyncModel().copy(syncSchedule = transfer.syncSchedule()!!.copy(escortCode = newLogistics))
     val user = syncUser()
     val res = sendTransfer(transfer.person.identifier, request, user).successResponse<SyncTransferResponse>()
 
@@ -181,7 +180,7 @@ class SyncScheduledTransferIntTest(
   fun `200 - can reschedule a transfer`() {
     val transfer = givenTransfer(transfer())
 
-    val request = transfer.toSyncModel().copy(syncSchedule = transfer.syncSchedule()!!.copy(start = LocalDateTime.now().plusDays(7)))
+    val request = transfer.toTestSyncModel().copy(syncSchedule = transfer.syncSchedule()!!.copy(start = LocalDateTime.now().plusDays(7)))
     val user = syncUser()
     val res = sendTransfer(transfer.person.identifier, request, user).successResponse<SyncTransferResponse>()
 
