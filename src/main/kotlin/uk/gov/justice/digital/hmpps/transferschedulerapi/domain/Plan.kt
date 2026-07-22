@@ -17,7 +17,9 @@ import org.hibernate.envers.RelationTargetAuditMode.NOT_AUDITED
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.RdProvider
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferPriority
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.PlanRequest
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyPlanComments
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyPriority
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyRequestedOn
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.TransferAction
 import java.time.LocalDate
 import java.util.UUID
@@ -76,14 +78,28 @@ final class Plan(
   }.toSet()
 
   fun match(request: PlanRequest, rdProvider: RdProvider) = apply {
-    requestedOn = request.requestedOn
+    applyRequestedOn(ApplyRequestedOn(request.requestedOn))
     applyPriority(ApplyPriority(request.priorityCode), rdProvider)
-    comments = request.comments
+    applyComments(ApplyPlanComments(request.comments))
+  }
+
+  fun applyRequestedOn(action: ApplyRequestedOn) = apply {
+    if (requestedOn != action.requestedOn) {
+      requestedOn = action.requestedOn
+      appliedActions += action
+    }
   }
 
   fun applyPriority(action: ApplyPriority, rdProvider: RdProvider) = apply {
     if (priority.code != action.priorityCode) {
       priority = rdProvider.get(action.priorityCode)
+      appliedActions += action
+    }
+  }
+
+  fun applyComments(action: ApplyPlanComments) = apply {
+    if (action changes comments) {
+      comments = action.comments
       appliedActions += action
     }
   }

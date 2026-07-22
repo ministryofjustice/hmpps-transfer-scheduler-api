@@ -13,19 +13,16 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Plan
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Schedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.publication
-import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferLogistics
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferPriority
-import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferReason
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.IN_TRANSIT
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.PLANNING
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.READY_TO_SCHEDULE
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.SCHEDULED
+import uk.gov.justice.digital.hmpps.transferschedulerapi.event.PlanCommentsChanged
+import uk.gov.justice.digital.hmpps.transferschedulerapi.event.PlanRequestedOnChanged
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferCancelled
-import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferLogisticsChanged
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferMovedToPlanning
-import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferRecategorised
-import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferRelocated
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferReprioritised
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferScheduled
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.personIdentifier
@@ -35,18 +32,15 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.Tran
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.movement
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.plan
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.transfer
-import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.referencedata.TransferLogisticsCode
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.referencedata.TransferPriorityCode
-import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.referencedata.TransferReasonCode
-import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.wiremock.PrisonRegisterMockServer.Companion.prison
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.AuditHistory
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.AuditedAction
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Movement
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyDestination
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyLogistics
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyPlanComments
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyPriority
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyReason
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyRequestedOn
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.CancelTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.PlanTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ScheduleTransfer
@@ -58,7 +52,7 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter.ISO_LOCAL_DATE
 import java.util.UUID
 
-class TransferModificationsIntTest(
+class PlanModificationsIntTest(
   @Autowired tro: TransferOperations,
 ) : IntegrationTestBase(),
   TransferOperations by tro {
@@ -80,126 +74,6 @@ class TransferModificationsIntTest(
   @Test
   fun `404 - not found if uuid does not exist`() {
     applyAction(newUuid(), ApplyDestination("ANY")).errorResponse(HttpStatus.NOT_FOUND)
-  }
-
-  @Test
-  fun `200 - can change destination prison for a transfer`() {
-    val destination = prison()
-    val transfer = givenTransfer(transfer())
-    val action = ApplyDestination(destination.code)
-    val username = username()
-    val givenReason = word(20)
-
-    val res = applyAction(transfer.id, action, givenReason, username).successResponse<AuditHistory>()
-    with(res.content.single()) {
-      assertThat(domainEvents).containsExactly(TransferRelocated.EVENT_TYPE)
-      assertThat(reason).isEqualTo(givenReason)
-      assertThat(changes).containsExactly(
-        AuditedAction.Change(
-          Transfer::destinationCode.name,
-          transfer.destinationCode,
-          action.destinationCode,
-        ),
-      )
-    }
-
-    val saved = requireNotNull(findTransfer(transfer.id))
-    assertThat(saved.destinationCode).isEqualTo(action.destinationCode)
-
-    verifyAudit(
-      saved,
-      RevisionType.MOD,
-      setOf(HmppsDomainEvent::class.simpleName!!, Transfer::class.simpleName!!),
-      SchedulerContext.get().copy(username = username, reason = givenReason),
-    )
-
-    verifyEventPublications(
-      saved,
-      setOf(
-        TransferRelocated(saved.person.identifier, saved.id).publication(saved.id),
-      ),
-    )
-  }
-
-  @Test
-  fun `200 - can change the reason for a transfer`() {
-    val transfer = givenTransfer(transfer())
-    val newReasonCode = generateSequence { TransferReasonCode.randomCode() }.first { it != transfer.reason?.code }
-    val action = ApplyReason(newReasonCode)
-    val username = username()
-    val givenReason = word(20)
-
-    val res = applyAction(transfer.id, action, givenReason, username).successResponse<AuditHistory>()
-    val rdReason = rdRepository.rdProvider().get<TransferReason>(action.reasonCode!!)
-    with(res.content.single()) {
-      assertThat(domainEvents).containsExactly(TransferRecategorised.EVENT_TYPE)
-      assertThat(reason).isEqualTo(givenReason)
-      assertThat(changes).containsExactly(
-        AuditedAction.Change(
-          Transfer::reason.name,
-          transfer.reason?.description,
-          rdReason.description,
-        ),
-      )
-    }
-
-    val saved = requireNotNull(findTransfer(transfer.id))
-    assertThat(saved.reason?.description).isEqualTo(rdReason.description)
-
-    verifyAudit(
-      saved,
-      RevisionType.MOD,
-      setOf(HmppsDomainEvent::class.simpleName!!, Transfer::class.simpleName!!),
-      SchedulerContext.get().copy(username = username, reason = givenReason),
-    )
-
-    verifyEventPublications(
-      saved,
-      setOf(
-        TransferRecategorised(saved.person.identifier, saved.id).publication(saved.id),
-      ),
-    )
-  }
-
-  @Test
-  fun `200 - can change the logistics for a transfer`() {
-    val transfer = givenTransfer(transfer())
-    val newLogisticsCode =
-      generateSequence { TransferLogisticsCode.randomCode() }.first { it != transfer.logistics?.code }
-    val action = ApplyLogistics(newLogisticsCode)
-    val username = username()
-    val givenReason = word(20)
-
-    val res = applyAction(transfer.id, action, givenReason, username).successResponse<AuditHistory>()
-    val rdLogistics = rdRepository.rdProvider().get<TransferLogistics>(action.logisticsCode!!)
-    with(res.content.single()) {
-      assertThat(domainEvents).containsExactly(TransferLogisticsChanged.EVENT_TYPE)
-      assertThat(reason).isEqualTo(givenReason)
-      assertThat(changes).containsExactly(
-        AuditedAction.Change(
-          Transfer::logistics.name,
-          transfer.logistics!!.description,
-          rdLogistics.description,
-        ),
-      )
-    }
-
-    val saved = requireNotNull(findTransfer(transfer.id))
-    assertThat(saved.logistics?.description).isEqualTo(rdLogistics.description)
-
-    verifyAudit(
-      saved,
-      RevisionType.MOD,
-      setOf(HmppsDomainEvent::class.simpleName!!, Transfer::class.simpleName!!),
-      SchedulerContext.get().copy(username = username, reason = givenReason),
-    )
-
-    verifyEventPublications(
-      saved,
-      setOf(
-        TransferLogisticsChanged(saved.person.identifier, saved.id).publication(saved.id),
-      ),
-    )
   }
 
   @Test
@@ -339,7 +213,12 @@ class TransferModificationsIntTest(
 
     val res = applyAction(transfer.id, action, givenReason, username).successResponse<AuditHistory>()
     with(res.content.single()) {
-      assertThat(domainEvents).containsExactlyInAnyOrder(TransferMovedToPlanning.EVENT_TYPE, TransferReprioritised.EVENT_TYPE)
+      assertThat(domainEvents).containsExactlyInAnyOrder(
+        TransferMovedToPlanning.EVENT_TYPE,
+        TransferReprioritised.EVENT_TYPE,
+        PlanCommentsChanged.EVENT_TYPE,
+        PlanRequestedOnChanged.EVENT_TYPE,
+      )
       assertThat(reason).isEqualTo(givenReason)
       assertThat(changes).containsExactlyInAnyOrder(
         AuditedAction.Change(
@@ -375,24 +254,10 @@ class TransferModificationsIntTest(
       setOf(
         TransferMovedToPlanning(saved.person.identifier, saved.id).publication(saved.id),
         TransferReprioritised(saved.person.identifier, saved.id).publication(saved.id),
+        PlanCommentsChanged(saved.person.identifier, saved.id).publication(saved.id),
+        PlanRequestedOnChanged(saved.person.identifier, saved.id).publication(saved.id),
       ),
     )
-  }
-
-  @Test
-  fun `409 - cannot revert to scheduled`() {
-    val transfer = givenTransfer(transfer(statusCode = IN_TRANSIT, movement = movement()))
-    val action = ScheduleTransfer(LocalDateTime.now().plusDays(7), word(20))
-    val username = username()
-    val givenReason = word(10)
-
-    val res = applyAction(transfer.id, action, givenReason, username).errorResponse(HttpStatus.CONFLICT)
-    assertThat(res.status).isEqualTo(HttpStatus.CONFLICT.value())
-    assertThat(res.userMessage).isEqualTo("A conflict has been detected")
-
-    val saved = requireNotNull(findTransfer(transfer.id))
-    assertThat(saved.status.code).isEqualTo(IN_TRANSIT.name)
-    assertThat(saved.version).isEqualTo(transfer.version)
   }
 
   @Test
@@ -437,40 +302,75 @@ class TransferModificationsIntTest(
   }
 
   @Test
-  fun `200 - can cancel a scheduled transfer`() {
-    val transfer = givenTransfer(transfer())
-    val action = CancelTransfer
-    val username = username()
-    val givenReason = word(20)
+  fun `200 - can update requested date on a planned transfer`() {
+    val transfer = givenTransfer(transfer(schedule = null, statusCode = READY_TO_SCHEDULE))
+    val action = ApplyRequestedOn(LocalDate.now().minusDays(7))
 
-    val res = applyAction(transfer.id, action, givenReason, username).successResponse<AuditHistory>()
+    val res = applyAction(transfer.id, action, reason = null).successResponse<AuditHistory>()
     with(res.content.single()) {
-      assertThat(domainEvents).containsExactly(TransferCancelled.EVENT_TYPE)
-      assertThat(reason).isEqualTo(givenReason)
-      assertThat(changes).containsExactly(
+      assertThat(domainEvents).containsExactly(PlanRequestedOnChanged.EVENT_TYPE)
+      assertThat(changes).containsExactlyInAnyOrder(
         AuditedAction.Change(
-          Transfer::status.name,
-          "Scheduled",
-          "Cancelled",
+          Plan::requestedOn.name,
+          ISO_LOCAL_DATE.format(transfer.plan?.requestedOn),
+          ISO_LOCAL_DATE.format(action.requestedOn),
         ),
       )
     }
 
     val saved = requireNotNull(findTransfer(transfer.id))
-    assertThat(saved.status.code).isEqualTo(TransferStatus.Code.CANCELLED.name)
-    assertThat(saved.stage).isEqualTo(TransferStage.SCHEDULED)
+    assertThat(saved.status.code).isEqualTo(READY_TO_SCHEDULE.name)
+    assertThat(saved.stage).isEqualTo(TransferStage.PLANNING)
+    assertThat(saved.plan?.requestedOn).isEqualTo(action.requestedOn)
 
     verifyAudit(
-      saved,
+      saved.plan!!,
       RevisionType.MOD,
-      setOf(HmppsDomainEvent::class.simpleName!!, Transfer::class.simpleName!!),
-      SchedulerContext.get().copy(username = username, reason = givenReason),
+      setOf(HmppsDomainEvent::class.simpleName!!, Plan::class.simpleName!!),
+      SchedulerContext.get().copy(username = DEFAULT_USERNAME),
     )
 
     verifyEventPublications(
-      saved,
+      saved.plan!!,
       setOf(
-        TransferCancelled(saved.person.identifier, saved.id).publication(saved.id),
+        PlanRequestedOnChanged(saved.person.identifier, saved.id).publication(saved.id),
+      ),
+    )
+  }
+
+  @Test
+  fun `200 - can update comments on a planned transfer`() {
+    val transfer = givenTransfer(transfer(schedule = null, statusCode = READY_TO_SCHEDULE))
+    val action = ApplyPlanComments(word(20))
+
+    val res = applyAction(transfer.id, action, reason = null).successResponse<AuditHistory>()
+    with(res.content.single()) {
+      assertThat(domainEvents).containsExactly(PlanCommentsChanged.EVENT_TYPE)
+      assertThat(changes).containsExactlyInAnyOrder(
+        AuditedAction.Change(
+          Plan::comments.name,
+          transfer.plan?.comments,
+          action.comments,
+        ),
+      )
+    }
+
+    val saved = requireNotNull(findTransfer(transfer.id))
+    assertThat(saved.status.code).isEqualTo(READY_TO_SCHEDULE.name)
+    assertThat(saved.stage).isEqualTo(TransferStage.PLANNING)
+    assertThat(saved.plan?.comments).isEqualTo(action.comments)
+
+    verifyAudit(
+      saved.plan!!,
+      RevisionType.MOD,
+      setOf(HmppsDomainEvent::class.simpleName!!, Plan::class.simpleName!!),
+      SchedulerContext.get().copy(username = DEFAULT_USERNAME),
+    )
+
+    verifyEventPublications(
+      saved.plan!!,
+      setOf(
+        PlanCommentsChanged(saved.person.identifier, saved.id).publication(saved.id),
       ),
     )
   }
@@ -512,22 +412,6 @@ class TransferModificationsIntTest(
         TransferCancelled(saved.person.identifier, saved.id).publication(saved.id),
       ),
     )
-  }
-
-  @Test
-  fun `409 - cannot cancel in transit`() {
-    val transfer = givenTransfer(transfer(statusCode = IN_TRANSIT, movement = movement()))
-    val action = CancelTransfer
-    val username = username()
-    val givenReason = word(10)
-
-    val res = applyAction(transfer.id, action, givenReason, username).errorResponse(HttpStatus.CONFLICT)
-    assertThat(res.status).isEqualTo(HttpStatus.CONFLICT.value())
-    assertThat(res.userMessage).isEqualTo("A conflict has been detected")
-
-    val saved = requireNotNull(findTransfer(transfer.id))
-    assertThat(saved.status.code).isEqualTo(IN_TRANSIT.name)
-    assertThat(saved.version).isEqualTo(transfer.version)
   }
 
   private fun applyAction(

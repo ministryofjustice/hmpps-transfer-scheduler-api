@@ -260,7 +260,7 @@ class SyncWaitingListTransferIntTest(
     val newPriority =
       generateSequence { TransferPriorityCode.randomCode() }.first { it != transfer.plan?.priority?.code }
 
-    val request = transfer.toTestSyncModel().copy(syncWaitlist = syncWaitList(transferPriority = newPriority))
+    val request = transfer.toTestSyncModel().copy(syncWaitlist = transfer.syncWaitList { emptyList() }!!.copy(transferPriority = newPriority))
     val user = syncUser()
     val res = sendTransfer(transfer.person.identifier, request, user).successResponse<SyncTransferResponse>()
 
@@ -338,7 +338,12 @@ class SyncWaitingListTransferIntTest(
       RevisionType.MOD,
       setOf(HmppsDomainEvent::class.simpleName!!, Transfer::class.simpleName!!, Schedule::class.simpleName!!),
       SchedulerContext.get()
-        .copy(username = user.username, caseloadId = user.activeCaseloadId, source = DataSource.NOMIS, reason = "OIC - Offence In Custody"),
+        .copy(
+          username = user.username,
+          caseloadId = user.activeCaseloadId,
+          source = DataSource.NOMIS,
+          reason = "OIC - Offence In Custody",
+        ),
     )
 
     verifyEventPublications(
