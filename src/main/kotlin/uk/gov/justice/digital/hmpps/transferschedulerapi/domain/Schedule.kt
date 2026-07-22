@@ -13,6 +13,7 @@ import jakarta.persistence.Version
 import jakarta.validation.constraints.NotNull
 import org.hibernate.envers.Audited
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.ScheduleRequest
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyScheduleComments
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.RescheduleTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.TransferAction
 import java.time.LocalDateTime
@@ -66,12 +67,19 @@ final class Schedule(
 
   fun match(request: ScheduleRequest) = apply {
     reschedule(RescheduleTransfer(request.start))
-    comments = request.comments
+    applyComments(ApplyScheduleComments(request.comments))
   }
 
   fun reschedule(action: RescheduleTransfer) = apply {
     if (action changes this) {
       start = action.start
+      appliedActions += action
+    }
+  }
+
+  fun applyComments(action: ApplyScheduleComments) = apply {
+    if (action changes comments) {
+      comments = action.comments
       appliedActions += action
     }
   }

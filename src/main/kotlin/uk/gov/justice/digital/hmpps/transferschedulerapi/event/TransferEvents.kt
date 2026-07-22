@@ -318,3 +318,69 @@ data class TransferInTransit(
     )
   }
 }
+
+data class PlanRequestedOnChanged(
+  override val additionalInformation: TransferInformation,
+  override val personReference: PersonReference,
+) : DomainEvent<TransferInformation> {
+  override val eventType: String = EVENT_TYPE
+  override val description: String = DESCRIPTION
+  override val detailUrl: String = transferUrl(id)
+
+  companion object {
+    const val EVENT_TYPE = "person.transfer.planning-requested-changed"
+    const val DESCRIPTION = "The date the plan of a transfer was requested has been changed"
+    operator fun invoke(
+      personIdentifier: String,
+      id: UUID,
+      dataSource: DataSource = SchedulerContext.get().source,
+    ) = PlanRequestedOnChanged(
+      TransferInformation(id, dataSource),
+      PersonReference.withIdentifier(personIdentifier),
+    )
+  }
+}
+
+data class PlanCommentsChanged(
+  override val additionalInformation: TransferInformation,
+  override val personReference: PersonReference,
+) : DomainEvent<TransferInformation> {
+  override val eventType: String = EVENT_TYPE
+  override val description: String = DESCRIPTION
+  override val detailUrl: String = transferUrl(id)
+
+  companion object {
+    const val EVENT_TYPE = "person.transfer.planning-comments-changed"
+    const val DESCRIPTION = "Comments for the plan of a transfer have been changed"
+    operator fun invoke(
+      personIdentifier: String,
+      id: UUID,
+      dataSource: DataSource = SchedulerContext.get().source,
+    ) = PlanCommentsChanged(
+      TransferInformation(id, dataSource),
+      PersonReference.withIdentifier(personIdentifier),
+    )
+  }
+}
+
+data class ScheduleCommentsChanged(
+  override val additionalInformation: TransferInformation,
+  override val personReference: PersonReference,
+) : DomainEvent<TransferInformation> {
+  override val eventType: String = EVENT_TYPE
+  override val description: String = DESCRIPTION
+  override val detailUrl: String = transferUrl(id)
+
+  companion object {
+    const val EVENT_TYPE = "person.transfer.schedule-comments-changed"
+    const val DESCRIPTION = "Comments for the schedule of a transfer have been changed"
+    operator fun invoke(
+      personIdentifier: String,
+      id: UUID,
+      dataSource: DataSource = SchedulerContext.get().source,
+    ) = ScheduleCommentsChanged(
+      TransferInformation(id, dataSource),
+      PersonReference.withIdentifier(personIdentifier),
+    )
+  }
+}
