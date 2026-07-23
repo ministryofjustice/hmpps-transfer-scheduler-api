@@ -2,7 +2,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-  id("uk.gov.justice.hmpps.gradle-spring-boot") version "10.5.7"
+  id("uk.gov.justice.hmpps.gradle-spring-boot") version "11.0.1"
   kotlin("plugin.spring") version "2.4.10"
   kotlin("plugin.jpa") version "2.4.10"
 }
@@ -10,7 +10,7 @@ plugins {
 val ehcacheVersion = "3.12.0"
 val hibernateJcacheVersion = "7.4.5.Final"
 val hmppsKotlinVersion = "3.0.0"
-val sentryVersion = "8.49.0"
+val sentryVersion = "8.50.0"
 val springDocVersion = "3.0.3"
 val sqsStarterVersion = "7.4.0"
 val swaggerParserVersion = "2.1.45"
@@ -27,7 +27,7 @@ dependencies {
   implementation("org.springframework.boot:spring-boot-starter-data-jpa")
   implementation("org.springframework.data:spring-data-envers")
   implementation("io.sentry:sentry-spring-boot-4:$sentryVersion")
-  implementation("org.hibernate:hibernate-jcache:$hibernateJcacheVersion")
+  implementation("org.hibernate.orm:hibernate-jcache:$hibernateJcacheVersion")
 
   runtimeOnly("org.ehcache:ehcache:$ehcacheVersion")
   runtimeOnly("org.springframework.boot:spring-boot-starter-flyway")
