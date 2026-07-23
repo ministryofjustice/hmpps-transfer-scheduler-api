@@ -4,6 +4,7 @@ import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.transferschedulerapi.context.SchedulerContext
+import uk.gov.justice.digital.hmpps.transferschedulerapi.context.SchedulerContext.Companion.SYSTEM_USERNAME
 import uk.gov.justice.digital.hmpps.transferschedulerapi.context.set
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.TransferRepository
@@ -12,6 +13,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.service.PersonSummarySe
 import uk.gov.justice.digital.hmpps.transferschedulerapi.service.asEntity
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncTransferRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncTransferResponse
+import java.util.UUID
 
 @Transactional
 @Service
@@ -37,5 +39,12 @@ class TransferSync(
 
     val legacyIdParts = saved.movement?.syncIdsFromLegacyId()
     SyncTransferResponse(saved.id, saved.legacyId, legacyIdParts?.first, legacyIdParts?.second)
+  }
+
+  fun delete(id: UUID) {
+    transferRepository.findByIdOrNull(id)?.let {
+      SchedulerContext.get().copy(username = SYSTEM_USERNAME).set()
+      transferRepository.delete(it)
+    }
   }
 }

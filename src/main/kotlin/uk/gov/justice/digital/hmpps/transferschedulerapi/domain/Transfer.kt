@@ -8,6 +8,9 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
+import jakarta.persistence.NamedAttributeNode
+import jakarta.persistence.NamedEntityGraph
+import jakarta.persistence.NamedSubgraph
 import jakarta.persistence.OneToOne
 import jakarta.persistence.PostLoad
 import jakarta.persistence.Table
@@ -35,6 +38,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.Tr
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.PLANNING
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.READY_TO_SCHEDULE
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.SCHEDULED
+import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferDeleted
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferMigrated
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferPlanned
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferRecorded
@@ -56,6 +60,25 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.T
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.StringLegacyIdRequest
 import java.util.UUID
 
+@NamedEntityGraph(
+  name = "transfer.all",
+  attributeNodes = [
+    NamedAttributeNode("person"),
+    NamedAttributeNode("status"),
+    NamedAttributeNode("reason"),
+    NamedAttributeNode("logistics"),
+    NamedAttributeNode("plan", subgraph = "transfer.plan"),
+    NamedAttributeNode("schedule"),
+    NamedAttributeNode("movement", subgraph = "transfer.movement"),
+  ],
+  subgraphs = [
+    NamedSubgraph(name = "transfer.plan", attributeNodes = [NamedAttributeNode("priority")]),
+    NamedSubgraph(
+      name = "transfer.movement",
+      attributeNodes = [NamedAttributeNode("reason"), NamedAttributeNode("logistics")],
+    ),
+  ],
+)
 @Audited
 @Entity
 @Table(name = "transfer")
@@ -170,6 +193,10 @@ final class Transfer(
   override fun domainEvents(): Set<DomainEventPublication> = appliedActions.mapNotNull {
     it.domainEvent(this)?.publication(id)
   }.toSet()
+
+  override fun deletionEvents(): Set<DomainEventPublication> = setOf(
+    TransferDeleted(person.identifier, id).publication(id),
+  )
 
   fun isReadyToSchedule(): Boolean = plan != null && logistics != null && destinationCode != null && schedule != null
 

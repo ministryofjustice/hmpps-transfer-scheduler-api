@@ -1,7 +1,10 @@
 package uk.gov.justice.digital.hmpps.transferschedulerapi.domain
 
 import jakarta.persistence.criteria.JoinType
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.domain.Specification
+import org.springframework.data.jpa.repository.EntityGraph
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor
 import org.springframework.data.repository.findByIdOrNull
@@ -11,12 +14,26 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.Tr
 import uk.gov.justice.digital.hmpps.transferschedulerapi.exception.NotFoundException
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
 import java.time.LocalDate
+import java.util.Optional
 import java.util.UUID
 
 interface TransferRepository :
   JpaRepository<Transfer, UUID>,
   JpaSpecificationExecutor<Transfer> {
+
+  @EntityGraph("transfer.all")
   fun findByLegacyId(legacyId: Long): Transfer?
+
+  @EntityGraph("transfer.all")
+  override fun findById(id: UUID): Optional<Transfer>
+
+  @EntityGraph("transfer.all")
+  override fun findAllById(ids: Iterable<UUID>): List<Transfer>
+
+  @EntityGraph("transfer.all")
+  override fun findAll(spec: Specification<Transfer>, pageable: Pageable): Page<Transfer>
+
+  fun countAllByPersonIdentifier(personIdentifier: String): Int
 }
 
 fun TransferRepository.getTransfer(id: UUID): Transfer = findByIdOrNull(id) ?: throw NotFoundException("Transfer not found")

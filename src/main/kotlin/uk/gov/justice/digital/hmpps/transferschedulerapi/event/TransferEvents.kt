@@ -55,6 +55,28 @@ data class TransferRecorded(
   }
 }
 
+data class TransferDeleted(
+  override val additionalInformation: TransferInformation,
+  override val personReference: PersonReference,
+) : DomainEvent<TransferInformation> {
+  override val eventType: String = EVENT_TYPE
+  override val description: String = DESCRIPTION
+  override val detailUrl: String = transferUrl(id)
+
+  companion object {
+    const val EVENT_TYPE = "person.transfer.deleted"
+    const val DESCRIPTION = "A transfer has been deleted"
+    operator fun invoke(
+      personIdentifier: String,
+      id: UUID,
+      dataSource: DataSource = SchedulerContext.get().source,
+    ) = TransferDeleted(
+      TransferInformation(id, dataSource),
+      PersonReference.withIdentifier(personIdentifier),
+    )
+  }
+}
+
 data class TransferPlanned(
   override val additionalInformation: TransferInformation,
   override val personReference: PersonReference,

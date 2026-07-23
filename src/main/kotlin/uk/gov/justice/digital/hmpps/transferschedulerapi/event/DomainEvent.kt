@@ -17,6 +17,7 @@ import java.util.UUID
 
     JsonSubTypes.Type(value = TransferMigrated::class, name = TransferMigrated.EVENT_TYPE),
     JsonSubTypes.Type(value = TransferRecorded::class, name = TransferRecorded.EVENT_TYPE),
+    JsonSubTypes.Type(value = TransferDeleted::class, name = TransferDeleted.EVENT_TYPE),
     JsonSubTypes.Type(value = TransferPlanned::class, name = TransferPlanned.EVENT_TYPE),
     JsonSubTypes.Type(value = TransferScheduled::class, name = TransferScheduled.EVENT_TYPE),
     JsonSubTypes.Type(value = TransferCancelled::class, name = TransferCancelled.EVENT_TYPE),
@@ -35,6 +36,7 @@ import java.util.UUID
 
     JsonSubTypes.Type(value = TransferMovementMigrated::class, name = TransferMovementMigrated.EVENT_TYPE),
     JsonSubTypes.Type(value = TransferMovementRecorded::class, name = TransferMovementRecorded.EVENT_TYPE),
+    JsonSubTypes.Type(value = TransferMovementDeleted::class, name = TransferMovementDeleted.EVENT_TYPE),
     JsonSubTypes.Type(value = TransferMovementRelocated::class, name = TransferMovementRelocated.EVENT_TYPE),
     JsonSubTypes.Type(value = TransferMovementRecategorised::class, name = TransferMovementRecategorised.EVENT_TYPE),
     JsonSubTypes.Type(value = TransferMovementLogisticsChanged::class, name = TransferMovementLogisticsChanged.EVENT_TYPE),

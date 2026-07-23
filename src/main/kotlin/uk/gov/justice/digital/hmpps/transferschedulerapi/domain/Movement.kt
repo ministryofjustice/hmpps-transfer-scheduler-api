@@ -21,6 +21,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.context.SchedulerContex
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.RdProvider
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferLogistics
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferReason
+import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferMovementDeleted
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferMovementMigrated
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferMovementRecorded
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.MovementRequest
@@ -111,6 +112,8 @@ final class Movement(
   override fun domainEvents(): Set<DomainEventPublication> = appliedActions.mapNotNull {
     it.domainEvent(this)?.publication(id)
   }.toSet()
+
+  override fun deletionEvents(): Set<DomainEventPublication> = setOf(TransferMovementDeleted(transfer.person.identifier, id).publication(id))
 
   fun match(request: MovementRequest, rdProvider: RdProvider) = apply {
     occurredAt = request.occurredAt

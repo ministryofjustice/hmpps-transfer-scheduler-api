@@ -38,7 +38,7 @@ class SchedulerContextInterceptor : HandlerInterceptor {
     response: HttpServletResponse,
     handler: Any,
   ): Boolean {
-    val contextSource = if (request.requestURI.startsWith("/sync")) {
+    val contextSource = if (request.requestURI.startsWith("/sync") || request.requestURI.startsWith("/move/transfers")) {
       DataSource.NOMIS
     } else {
       DataSource.DPS
