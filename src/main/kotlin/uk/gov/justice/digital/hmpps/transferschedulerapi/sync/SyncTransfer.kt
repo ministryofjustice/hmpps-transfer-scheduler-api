@@ -12,29 +12,26 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.UUID
 
-@ValidSyncTransfer
 data class SyncTransfer(
   val dpsId: UUID?,
   val eventId: Long?,
   @JsonProperty("waitlist")
   val syncWaitlist: SyncWaitlist?,
   @JsonProperty("schedule")
-  val syncSchedule: SyncSchedule?,
-  @JsonProperty("movement")
-  val syncMovement: SyncMovement?,
+  val syncSchedule: SyncSchedule,
 ) : NumericLegacyIdRequest,
   TransferRequest {
   @get:JsonIgnore
   override val legacyId: Long? = eventId
 
   @get:JsonIgnore
-  override val reasonCode: String? = syncSchedule?.eventSubType
+  override val reasonCode: String = syncSchedule.eventSubType
 
   @get:JsonIgnore
-  override val destinationCode: String? = syncSchedule?.toAgyLocId
+  override val destinationCode: String? = syncSchedule.toAgyLocId
 
   @get:JsonIgnore
-  override val logisticsCode: String? = syncSchedule?.escortCode
+  override val logisticsCode: String? = syncSchedule.escortCode
 
   @get:JsonIgnore
   override val plan: PlanRequest? = syncWaitlist?.let {
@@ -46,7 +43,7 @@ data class SyncTransfer(
   }
 
   @get:JsonIgnore
-  override val schedule: ScheduleRequest? = syncSchedule?.start?.let {
+  override val schedule: ScheduleRequest? = syncSchedule.start?.let {
     object : ScheduleRequest {
       override val start: LocalDateTime = it
       override val comments: String? = syncSchedule.commentText
@@ -54,29 +51,23 @@ data class SyncTransfer(
   }
 
   @get:JsonIgnore
-  override val movement: MovementRequest? = syncMovement
+  val isCancelled: Boolean = syncSchedule.isCancelled
 
   @get:JsonIgnore
-  val isCancelled: Boolean = syncSchedule?.isCancelled ?: syncWaitlist?.isCancelled ?: false
-
-  @get:JsonIgnore
-  val isExpired: Boolean = syncSchedule?.isExpired ?: false
-
-  @get:JsonIgnore
-  val isCompleted: Boolean = syncSchedule?.isCompleted ?: false
+  val isExpired: Boolean = syncSchedule.isExpired
 
   override fun initialStatusCode(): TransferStatus.Code = when {
-    syncSchedule?.isCancelled == true -> TransferStatus.Code.CANCELLED
-    syncSchedule?.isExpired == true -> TransferStatus.Code.EXPIRED
-    syncMovement?.active == true -> TransferStatus.Code.IN_TRANSIT
-    syncSchedule?.isCompleted == true || syncMovement?.active == false -> TransferStatus.Code.COMPLETED
-    syncSchedule?.isScheduled == true -> TransferStatus.Code.SCHEDULED
+    syncSchedule.isCancelled -> TransferStatus.Code.CANCELLED
+    syncSchedule.isExpired -> TransferStatus.Code.EXPIRED
+    syncSchedule.isCompleted -> TransferStatus.Code.COMPLETED
+    syncSchedule.isScheduled -> TransferStatus.Code.SCHEDULED
     isReadyToSchedule -> TransferStatus.Code.READY_TO_SCHEDULE
     else -> TransferStatus.Code.PLANNING
   }
 
-  override fun initialStage(): TransferStage = syncSchedule?.takeIf { it.isScheduled || it.isExpired || it.isCancelled || it.isCompleted }
-    ?.let { TransferStage.SCHEDULED } ?: syncMovement?.let { TransferStage.UNSCHEDULED } ?: TransferStage.PLANNING
+  override fun initialStage(): TransferStage = syncSchedule
+    .takeIf { it.isScheduled || it.isExpired || (syncWaitlist?.isCancelled != true && syncSchedule.isCancelled) || it.isCompleted }
+    ?.let { TransferStage.SCHEDULED } ?: TransferStage.PLANNING
 }
 
 data class SyncWaitlist(

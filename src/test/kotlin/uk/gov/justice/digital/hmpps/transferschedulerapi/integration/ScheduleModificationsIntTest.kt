@@ -103,7 +103,7 @@ class ScheduleModificationsIntTest(
     verifyEventPublications(
       saved,
       setOf(
-        TransferRelocated(saved.person.identifier, saved.id).publication(saved.id),
+        TransferRelocated(saved.person.identifier, saved.id, saved.stage).publication(saved.id),
       ),
     )
   }
@@ -143,7 +143,7 @@ class ScheduleModificationsIntTest(
     verifyEventPublications(
       saved,
       setOf(
-        TransferRecategorised(saved.person.identifier, saved.id).publication(saved.id),
+        TransferRecategorised(saved.person.identifier, saved.id, saved.stage).publication(saved.id),
       ),
     )
   }
@@ -184,7 +184,7 @@ class ScheduleModificationsIntTest(
     verifyEventPublications(
       saved,
       setOf(
-        TransferLogisticsChanged(saved.person.identifier, saved.id).publication(saved.id),
+        TransferLogisticsChanged(saved.person.identifier, saved.id, saved.stage).publication(saved.id),
       ),
     )
   }
@@ -237,7 +237,7 @@ class ScheduleModificationsIntTest(
     verifyEventPublications(
       saved.schedule!!,
       setOf(
-        ScheduleCommentsChanged(saved.person.identifier, saved.id).publication(saved.id),
+        ScheduleCommentsChanged(saved.person.identifier, saved.id, saved.stage).publication(saved.id),
       ),
     )
   }
@@ -276,7 +276,7 @@ class ScheduleModificationsIntTest(
     verifyEventPublications(
       saved,
       setOf(
-        TransferCancelled(saved.person.identifier, saved.id).publication(saved.id),
+        TransferCancelled(saved.person.identifier, saved.id, saved.stage).publication(saved.id),
       ),
     )
   }

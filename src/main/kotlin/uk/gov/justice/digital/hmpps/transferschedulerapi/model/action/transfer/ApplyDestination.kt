@@ -13,5 +13,5 @@ data class ApplyDestination(val destinationCode: String?) :
     updatePreScheduleStatus(entity, rdProvider)
   }
 
-  override fun domainEvent(entity: Transfer) = TransferRelocated(entity.person.identifier, entity.id)
+  override fun domainEvent(entity: Transfer) = TransferRelocated(entity.person.identifier, entity.id, entity.stage)
 }

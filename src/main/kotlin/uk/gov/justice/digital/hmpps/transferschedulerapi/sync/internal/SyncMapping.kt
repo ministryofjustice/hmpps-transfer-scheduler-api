@@ -13,9 +13,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyDestination
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyLogistics
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyReason
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyTransit
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.CancelTransfer
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.CompleteTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ExpireTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.PlanTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ScheduleTransfer
@@ -28,41 +26,26 @@ import java.util.UUID
 
 fun Transfer.updateFrom(request: SyncTransfer, personSummary: PersonSummary, rdProvider: RdProvider): Transfer = apply {
   applyLegacyId(legacyId)
-  movePerson(personSummary, requireNotNull(request.syncSchedule?.agyLocId ?: request.syncMovement?.fromAgyLocId))
+  movePerson(personSummary, request.syncSchedule.agyLocId)
   applyDestination(ApplyDestination(request.destinationCode))
   applyLogistics(ApplyLogistics(request.logisticsCode), rdProvider)
   applyReason(ApplyReason(request.reasonCode), rdProvider)
-  if (status.code == SCHEDULED.name && request.plan != null && request.syncSchedule?.isPending == true) {
+  if (status.code == SCHEDULED.name && request.plan != null && request.syncSchedule.isPending) {
     with(request.plan) { applyPlan(PlanTransfer(requestedOn, priorityCode, comments), rdProvider) }
   } else {
     withPlan(request.plan, rdProvider)
   }
-  if (request.syncSchedule?.isScheduled == true && request.schedule != null && status.code in PRE_SCHEDULED_STATUSES.map { it.name }) {
+  if (request.syncSchedule.isScheduled && request.schedule != null && status.code in PRE_SCHEDULED_STATUSES.map { it.name }) {
     with(request.schedule) { applySchedule(ScheduleTransfer(start, comments), rdProvider) }
   } else {
     withSchedule(request.schedule)
-  }
-  if (movement == null && request.movement != null) {
-    with(request.movement) { applyTransit(ApplyTransit(occurredAt, destinationCode, reasonCode, logisticsCode, comments), rdProvider) }
-  } else {
-    withMovement(request.movement, rdProvider)
   }
 
   when {
     request.isCancelled -> cancel(CancelTransfer, rdProvider)
     request.isExpired -> expire(ExpireTransfer, rdProvider)
-    request.isCompleted || (request.syncSchedule == null && request.syncMovement?.active != true) -> complete(CompleteTransfer, rdProvider)
     request.isReadyToSchedule && status.code == PLANNING.name -> applyStatus(READY_TO_SCHEDULE, rdProvider)
     !request.isReadyToSchedule && status.code == READY_TO_SCHEDULE.name -> applyStatus(PLANNING, rdProvider)
-  }
-}
-
-fun Movement.syncIdsFromLegacyId(): Pair<Long, Long>? {
-  val parts = legacyId?.split("_")
-  return if (parts?.size != 2) {
-    null
-  } else {
-    parts[0].toLong() to parts[1].toLong()
   }
 }
 
@@ -71,7 +54,6 @@ fun Transfer.toSyncModel(statusChanges: (UUID) -> List<StatusChanged>): SyncTran
   legacyId,
   syncWaitList(statusChanges),
   syncSchedule(),
-  syncMovement(),
 )
 
 fun Transfer.syncWaitList(
@@ -96,36 +78,17 @@ fun Transfer.syncWaitList(
   )
 }
 
-fun Transfer.syncSchedule() = if (stage == TransferStage.UNSCHEDULED) {
-  null
-} else {
-  SyncSchedule(
-    schedule?.start,
-    requireNotNull(reason).code,
-    statusForSchedule(),
-    schedule?.comments,
-    null,
-    prisonCode,
-    destinationCode,
-    null,
-    logistics?.code,
-  )
-}
-
-fun Transfer.syncMovement(): SyncMovement? = movement?.let {
-  val legacyIdParts = it.syncIdsFromLegacyId()
-  SyncMovement(
-    legacyIdParts?.first,
-    legacyIdParts?.second,
-    it.occurredAt,
-    it.reason.code,
-    it.logistics.code,
-    prisonCode,
-    it.destinationCode,
-    null,
-    it.comments,
-  )
-}
+fun Transfer.syncSchedule() = SyncSchedule(
+  schedule?.start,
+  reason.code,
+  statusForSchedule(),
+  schedule?.comments,
+  null,
+  prisonCode,
+  destinationCode,
+  null,
+  logistics?.code,
+)
 
 fun Transfer.statusForWaitlist(): String = when (TransferStatus.Code.valueOf(status.code)) {
   TransferStatus.Code.CANCELLED -> SyncWaitlist.CANCELLED
@@ -139,4 +102,28 @@ fun Transfer.statusForSchedule(): String = when (TransferStatus.Code.valueOf(sta
   TransferStatus.Code.EXPIRED -> SyncSchedule.EXPIRED
   SCHEDULED -> SyncSchedule.SCHEDULED
   else -> SyncSchedule.PENDING
+}
+
+fun Movement.syncIdsFromLegacyId(): Pair<Long, Long>? {
+  val parts = legacyId?.split("_")
+  return if (parts?.size != 2) {
+    null
+  } else {
+    parts[0].toLong() to parts[1].toLong()
+  }
+}
+
+fun Movement.syncMovement(): SyncMovement {
+  val legacyIdParts = syncIdsFromLegacyId()
+  return SyncMovement(
+    legacyIdParts?.first,
+    legacyIdParts?.second,
+    occurredAt,
+    reason.code,
+    logistics.code,
+    transfer.prisonCode,
+    destinationCode,
+    null,
+    comments,
+  )
 }

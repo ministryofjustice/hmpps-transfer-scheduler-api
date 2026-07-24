@@ -5,10 +5,17 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.DataSource
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.IntegrationUrlBuilder.transferUrl
 import java.util.UUID
 
+data class TransferMovementInformation(
+  override val id: UUID,
+  val movementId: UUID,
+  override val source: DataSource,
+) : SourceInformation,
+  IdInformation
+
 data class TransferMovementMigrated(
-  override val additionalInformation: TransferInformation,
+  override val additionalInformation: TransferMovementInformation,
   override val personReference: PersonReference,
-) : DomainEvent<TransferInformation> {
+) : DomainEvent<TransferMovementInformation> {
   override val eventType: String = EVENT_TYPE
   override val description: String = DESCRIPTION
   override val detailUrl: String = transferUrl(id)
@@ -19,18 +26,19 @@ data class TransferMovementMigrated(
     operator fun invoke(
       personIdentifier: String,
       id: UUID,
+      movementId: UUID,
       dataSource: DataSource = SchedulerContext.get().source,
     ) = TransferMovementMigrated(
-      TransferInformation(id, dataSource),
+      TransferMovementInformation(id, movementId, dataSource),
       PersonReference.withIdentifier(personIdentifier),
     )
   }
 }
 
 data class TransferMovementRecorded(
-  override val additionalInformation: TransferInformation,
+  override val additionalInformation: TransferMovementInformation,
   override val personReference: PersonReference,
-) : DomainEvent<TransferInformation> {
+) : DomainEvent<TransferMovementInformation> {
   override val eventType: String = EVENT_TYPE
   override val description: String = DESCRIPTION
   override val detailUrl: String = transferUrl(id)
@@ -41,18 +49,19 @@ data class TransferMovementRecorded(
     operator fun invoke(
       personIdentifier: String,
       id: UUID,
+      movementId: UUID,
       dataSource: DataSource = SchedulerContext.get().source,
     ) = TransferMovementRecorded(
-      TransferInformation(id, dataSource),
+      TransferMovementInformation(id, movementId, dataSource),
       PersonReference.withIdentifier(personIdentifier),
     )
   }
 }
 
 data class TransferMovementDeleted(
-  override val additionalInformation: TransferInformation,
+  override val additionalInformation: TransferMovementInformation,
   override val personReference: PersonReference,
-) : DomainEvent<TransferInformation> {
+) : DomainEvent<TransferMovementInformation> {
   override val eventType: String = EVENT_TYPE
   override val description: String = DESCRIPTION
   override val detailUrl: String = transferUrl(id)
@@ -63,18 +72,19 @@ data class TransferMovementDeleted(
     operator fun invoke(
       personIdentifier: String,
       id: UUID,
+      movementId: UUID,
       dataSource: DataSource = SchedulerContext.get().source,
     ) = TransferMovementDeleted(
-      TransferInformation(id, dataSource),
+      TransferMovementInformation(id, movementId, dataSource),
       PersonReference.withIdentifier(personIdentifier),
     )
   }
 }
 
 data class TransferMovementLogisticsChanged(
-  override val additionalInformation: TransferInformation,
+  override val additionalInformation: TransferMovementInformation,
   override val personReference: PersonReference,
-) : DomainEvent<TransferInformation> {
+) : DomainEvent<TransferMovementInformation> {
   override val eventType: String = EVENT_TYPE
   override val description: String = DESCRIPTION
   override val detailUrl: String = transferUrl(id)
@@ -85,18 +95,19 @@ data class TransferMovementLogisticsChanged(
     operator fun invoke(
       personIdentifier: String,
       id: UUID,
+      movementId: UUID,
       dataSource: DataSource = SchedulerContext.get().source,
     ) = TransferMovementLogisticsChanged(
-      TransferInformation(id, dataSource),
+      TransferMovementInformation(id, movementId, dataSource),
       PersonReference.withIdentifier(personIdentifier),
     )
   }
 }
 
 data class TransferMovementRecategorised(
-  override val additionalInformation: TransferInformation,
+  override val additionalInformation: TransferMovementInformation,
   override val personReference: PersonReference,
-) : DomainEvent<TransferInformation> {
+) : DomainEvent<TransferMovementInformation> {
   override val eventType: String = EVENT_TYPE
   override val description: String = DESCRIPTION
   override val detailUrl: String = transferUrl(id)
@@ -107,18 +118,19 @@ data class TransferMovementRecategorised(
     operator fun invoke(
       personIdentifier: String,
       id: UUID,
+      movementId: UUID,
       dataSource: DataSource = SchedulerContext.get().source,
     ) = TransferMovementRecategorised(
-      TransferInformation(id, dataSource),
+      TransferMovementInformation(id, movementId, dataSource),
       PersonReference.withIdentifier(personIdentifier),
     )
   }
 }
 
 data class TransferMovementRelocated(
-  override val additionalInformation: TransferInformation,
+  override val additionalInformation: TransferMovementInformation,
   override val personReference: PersonReference,
-) : DomainEvent<TransferInformation> {
+) : DomainEvent<TransferMovementInformation> {
   override val eventType: String = EVENT_TYPE
   override val description: String = DESCRIPTION
   override val detailUrl: String = transferUrl(id)
@@ -129,9 +141,33 @@ data class TransferMovementRelocated(
     operator fun invoke(
       personIdentifier: String,
       id: UUID,
+      movementId: UUID,
       dataSource: DataSource = SchedulerContext.get().source,
     ) = TransferMovementRelocated(
-      TransferInformation(id, dataSource),
+      TransferMovementInformation(id, movementId, dataSource),
+      PersonReference.withIdentifier(personIdentifier),
+    )
+  }
+}
+
+data class TransferMovementOccurredAtChanged(
+  override val additionalInformation: TransferMovementInformation,
+  override val personReference: PersonReference,
+) : DomainEvent<TransferMovementInformation> {
+  override val eventType: String = EVENT_TYPE
+  override val description: String = DESCRIPTION
+  override val detailUrl: String = transferUrl(id)
+
+  companion object {
+    const val EVENT_TYPE = "person.transfer-movement.occurred-at-changed"
+    const val DESCRIPTION = "When a transfer movement occurred has been changed"
+    operator fun invoke(
+      personIdentifier: String,
+      id: UUID,
+      movementId: UUID,
+      dataSource: DataSource = SchedulerContext.get().source,
+    ) = TransferMovementOccurredAtChanged(
+      TransferMovementInformation(id, movementId, dataSource),
       PersonReference.withIdentifier(personIdentifier),
     )
   }

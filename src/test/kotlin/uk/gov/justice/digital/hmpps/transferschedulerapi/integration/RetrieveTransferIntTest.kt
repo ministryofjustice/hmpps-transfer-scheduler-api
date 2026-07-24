@@ -68,7 +68,6 @@ class RetrieveTransferIntTest(
     res verifyAgainst transfer
     assertThat(res.prison.name).isEqualTo(prison.name)
     assertThat(res.destination!!.name).isEqualTo(destination.name)
-    assertThat(res.movement).isNull()
   }
 
   @Test
@@ -85,7 +84,6 @@ class RetrieveTransferIntTest(
     assertThat(res.prison.name).isEqualTo(prison.name)
     assertThat(res.destination!!.name).isEqualTo(destination.name)
     assertThat(res.schedule).isNull()
-    assertThat(res.movement).isNull()
   }
 
   @Test
@@ -102,7 +100,6 @@ class RetrieveTransferIntTest(
     assertThat(res.prison.name).isEqualTo(prison.name)
     assertThat(res.destination!!.name).isEqualTo(destination.name)
     assertThat(res.plan).isNull()
-    assertThat(res.movement).isNull()
   }
 
   @Test
@@ -121,7 +118,6 @@ class RetrieveTransferIntTest(
     assertThat(res.destination!!.name).isEqualTo(destination.name)
     assertThat(res.plan).isNull()
     assertThat(res.schedule).isNull()
-    assertThat(res.movement).isNull()
   }
 
   private fun retrieveTransfer(

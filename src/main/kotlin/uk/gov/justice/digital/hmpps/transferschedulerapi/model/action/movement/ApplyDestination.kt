@@ -9,5 +9,5 @@ data class ApplyDestination(val destinationCode: String) : MovementAction {
     entity.applyDestination(this)
   }
 
-  override fun domainEvent(entity: Movement) = TransferMovementRelocated(entity.transfer.person.identifier, entity.id)
+  override fun domainEvent(entity: Movement) = TransferMovementRelocated(entity.transfer.person.identifier, entity.transfer.id, entity.id)
 }

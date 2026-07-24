@@ -17,5 +17,5 @@ data class ApplyPlanComments(override val comments: String?) :
     }
   }
 
-  override fun domainEvent(entity: Transfer) = PlanCommentsChanged(entity.person.identifier, entity.id)
+  override fun domainEvent(entity: Transfer) = PlanCommentsChanged(entity.person.identifier, entity.id, entity.stage)
 }

@@ -9,6 +9,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.context.set
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.TransferRepository
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.ReferenceDataRepository
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.MakeUnscheduled
 import uk.gov.justice.digital.hmpps.transferschedulerapi.service.PersonSummaryService
 import uk.gov.justice.digital.hmpps.transferschedulerapi.service.asEntity
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncTransferRequest
@@ -42,9 +43,14 @@ class TransferSync(
   }
 
   fun delete(id: UUID) {
-    transferRepository.findByIdOrNull(id)?.let {
+    transferRepository.findByIdOrNull(id)?.let { tr ->
       SchedulerContext.get().copy(username = SYSTEM_USERNAME).set()
-      transferRepository.delete(it)
+      val rdProvider = rdRepository.rdProvider()
+      if (tr.movement != null) {
+        tr.makeUnscheduled(MakeUnscheduled, rdProvider)
+      } else {
+        transferRepository.delete(tr)
+      }
     }
   }
 }

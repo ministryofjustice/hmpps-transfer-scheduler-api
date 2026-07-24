@@ -15,5 +15,5 @@ data class ApplyRequestedOn(val requestedOn: LocalDate) : TransferAction {
     }
   }
 
-  override fun domainEvent(entity: Transfer) = PlanRequestedOnChanged(entity.person.identifier, entity.id)
+  override fun domainEvent(entity: Transfer) = PlanRequestedOnChanged(entity.person.identifier, entity.id, entity.stage)
 }
