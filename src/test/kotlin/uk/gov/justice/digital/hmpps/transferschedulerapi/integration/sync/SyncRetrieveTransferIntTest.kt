@@ -14,6 +14,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerat
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.word
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.IntegrationTestBase
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperations
+import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.movement
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.referencedata.TransferPriorityCode
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
@@ -48,6 +49,19 @@ class SyncRetrieveTransferIntTest(
   @Test
   fun `404 - not found if uuid does not exist`() {
     retrieveTransfer(newUuid()).errorResponse(HttpStatus.NOT_FOUND)
+  }
+
+  @Test
+  fun `404 - not found if unscheduled transfer id provided`() {
+    val transfer = givenTransfer(
+      transfer(
+        statusCode = TransferStatus.Code.IN_TRANSIT,
+        movement = movement(),
+        schedule = null,
+        plan = null,
+      ),
+    )
+    retrieveTransfer(transfer.id).errorResponse(HttpStatus.NOT_FOUND)
   }
 
   @Test
@@ -124,7 +138,7 @@ class SyncRetrieveTransferIntTest(
     transfer verifyAgainst res
     assertThat(res.syncWaitlist?.waitListStatus).isEqualTo(SyncWaitlist.CANCELLED)
     assertThat(res.syncWaitlist?.outcomeReasonCode).isEqualTo(SyncWaitlist.OutcomeReasonCode.ADMI)
-    assertThat(res.syncSchedule?.eventStatus).isEqualTo(SyncSchedule.CANCELLED)
+    assertThat(res.syncSchedule.eventStatus).isEqualTo(SyncSchedule.CANCELLED)
   }
 
   private fun retrieveTransfer(

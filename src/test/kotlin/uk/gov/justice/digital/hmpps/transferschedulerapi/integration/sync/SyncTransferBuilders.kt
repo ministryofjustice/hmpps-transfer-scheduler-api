@@ -89,9 +89,8 @@ fun syncTransfer(
   dpsId: UUID? = null,
   eventId: Long = newId(),
   waitlist: SyncWaitlist? = null,
-  schedule: SyncSchedule? = syncSchedule(),
-  movement: SyncMovement? = null,
-) = SyncTransfer(dpsId, eventId, waitlist, schedule, movement)
+  schedule: SyncSchedule = syncSchedule(),
+) = SyncTransfer(dpsId, eventId, waitlist, schedule)
 
 fun syncUser(username: String = username(), activeCaseloadId: String? = prisonCode()) = SyncUser(username, activeCaseloadId)
 

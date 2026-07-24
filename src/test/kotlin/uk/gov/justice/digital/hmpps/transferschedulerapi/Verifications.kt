@@ -19,7 +19,7 @@ infix fun TransferModel.verifyAgainst(
   assertThat(id).isEqualTo(transfer.id)
   assertThat(person.identifier).isEqualTo(transfer.person.identifier)
   assertThat(status.code).isEqualTo(transfer.status.code)
-  assertThat(reason.code).isEqualTo(transfer.reason?.code)
+  assertThat(reason.code).isEqualTo(transfer.reason.code)
   assertThat(prison.code).isEqualTo(transfer.prisonCode)
   assertThat(destination?.code).isEqualTo(transfer.destinationCode)
   assertThat(logistics?.code).isEqualTo(transfer.logistics?.code)
@@ -43,7 +43,7 @@ infix fun ScheduleModel.verifyAgainst(schedule: ScheduleEntity) {
 }
 
 infix fun TransferEntity.verifyAgainst(request: TransferRequest) {
-  assertThat(reason?.code).isEqualTo(request.reasonCode)
+  assertThat(reason.code).isEqualTo(request.reasonCode)
   assertThat(destinationCode).isEqualTo(request.destinationCode)
   assertThat(logistics?.code).isEqualTo(request.logisticsCode)
   check(nullStateIsEqual(plan, request.plan)) { "Invalid plan state" }

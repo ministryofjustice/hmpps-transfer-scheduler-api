@@ -10,14 +10,11 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.context.SchedulerContex
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.DataSource
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.HmppsDomainEvent
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.IdGenerator.newUuid
-import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Movement
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Plan
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Schedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.publication
-import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferDeleted
-import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferMovementDeleted
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.IntegrationTestBase
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperations
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.movement
@@ -74,67 +71,63 @@ class SyncDeleteTransferIntTest(
     verifyEventPublications(
       transfer,
       setOf(
-        TransferDeleted(transfer.person.identifier, transfer.id, DataSource.NOMIS).publication(transfer.id),
+        TransferDeleted(transfer.person.identifier, transfer.id, transfer.stage, DataSource.NOMIS).publication(transfer.id),
       ),
     )
   }
 
   @Test
-  fun `204 no content - can delete a transfer with movement`() {
-    val transfer = givenTransfer(transfer(movement = movement()))
+  fun `204 no content - can delete a transfer with movement - movement becomes unscheduled`() {
+    val movement = movement()
+    val transfer = givenTransfer(
+      transfer(
+        destinationCode = movement.destinationCode,
+        reasonCode = movement.reasonCode,
+        logisticsCode = movement.logisticsCode,
+        movement = movement,
+      ),
+    )
     deleteTransfer(transfer.id).expectStatus().isNoContent
-    assertThat(findTransfer(transfer.id)).isNull()
+
+    val updated = requireNotNull(findTransfer(transfer.id))
+    assertThat(updated.stage).isEqualTo(TransferStage.UNSCHEDULED)
 
     verifyAudit(
-      transfer,
+      transfer.plan!!,
       RevisionType.DEL,
       setOf(
-        HmppsDomainEvent::class.simpleName!!,
         Transfer::class.simpleName!!,
         Schedule::class.simpleName!!,
         Plan::class.simpleName!!,
-        Movement::class.simpleName!!,
       ),
       SchedulerContext.get().copy(source = DataSource.NOMIS),
     )
-    verifyEventPublications(
-      transfer,
-      setOf(
-        TransferDeleted(transfer.person.identifier, transfer.id, DataSource.NOMIS).publication(transfer.id),
-        TransferMovementDeleted(transfer.person.identifier, transfer.id, DataSource.NOMIS).publication(transfer.id),
-      ),
-    )
-  }
-
-  @Test
-  fun `204 no content - can delete unscheduled transfer movement`() {
-    val transfer = givenTransfer(
-      transfer(
-        reasonCode = null,
-        destinationCode = null,
-        logisticsCode = null,
-        plan = null,
-        schedule = null,
-        statusCode = TransferStatus.Code.COMPLETED,
-        stage = TransferStage.UNSCHEDULED,
-        movement = movement(),
-      ),
-    )
-    deleteTransfer(transfer.id).expectStatus().isNoContent
-    assertThat(findTransfer(transfer.id)).isNull()
 
     verifyAudit(
-      transfer,
+      transfer.schedule!!,
       RevisionType.DEL,
-      setOf(HmppsDomainEvent::class.simpleName!!, Transfer::class.simpleName!!, Movement::class.simpleName!!),
+      setOf(
+        Transfer::class.simpleName!!,
+        Schedule::class.simpleName!!,
+        Plan::class.simpleName!!,
+      ),
       SchedulerContext.get().copy(source = DataSource.NOMIS),
     )
+
+    verifyAudit(
+      updated,
+      RevisionType.MOD,
+      setOf(
+        Transfer::class.simpleName!!,
+        Schedule::class.simpleName!!,
+        Plan::class.simpleName!!,
+      ),
+      SchedulerContext.get().copy(source = DataSource.NOMIS),
+    )
+
     verifyEventPublications(
       transfer,
-      setOf(
-        TransferDeleted(transfer.person.identifier, transfer.id, DataSource.NOMIS).publication(transfer.id),
-        TransferMovementDeleted(transfer.person.identifier, transfer.id, DataSource.NOMIS).publication(transfer.id),
-      ),
+      setOf(),
     )
   }
 

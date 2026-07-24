@@ -27,7 +27,7 @@ data class ScheduleTransfer(
     entity.applySchedule(this, rdProvider)
   }
 
-  override fun domainEvent(entity: Transfer) = TransferScheduled(entity.person.identifier, entity.id)
+  override fun domainEvent(entity: Transfer) = TransferScheduled(entity.person.identifier, entity.id, entity.stage)
 
   infix fun changes(schedule: Schedule?): Boolean = (schedule?.start?.truncatedTo(ChronoUnit.SECONDS) != start.truncatedTo(ChronoUnit.SECONDS)) || (schedule.comments != comments)
 }

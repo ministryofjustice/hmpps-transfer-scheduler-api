@@ -54,6 +54,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.A
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.CancelTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.CompleteTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ExpireTransfer
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.MakeUnscheduled
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.PlanTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ScheduleTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.TransferAction
@@ -85,7 +86,7 @@ import java.util.UUID
 final class Transfer(
   person: PersonSummary,
   prisonCode: String,
-  reason: TransferReason?,
+  reason: TransferReason,
   status: TransferStatus,
   destinationCode: String?,
   logistics: TransferLogistics?,
@@ -129,9 +130,10 @@ final class Transfer(
 
   @Fetch(FetchMode.JOIN)
   @Audited(targetAuditMode = NOT_AUDITED)
+  @NotNull
   @ManyToOne
-  @JoinColumn(name = "reason_id")
-  var reason: TransferReason? = reason
+  @JoinColumn(name = "reason_id", nullable = false)
+  var reason: TransferReason = reason
     private set
 
   @Size(max = 6)
@@ -151,12 +153,12 @@ final class Transfer(
     private set
 
   @NotAudited
-  @OneToOne(mappedBy = "transfer", cascade = [CascadeType.ALL])
+  @OneToOne(mappedBy = "transfer", cascade = [CascadeType.ALL], orphanRemoval = true)
   var plan: Plan? = null
     private set
 
   @NotAudited
-  @OneToOne(mappedBy = "transfer", cascade = [CascadeType.ALL])
+  @OneToOne(mappedBy = "transfer", cascade = [CascadeType.ALL], orphanRemoval = true)
   var schedule: Schedule? = null
     private set
 
@@ -180,12 +182,12 @@ final class Transfer(
   }
 
   override fun initialEvents(): Set<DomainEventPublication> = if (SchedulerContext.get().migratingData) {
-    setOf(TransferMigrated(person.identifier, id).publication(id))
+    setOf(TransferMigrated(person.identifier, id, stage).publication(id))
   } else {
     val event = when (TransferStatus.Code.valueOf(status.code)) {
-      PLANNING, READY_TO_SCHEDULE -> TransferPlanned(person.identifier, id)
-      SCHEDULED -> TransferScheduled(person.identifier, id)
-      else -> TransferRecorded(person.identifier, id)
+      PLANNING, READY_TO_SCHEDULE -> TransferPlanned(person.identifier, id, stage)
+      SCHEDULED -> TransferScheduled(person.identifier, id, stage)
+      else -> TransferRecorded(person.identifier, id, stage)
     }
     setOf(event.publication(id))
   }
@@ -195,7 +197,7 @@ final class Transfer(
   }.toSet()
 
   override fun deletionEvents(): Set<DomainEventPublication> = setOf(
-    TransferDeleted(person.identifier, id).publication(id),
+    TransferDeleted(person.identifier, id, stage).publication(id),
   )
 
   fun isReadyToSchedule(): Boolean = plan != null && logistics != null && destinationCode != null && schedule != null
@@ -225,8 +227,8 @@ final class Transfer(
   }
 
   fun applyReason(action: ApplyReason, rdProvider: RdProvider) = apply {
-    if (reason?.code != action.reasonCode) {
-      reason = action.reasonCode?.let { rdProvider.get(it) }
+    if (reason.code != action.reasonCode) {
+      reason = rdProvider.get(action.reasonCode)
       appliedActions += action
     }
   }
@@ -301,6 +303,20 @@ final class Transfer(
 
   fun applyLegacyId(legacyId: Long?) = apply {
     this.legacyId = legacyId
+  }
+
+  fun makeUnscheduled(action: MakeUnscheduled, rdProvider: RdProvider) = apply {
+    checkNotNull(movement)
+    withPlan(null, rdProvider)
+    withSchedule(null)
+    applyLegacyId(null)
+    stage = TransferStage.UNSCHEDULED
+    movement!!.also {
+      applyDestination(ApplyDestination(it.destinationCode))
+      applyReason(ApplyReason(it.reason.code), rdProvider)
+      applyLogistics(ApplyLogistics(it.logistics.code), rdProvider)
+    }
+    appliedActions += action
   }
 
   private fun PlanRequest.createNewPlan(transfer: Transfer, rdProvider: RdProvider) = Plan(transfer, requestedOn, rdProvider.get(priorityCode), comments)

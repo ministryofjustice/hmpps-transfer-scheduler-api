@@ -13,5 +13,5 @@ data class ApplyLogistics(val logisticsCode: String?) :
     updatePreScheduleStatus(entity, rdProvider)
   }
 
-  override fun domainEvent(entity: Transfer) = TransferLogisticsChanged(entity.person.identifier, entity.id)
+  override fun domainEvent(entity: Transfer) = TransferLogisticsChanged(entity.person.identifier, entity.id, entity.stage)
 }

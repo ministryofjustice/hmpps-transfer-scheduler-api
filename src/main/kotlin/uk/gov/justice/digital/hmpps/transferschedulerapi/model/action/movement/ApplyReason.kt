@@ -9,5 +9,5 @@ data class ApplyReason(val reasonCode: String) : MovementAction {
     entity.applyReason(this, rdProvider)
   }
 
-  override fun domainEvent(entity: Movement) = TransferMovementRecategorised(entity.transfer.person.identifier, entity.id)
+  override fun domainEvent(entity: Movement) = TransferMovementRecategorised(entity.transfer.person.identifier, entity.transfer.id, entity.id)
 }

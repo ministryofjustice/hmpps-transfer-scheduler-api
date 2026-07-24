@@ -19,5 +19,5 @@ data object CancelTransfer : TransferAction {
     entity.cancel(this, rdProvider)
   }
 
-  override fun domainEvent(entity: Transfer) = TransferCancelled(entity.person.identifier, entity.id)
+  override fun domainEvent(entity: Transfer) = TransferCancelled(entity.person.identifier, entity.id, entity.stage)
 }

@@ -110,7 +110,7 @@ class CreateTransferIntTest(
       SchedulerContext.get().copy(username = username, caseloadId = prison.code),
     )
 
-    verifyEventPublications(saved, setOf(TransferPlanned(person.prisonerNumber, saved.id).publication(saved.id)))
+    verifyEventPublications(saved, setOf(TransferPlanned(person.prisonerNumber, saved.id, saved.stage).publication(saved.id)))
   }
 
   @ParameterizedTest
@@ -153,7 +153,7 @@ class CreateTransferIntTest(
       SchedulerContext.get().copy(username = username, caseloadId = prison.code),
     )
 
-    verifyEventPublications(saved, setOf(TransferPlanned(person.prisonerNumber, saved.id).publication(saved.id)))
+    verifyEventPublications(saved, setOf(TransferPlanned(person.prisonerNumber, saved.id, saved.stage).publication(saved.id)))
   }
 
   @Test
@@ -186,7 +186,7 @@ class CreateTransferIntTest(
       SchedulerContext.get().copy(username = username, caseloadId = prison.code),
     )
 
-    verifyEventPublications(saved, setOf(TransferPlanned(person.prisonerNumber, saved.id).publication(saved.id)))
+    verifyEventPublications(saved, setOf(TransferPlanned(person.prisonerNumber, saved.id, saved.stage).publication(saved.id)))
   }
 
   @Test
@@ -214,7 +214,7 @@ class CreateTransferIntTest(
       SchedulerContext.get().copy(username = username, caseloadId = prison.code),
     )
 
-    verifyEventPublications(saved, setOf(TransferScheduled(person.prisonerNumber, saved.id).publication(saved.id)))
+    verifyEventPublications(saved, setOf(TransferScheduled(person.prisonerNumber, saved.id, saved.stage).publication(saved.id)))
   }
 
   private fun createTransfer(

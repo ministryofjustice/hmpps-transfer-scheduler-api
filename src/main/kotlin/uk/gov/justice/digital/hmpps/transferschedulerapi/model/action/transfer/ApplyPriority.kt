@@ -11,5 +11,5 @@ data class ApplyPriority(val priorityCode: String) : TransferAction {
     entity.plan?.applyPriority(this, rdProvider)
   }
 
-  override fun domainEvent(entity: Transfer) = TransferReprioritised(entity.person.identifier, entity.id)
+  override fun domainEvent(entity: Transfer) = TransferReprioritised(entity.person.identifier, entity.id, entity.stage)
 }

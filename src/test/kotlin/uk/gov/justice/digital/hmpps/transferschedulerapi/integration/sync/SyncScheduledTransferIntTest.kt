@@ -4,7 +4,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.hibernate.envers.RevisionType
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.http.HttpStatus
 import uk.gov.justice.digital.hmpps.transferschedulerapi.access.Roles
 import uk.gov.justice.digital.hmpps.transferschedulerapi.context.SchedulerContext
 import uk.gov.justice.digital.hmpps.transferschedulerapi.context.SchedulerContext.Companion.SYSTEM_USERNAME
@@ -58,12 +57,6 @@ class SyncScheduledTransferIntTest(
   }
 
   @Test
-  fun `400 bad request if schedule and movement are missing`() {
-    sendTransfer(personIdentifier(), syncTransfer(schedule = null, movement = null), syncUser())
-      .errorResponse(HttpStatus.BAD_REQUEST)
-  }
-
-  @Test
   fun `200 - can create a new scheduled transfer`() {
     val prisonCode = prisonCode()
     val prisoner = prisonerSearch.givenPrisoner(prisoner(prisonCode))
@@ -87,7 +80,7 @@ class SyncScheduledTransferIntTest(
 
     verifyEventPublications(
       saved,
-      setOf(TransferScheduled(prisoner.prisonerNumber, saved.id, DataSource.NOMIS).publication(saved.id)),
+      setOf(TransferScheduled(prisoner.prisonerNumber, saved.id, saved.stage, DataSource.NOMIS).publication(saved.id)),
     )
   }
 
@@ -97,7 +90,7 @@ class SyncScheduledTransferIntTest(
     val newDestination = prisonCode()
 
     val request =
-      transfer.toTestSyncModel().copy(syncSchedule = transfer.syncSchedule()!!.copy(toAgyLocId = newDestination))
+      transfer.toTestSyncModel().copy(syncSchedule = transfer.syncSchedule().copy(toAgyLocId = newDestination))
     val user = syncUser()
     val res = sendTransfer(transfer.person.identifier, request, user).successResponse<SyncTransferResponse>()
 
@@ -116,7 +109,7 @@ class SyncScheduledTransferIntTest(
 
     verifyEventPublications(
       saved,
-      setOf(TransferRelocated(transfer.person.identifier, saved.id, DataSource.NOMIS).publication(saved.id)),
+      setOf(TransferRelocated(transfer.person.identifier, saved.id, saved.stage, DataSource.NOMIS).publication(saved.id)),
     )
   }
 
@@ -125,7 +118,7 @@ class SyncScheduledTransferIntTest(
     val transfer = givenTransfer(transfer())
     val newReason = generateSequence { TransferReasonCode.randomCode() }.first { it != transfer.reason?.code }
 
-    val request = transfer.toTestSyncModel().copy(syncSchedule = transfer.syncSchedule()!!.copy(eventSubType = newReason))
+    val request = transfer.toTestSyncModel().copy(syncSchedule = transfer.syncSchedule().copy(eventSubType = newReason))
     val user = syncUser()
     val res = sendTransfer(transfer.person.identifier, request, user).successResponse<SyncTransferResponse>()
 
@@ -144,7 +137,7 @@ class SyncScheduledTransferIntTest(
 
     verifyEventPublications(
       saved,
-      setOf(TransferRecategorised(transfer.person.identifier, saved.id, DataSource.NOMIS).publication(saved.id)),
+      setOf(TransferRecategorised(transfer.person.identifier, saved.id, saved.stage, DataSource.NOMIS).publication(saved.id)),
     )
   }
 
@@ -153,7 +146,7 @@ class SyncScheduledTransferIntTest(
     val transfer = givenTransfer(transfer())
     val newLogistics = generateSequence { TransferLogisticsCode.randomCode() }.first { it != transfer.logistics?.code }
 
-    val request = transfer.toTestSyncModel().copy(syncSchedule = transfer.syncSchedule()!!.copy(escortCode = newLogistics))
+    val request = transfer.toTestSyncModel().copy(syncSchedule = transfer.syncSchedule().copy(escortCode = newLogistics))
     val user = syncUser()
     val res = sendTransfer(transfer.person.identifier, request, user).successResponse<SyncTransferResponse>()
 
@@ -172,7 +165,7 @@ class SyncScheduledTransferIntTest(
 
     verifyEventPublications(
       saved,
-      setOf(TransferLogisticsChanged(transfer.person.identifier, saved.id, DataSource.NOMIS).publication(saved.id)),
+      setOf(TransferLogisticsChanged(transfer.person.identifier, saved.id, saved.stage, DataSource.NOMIS).publication(saved.id)),
     )
   }
 
@@ -180,7 +173,7 @@ class SyncScheduledTransferIntTest(
   fun `200 - can reschedule a transfer`() {
     val transfer = givenTransfer(transfer())
 
-    val request = transfer.toTestSyncModel().copy(syncSchedule = transfer.syncSchedule()!!.copy(start = LocalDateTime.now().plusDays(7)))
+    val request = transfer.toTestSyncModel().copy(syncSchedule = transfer.syncSchedule().copy(start = LocalDateTime.now().plusDays(7)))
     val user = syncUser()
     val res = sendTransfer(transfer.person.identifier, request, user).successResponse<SyncTransferResponse>()
 
@@ -199,7 +192,7 @@ class SyncScheduledTransferIntTest(
 
     verifyEventPublications(
       saved.schedule!!,
-      setOf(TransferRescheduled(transfer.person.identifier, saved.id, DataSource.NOMIS).publication(saved.id)),
+      setOf(TransferRescheduled(transfer.person.identifier, saved.id, saved.stage, DataSource.NOMIS).publication(saved.id)),
     )
   }
 
