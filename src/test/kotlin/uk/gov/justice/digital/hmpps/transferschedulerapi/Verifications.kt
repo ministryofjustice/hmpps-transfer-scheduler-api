@@ -2,6 +2,8 @@ package uk.gov.justice.digital.hmpps.transferschedulerapi
 
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.within
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Movement
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.MovementRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.PlanRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.ScheduleRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferRequest
@@ -19,7 +21,7 @@ infix fun TransferModel.verifyAgainst(
   assertThat(id).isEqualTo(transfer.id)
   assertThat(person.identifier).isEqualTo(transfer.person.identifier)
   assertThat(status.code).isEqualTo(transfer.status.code)
-  assertThat(reason.code).isEqualTo(transfer.reason?.code)
+  assertThat(reason.code).isEqualTo(transfer.reason.code)
   assertThat(prison.code).isEqualTo(transfer.prisonCode)
   assertThat(destination?.code).isEqualTo(transfer.destinationCode)
   assertThat(logistics?.code).isEqualTo(transfer.logistics?.code)
@@ -43,7 +45,7 @@ infix fun ScheduleModel.verifyAgainst(schedule: ScheduleEntity) {
 }
 
 infix fun TransferEntity.verifyAgainst(request: TransferRequest) {
-  assertThat(reason?.code).isEqualTo(request.reasonCode)
+  assertThat(reason.code).isEqualTo(request.reasonCode)
   assertThat(destinationCode).isEqualTo(request.destinationCode)
   assertThat(logistics?.code).isEqualTo(request.logisticsCode)
   check(nullStateIsEqual(plan, request.plan)) { "Invalid plan state" }
@@ -61,6 +63,14 @@ infix fun PlanEntity.verifyAgainst(request: PlanRequest) {
 infix fun ScheduleEntity.verifyAgainst(request: ScheduleRequest) {
   assertThat(start.truncatedTo(ChronoUnit.SECONDS))
     .isCloseTo(request.start.truncatedTo(ChronoUnit.SECONDS), within(1, ChronoUnit.SECONDS))
+  assertThat(comments).isEqualTo(request.comments)
+}
+
+infix fun Movement.verifyAgainst(request: MovementRequest) {
+  assertThat(occurredAt.truncatedTo(ChronoUnit.SECONDS)).isEqualTo(request.occurredAt.truncatedTo(ChronoUnit.SECONDS))
+  assertThat(reason.code).isEqualTo(request.reasonCode)
+  assertThat(destinationCode).isEqualTo(request.destinationCode)
+  assertThat(logistics.code).isEqualTo(request.logisticsCode)
   assertThat(comments).isEqualTo(request.comments)
 }
 

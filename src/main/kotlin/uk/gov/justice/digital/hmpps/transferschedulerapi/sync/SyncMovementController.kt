@@ -14,28 +14,28 @@ import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.transferschedulerapi.access.Roles
 import uk.gov.justice.digital.hmpps.transferschedulerapi.config.OpenApiTags
+import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.internal.MovementSync
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.internal.RetrieveForSync
-import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.internal.TransferSync
 import java.util.UUID
 
 @Tag(name = OpenApiTags.SYNC)
 @RestController
-@RequestMapping("sync/transfers")
+@RequestMapping("sync/transfer-movements")
 @PreAuthorize("hasRole('${Roles.TRANSFER_SYNC}')")
-class SyncController(
-  private val transfer: TransferSync,
+class SyncMovementController(
+  private val movement: MovementSync,
   private val retrieve: RetrieveForSync,
 ) {
   @PutMapping("/{personIdentifier}")
-  fun syncTransfer(
+  fun syncMovement(
     @PathVariable personIdentifier: String,
-    @Valid @RequestBody request: SyncTransferRequest,
-  ): SyncTransferResponse = transfer.sync(personIdentifier, request)
+    @Valid @RequestBody request: SyncMovementRequest,
+  ): ReferenceId = movement.sync(personIdentifier, request)
 
   @GetMapping("/{id}")
-  fun getTransfer(@PathVariable id: UUID): SyncTransfer = retrieve.transfer(id)
+  fun getMovement(@PathVariable id: UUID): SyncMovement = retrieve.movement(id)
 
   @DeleteMapping("/{id}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  fun deleteTransfer(@PathVariable id: UUID) = transfer.delete(id)
+  fun deleteMovement(@PathVariable id: UUID) = movement.delete(id)
 }

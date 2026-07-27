@@ -5,7 +5,6 @@ import jakarta.persistence.Entity
 import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
-import jakarta.persistence.MapsId
 import jakarta.persistence.OneToOne
 import jakarta.persistence.PostLoad
 import jakarta.persistence.Table
@@ -27,6 +26,8 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferMovementR
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.MovementRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.movement.ApplyDestination
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.movement.ApplyLogistics
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.movement.ApplyMovementComments
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.movement.ApplyOccurredAt
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.movement.ApplyReason
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.movement.MovementAction
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.StringLegacyIdRequest
@@ -55,9 +56,8 @@ final class Movement(
   override var version: Int? = null
     private set
 
-  @MapsId
   @OneToOne
-  @JoinColumn(name = "id", nullable = false)
+  @JoinColumn(name = "transfer_id", nullable = false)
   var transfer: Transfer = transfer
     private set
 
@@ -104,25 +104,38 @@ final class Movement(
   }
 
   override fun initialEvents(): Set<DomainEventPublication> = if (SchedulerContext.get().migratingData) {
-    setOf(TransferMovementMigrated(transfer.person.identifier, id).publication(id))
+    setOf(TransferMovementMigrated(transfer.person.identifier, transfer.id, id).publication(id))
   } else {
-    setOf(TransferMovementRecorded(transfer.person.identifier, id).publication(id))
+    setOf(TransferMovementRecorded(transfer.person.identifier, transfer.id, id).publication(id))
   }
 
   override fun domainEvents(): Set<DomainEventPublication> = appliedActions.mapNotNull {
     it.domainEvent(this)?.publication(id)
   }.toSet()
 
-  override fun deletionEvents(): Set<DomainEventPublication> = setOf(TransferMovementDeleted(transfer.person.identifier, id).publication(id))
+  override fun deletionEvents(): Set<DomainEventPublication> = setOf(TransferMovementDeleted(transfer.person.identifier, transfer.id, id).publication(id))
 
   fun match(request: MovementRequest, rdProvider: RdProvider) = apply {
-    occurredAt = request.occurredAt
+    applyOccurredAt(ApplyOccurredAt(request.occurredAt))
     applyDestination(ApplyDestination(request.destinationCode))
     applyReason(ApplyReason(request.reasonCode), rdProvider)
     applyLogistics(ApplyLogistics(request.logisticsCode), rdProvider)
-    comments = request.comments
+    applyComments(ApplyMovementComments(request.comments))
     if (request is StringLegacyIdRequest) {
       legacyId = request.legacyId
+    }
+  }
+
+  fun applyTransfer(transfer: Transfer) {
+    if (transfer.id != this.transfer.id) {
+      this.transfer = transfer
+    }
+  }
+
+  fun applyOccurredAt(action: ApplyOccurredAt) = apply {
+    if (action changes this) {
+      occurredAt = action.occurredAt
+      appliedActions += action
     }
   }
 
@@ -143,6 +156,13 @@ final class Movement(
   fun applyLogistics(action: ApplyLogistics, rdProvider: RdProvider) = apply {
     if (logistics.code != action.logisticsCode) {
       logistics = rdProvider.get(action.logisticsCode)
+      appliedActions += action
+    }
+  }
+
+  fun applyComments(action: ApplyMovementComments) = apply {
+    if (action changes comments) {
+      comments = action.comments
       appliedActions += action
     }
   }

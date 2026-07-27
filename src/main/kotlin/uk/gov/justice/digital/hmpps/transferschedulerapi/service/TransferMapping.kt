@@ -15,7 +15,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.NumericLegacyIdReq
 fun TransferRequest.asEntity(person: PersonSummary, rdProvider: RdProvider) = uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer(
   person,
   requireNotNull(person.prisonCode),
-  reasonCode?.let { rdProvider.get(it) },
+  rdProvider.get(reasonCode),
   rdProvider.get(initialStatusCode().name),
   destinationCode,
   logisticsCode?.let { rdProvider.get(it) },
@@ -24,7 +24,6 @@ fun TransferRequest.asEntity(person: PersonSummary, rdProvider: RdProvider) = uk
 )
   .withPlan(plan, rdProvider)
   .withSchedule(schedule)
-  .withMovement(movement, rdProvider)
 
 fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer.asModel(prisonProvider: PrisonProvider) = Transfer(
   id,

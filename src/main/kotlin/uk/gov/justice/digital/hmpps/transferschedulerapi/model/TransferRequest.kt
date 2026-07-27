@@ -6,12 +6,11 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 
 interface TransferRequest {
-  val reasonCode: String?
+  val reasonCode: String
   val destinationCode: String?
   val logisticsCode: String?
   val plan: PlanRequest?
   val schedule: ScheduleRequest?
-  val movement: MovementRequest?
 
   fun initialStatusCode(): TransferStatus.Code
   fun initialStage(): TransferStage

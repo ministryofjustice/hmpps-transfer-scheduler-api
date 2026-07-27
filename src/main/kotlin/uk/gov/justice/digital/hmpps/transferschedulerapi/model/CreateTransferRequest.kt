@@ -12,7 +12,6 @@ data class CreateTransferRequest(
   override val plan: CreatePlanRequest?,
   override val schedule: CreateScheduleRequest?,
 ) : TransferRequest {
-  override val movement: MovementRequest? = null
 
   override fun initialStatusCode(): TransferStatus.Code = when {
     plan == null -> TransferStatus.Code.SCHEDULED

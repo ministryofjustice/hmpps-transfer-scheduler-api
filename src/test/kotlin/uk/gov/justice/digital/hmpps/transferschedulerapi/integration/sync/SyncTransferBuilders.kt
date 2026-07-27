@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.hmpps.transferschedulerapi.integration.sync
 
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Movement
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.newId
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.prisonCode
@@ -9,12 +10,12 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.referenceda
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.referencedata.TransferPriorityCode
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.referencedata.TransferReasonCode
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncMovement
+import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncMovementRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncSchedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncTransferRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncUser
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncWaitlist
-import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.internal.syncSchedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.internal.toSyncModel
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -64,6 +65,7 @@ fun syncSchedule(
 )
 
 fun syncMovement(
+  dpsTransferId: UUID? = null,
   offenderBookId: Long = newId(),
   movementSeq: Long = newId(),
   occurredAt: LocalDateTime = LocalDateTime.now(),
@@ -73,7 +75,10 @@ fun syncMovement(
   toAgyLocId: String = prisonCode(),
   active: Boolean = Random.nextBoolean(),
   comments: String? = word(30),
+  dpsId: UUID? = null,
 ) = SyncMovement(
+  dpsId,
+  dpsTransferId,
   offenderBookId,
   movementSeq,
   occurredAt,
@@ -89,9 +94,8 @@ fun syncTransfer(
   dpsId: UUID? = null,
   eventId: Long = newId(),
   waitlist: SyncWaitlist? = null,
-  schedule: SyncSchedule? = syncSchedule(),
-  movement: SyncMovement? = null,
-) = SyncTransfer(dpsId, eventId, waitlist, schedule, movement)
+  schedule: SyncSchedule = syncSchedule(),
+) = SyncTransfer(dpsId, eventId, waitlist, schedule)
 
 fun syncUser(username: String = username(), activeCaseloadId: String? = prisonCode()) = SyncUser(username, activeCaseloadId)
 
@@ -105,4 +109,32 @@ fun syncTransferRequest(
   occurredAt = occurredAt,
 )
 
+fun syncMovementRequest(
+  syncMovement: SyncMovement = syncMovement(),
+  syncUser: SyncUser = syncUser(),
+  occurredAt: LocalDateTime = LocalDateTime.now(),
+) = SyncMovementRequest(occurredAt, syncUser, syncMovement)
+
 fun Transfer.toTestSyncModel(): SyncTransfer = toSyncModel { _ -> emptyList() }
+
+fun Transfer.movementSync(active: Boolean = Random.nextBoolean()) = movement?.movementSync(active) ?: syncMovement(
+  dpsId = null,
+  dpsTransferId = id,
+  movementReasonCode = reason.code,
+  escortCode = checkNotNull(logistics?.code),
+  fromAgyLocId = prisonCode,
+  toAgyLocId = checkNotNull(destinationCode),
+  active = active,
+)
+
+fun Movement.movementSync(active: Boolean = Random.nextBoolean()) = syncMovement(
+  dpsId = id,
+  dpsTransferId = transfer.id,
+  occurredAt = occurredAt,
+  movementReasonCode = reason.code,
+  escortCode = logistics.code,
+  fromAgyLocId = transfer.prisonCode,
+  toAgyLocId = destinationCode,
+  comments = comments,
+  active = active,
+)

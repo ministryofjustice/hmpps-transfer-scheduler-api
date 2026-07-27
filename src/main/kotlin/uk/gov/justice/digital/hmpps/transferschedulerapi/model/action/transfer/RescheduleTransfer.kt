@@ -18,7 +18,7 @@ data class RescheduleTransfer(
     entity.schedule?.reschedule(this)
   }
 
-  override fun domainEvent(entity: Transfer) = TransferRescheduled(entity.person.identifier, entity.id)
+  override fun domainEvent(entity: Transfer) = TransferRescheduled(entity.person.identifier, entity.id, entity.stage)
 
   infix fun changes(schedule: Schedule?): Boolean = (schedule?.start?.truncatedTo(ChronoUnit.SECONDS) != start.truncatedTo(ChronoUnit.SECONDS))
 }

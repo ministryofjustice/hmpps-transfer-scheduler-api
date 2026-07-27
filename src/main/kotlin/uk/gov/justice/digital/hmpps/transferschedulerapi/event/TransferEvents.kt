@@ -3,10 +3,12 @@ package uk.gov.justice.digital.hmpps.transferschedulerapi.event
 import uk.gov.justice.digital.hmpps.transferschedulerapi.context.SchedulerContext
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.DataSource
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.IntegrationUrlBuilder.transferUrl
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
 import java.util.UUID
 
 data class TransferInformation(
   override val id: UUID,
+  val stage: TransferStage,
   override val source: DataSource,
 ) : SourceInformation,
   IdInformation
@@ -25,9 +27,10 @@ data class TransferMigrated(
     operator fun invoke(
       personIdentifier: String,
       id: UUID,
+      stage: TransferStage,
       dataSource: DataSource = SchedulerContext.get().source,
     ) = TransferMigrated(
-      TransferInformation(id, dataSource),
+      TransferInformation(id, stage, dataSource),
       PersonReference.withIdentifier(personIdentifier),
     )
   }
@@ -47,9 +50,10 @@ data class TransferRecorded(
     operator fun invoke(
       personIdentifier: String,
       id: UUID,
+      stage: TransferStage,
       dataSource: DataSource = SchedulerContext.get().source,
     ) = TransferRecorded(
-      TransferInformation(id, dataSource),
+      TransferInformation(id, stage, dataSource),
       PersonReference.withIdentifier(personIdentifier),
     )
   }
@@ -69,9 +73,10 @@ data class TransferDeleted(
     operator fun invoke(
       personIdentifier: String,
       id: UUID,
+      stage: TransferStage,
       dataSource: DataSource = SchedulerContext.get().source,
     ) = TransferDeleted(
-      TransferInformation(id, dataSource),
+      TransferInformation(id, stage, dataSource),
       PersonReference.withIdentifier(personIdentifier),
     )
   }
@@ -91,9 +96,10 @@ data class TransferPlanned(
     operator fun invoke(
       personIdentifier: String,
       id: UUID,
+      stage: TransferStage,
       dataSource: DataSource = SchedulerContext.get().source,
     ) = TransferPlanned(
-      TransferInformation(id, dataSource),
+      TransferInformation(id, stage, dataSource),
       PersonReference.withIdentifier(personIdentifier),
     )
   }
@@ -113,9 +119,10 @@ data class TransferScheduled(
     operator fun invoke(
       personIdentifier: String,
       id: UUID,
+      stage: TransferStage,
       dataSource: DataSource = SchedulerContext.get().source,
     ) = TransferScheduled(
-      TransferInformation(id, dataSource),
+      TransferInformation(id, stage, dataSource),
       PersonReference.withIdentifier(personIdentifier),
     )
   }
@@ -135,9 +142,10 @@ data class TransferCancelled(
     operator fun invoke(
       personIdentifier: String,
       id: UUID,
+      stage: TransferStage,
       dataSource: DataSource = SchedulerContext.get().source,
     ) = TransferCancelled(
-      TransferInformation(id, dataSource),
+      TransferInformation(id, stage, dataSource),
       PersonReference.withIdentifier(personIdentifier),
     )
   }
@@ -157,9 +165,10 @@ data class TransferExpired(
     operator fun invoke(
       personIdentifier: String,
       id: UUID,
+      stage: TransferStage,
       dataSource: DataSource = SchedulerContext.get().source,
     ) = TransferExpired(
-      TransferInformation(id, dataSource),
+      TransferInformation(id, stage, dataSource),
       PersonReference.withIdentifier(personIdentifier),
     )
   }
@@ -179,9 +188,10 @@ data class TransferCompleted(
     operator fun invoke(
       personIdentifier: String,
       id: UUID,
+      stage: TransferStage,
       dataSource: DataSource = SchedulerContext.get().source,
     ) = TransferCompleted(
-      TransferInformation(id, dataSource),
+      TransferInformation(id, stage, dataSource),
       PersonReference.withIdentifier(personIdentifier),
     )
   }
@@ -201,9 +211,10 @@ data class TransferRecategorised(
     operator fun invoke(
       personIdentifier: String,
       id: UUID,
+      stage: TransferStage,
       dataSource: DataSource = SchedulerContext.get().source,
     ) = TransferRecategorised(
-      TransferInformation(id, dataSource),
+      TransferInformation(id, stage, dataSource),
       PersonReference.withIdentifier(personIdentifier),
     )
   }
@@ -223,9 +234,10 @@ data class TransferRelocated(
     operator fun invoke(
       personIdentifier: String,
       id: UUID,
+      stage: TransferStage,
       dataSource: DataSource = SchedulerContext.get().source,
     ) = TransferRelocated(
-      TransferInformation(id, dataSource),
+      TransferInformation(id, stage, dataSource),
       PersonReference.withIdentifier(personIdentifier),
     )
   }
@@ -245,9 +257,10 @@ data class TransferRescheduled(
     operator fun invoke(
       personIdentifier: String,
       id: UUID,
+      stage: TransferStage,
       dataSource: DataSource = SchedulerContext.get().source,
     ) = TransferRescheduled(
-      TransferInformation(id, dataSource),
+      TransferInformation(id, stage, dataSource),
       PersonReference.withIdentifier(personIdentifier),
     )
   }
@@ -267,9 +280,10 @@ data class TransferReprioritised(
     operator fun invoke(
       personIdentifier: String,
       id: UUID,
+      stage: TransferStage,
       dataSource: DataSource = SchedulerContext.get().source,
     ) = TransferReprioritised(
-      TransferInformation(id, dataSource),
+      TransferInformation(id, stage, dataSource),
       PersonReference.withIdentifier(personIdentifier),
     )
   }
@@ -289,9 +303,10 @@ data class TransferLogisticsChanged(
     operator fun invoke(
       personIdentifier: String,
       id: UUID,
+      stage: TransferStage,
       dataSource: DataSource = SchedulerContext.get().source,
     ) = TransferLogisticsChanged(
-      TransferInformation(id, dataSource),
+      TransferInformation(id, stage, dataSource),
       PersonReference.withIdentifier(personIdentifier),
     )
   }
@@ -311,9 +326,10 @@ data class TransferMovedToPlanning(
     operator fun invoke(
       personIdentifier: String,
       id: UUID,
+      stage: TransferStage,
       dataSource: DataSource = SchedulerContext.get().source,
     ) = TransferMovedToPlanning(
-      TransferInformation(id, dataSource),
+      TransferInformation(id, stage, dataSource),
       PersonReference.withIdentifier(personIdentifier),
     )
   }
@@ -333,9 +349,10 @@ data class TransferInTransit(
     operator fun invoke(
       personIdentifier: String,
       id: UUID,
+      stage: TransferStage,
       dataSource: DataSource = SchedulerContext.get().source,
     ) = TransferInTransit(
-      TransferInformation(id, dataSource),
+      TransferInformation(id, stage, dataSource),
       PersonReference.withIdentifier(personIdentifier),
     )
   }
@@ -355,9 +372,10 @@ data class PlanRequestedOnChanged(
     operator fun invoke(
       personIdentifier: String,
       id: UUID,
+      stage: TransferStage,
       dataSource: DataSource = SchedulerContext.get().source,
     ) = PlanRequestedOnChanged(
-      TransferInformation(id, dataSource),
+      TransferInformation(id, stage, dataSource),
       PersonReference.withIdentifier(personIdentifier),
     )
   }
@@ -377,9 +395,10 @@ data class PlanCommentsChanged(
     operator fun invoke(
       personIdentifier: String,
       id: UUID,
+      stage: TransferStage,
       dataSource: DataSource = SchedulerContext.get().source,
     ) = PlanCommentsChanged(
-      TransferInformation(id, dataSource),
+      TransferInformation(id, stage, dataSource),
       PersonReference.withIdentifier(personIdentifier),
     )
   }
@@ -399,9 +418,10 @@ data class ScheduleCommentsChanged(
     operator fun invoke(
       personIdentifier: String,
       id: UUID,
+      stage: TransferStage,
       dataSource: DataSource = SchedulerContext.get().source,
     ) = ScheduleCommentsChanged(
-      TransferInformation(id, dataSource),
+      TransferInformation(id, stage, dataSource),
       PersonReference.withIdentifier(personIdentifier),
     )
   }

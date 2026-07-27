@@ -113,7 +113,7 @@ class PlanModificationsIntTest(
     verifyEventPublications(
       saved,
       setOf(
-        TransferReprioritised(saved.transfer.person.identifier, saved.id).publication(saved.id),
+        TransferReprioritised(saved.transfer.person.identifier, saved.id, saved.transfer.stage).publication(saved.id),
       ),
     )
   }
@@ -199,7 +199,7 @@ class PlanModificationsIntTest(
     verifyEventPublications(
       saved,
       setOf(
-        TransferMovedToPlanning(saved.person.identifier, saved.id).publication(saved.id),
+        TransferMovedToPlanning(saved.person.identifier, saved.id, saved.stage).publication(saved.id),
       ),
     )
   }
@@ -252,10 +252,10 @@ class PlanModificationsIntTest(
     verifyEventPublications(
       saved,
       setOf(
-        TransferMovedToPlanning(saved.person.identifier, saved.id).publication(saved.id),
-        TransferReprioritised(saved.person.identifier, saved.id).publication(saved.id),
-        PlanCommentsChanged(saved.person.identifier, saved.id).publication(saved.id),
-        PlanRequestedOnChanged(saved.person.identifier, saved.id).publication(saved.id),
+        TransferMovedToPlanning(saved.person.identifier, saved.id, saved.stage).publication(saved.id),
+        TransferReprioritised(saved.person.identifier, saved.id, saved.stage).publication(saved.id),
+        PlanCommentsChanged(saved.person.identifier, saved.id, saved.stage).publication(saved.id),
+        PlanRequestedOnChanged(saved.person.identifier, saved.id, saved.stage).publication(saved.id),
       ),
     )
   }
@@ -296,7 +296,7 @@ class PlanModificationsIntTest(
     verifyEventPublications(
       saved,
       setOf(
-        TransferScheduled(saved.person.identifier, saved.id).publication(saved.id),
+        TransferScheduled(saved.person.identifier, saved.id, saved.stage).publication(saved.id),
       ),
     )
   }
@@ -333,7 +333,7 @@ class PlanModificationsIntTest(
     verifyEventPublications(
       saved.plan!!,
       setOf(
-        PlanRequestedOnChanged(saved.person.identifier, saved.id).publication(saved.id),
+        PlanRequestedOnChanged(saved.person.identifier, saved.id, saved.stage).publication(saved.id),
       ),
     )
   }
@@ -370,7 +370,7 @@ class PlanModificationsIntTest(
     verifyEventPublications(
       saved.plan!!,
       setOf(
-        PlanCommentsChanged(saved.person.identifier, saved.id).publication(saved.id),
+        PlanCommentsChanged(saved.person.identifier, saved.id, saved.stage).publication(saved.id),
       ),
     )
   }
@@ -409,7 +409,7 @@ class PlanModificationsIntTest(
     verifyEventPublications(
       saved,
       setOf(
-        TransferCancelled(saved.person.identifier, saved.id).publication(saved.id),
+        TransferCancelled(saved.person.identifier, saved.id, saved.stage).publication(saved.id),
       ),
     )
   }

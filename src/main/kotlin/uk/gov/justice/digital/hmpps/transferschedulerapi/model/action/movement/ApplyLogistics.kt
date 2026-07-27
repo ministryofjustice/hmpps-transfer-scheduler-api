@@ -9,5 +9,5 @@ data class ApplyLogistics(val logisticsCode: String) : MovementAction {
     entity.applyLogistics(this, rdProvider)
   }
 
-  override fun domainEvent(entity: Movement) = TransferMovementLogisticsChanged(entity.transfer.person.identifier, entity.id)
+  override fun domainEvent(entity: Movement) = TransferMovementLogisticsChanged(entity.transfer.person.identifier, entity.transfer.id, entity.id)
 }

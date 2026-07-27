@@ -17,5 +17,5 @@ data object ExpireTransfer : TransferAction {
     entity.expire(this, rdProvider)
   }
 
-  override fun domainEvent(entity: Transfer) = TransferExpired(entity.person.identifier, entity.id)
+  override fun domainEvent(entity: Transfer) = TransferExpired(entity.person.identifier, entity.id, entity.stage)
 }

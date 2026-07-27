@@ -9,10 +9,11 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.context.set
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.TransferRepository
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.ReferenceDataRepository
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.MakeUnscheduled
 import uk.gov.justice.digital.hmpps.transferschedulerapi.service.PersonSummaryService
 import uk.gov.justice.digital.hmpps.transferschedulerapi.service.asEntity
+import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.ReferenceId
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncTransferRequest
-import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncTransferResponse
 import java.util.UUID
 
 @Transactional
@@ -22,7 +23,7 @@ class TransferSync(
   private val personSummaryService: PersonSummaryService,
   private val transferRepository: TransferRepository,
 ) {
-  fun sync(personIdentifier: String, request: SyncTransferRequest): SyncTransferResponse = with(request) {
+  fun sync(personIdentifier: String, request: SyncTransferRequest): ReferenceId = with(request) {
     SchedulerContext.get().copy(
       requestAt = occurredAt,
       username = syncUser.username,
@@ -36,15 +37,17 @@ class TransferSync(
       )
       ?.updateFrom(transfer, person, rdRepository.rdProvider())
       ?: transferRepository.save(transfer.asEntity(person, rdRepository.rdProvider()))
-
-    val legacyIdParts = saved.movement?.syncIdsFromLegacyId()
-    SyncTransferResponse(saved.id, saved.legacyId, legacyIdParts?.first, legacyIdParts?.second)
+    ReferenceId(saved.id)
   }
 
   fun delete(id: UUID) {
-    transferRepository.findByIdOrNull(id)?.let {
+    transferRepository.findByIdOrNull(id)?.let { tr ->
       SchedulerContext.get().copy(username = SYSTEM_USERNAME).set()
-      transferRepository.delete(it)
+      if (tr.movement != null) {
+        tr.makeUnscheduled(MakeUnscheduled)
+      } else {
+        transferRepository.delete(tr)
+      }
     }
   }
 }

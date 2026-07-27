@@ -78,10 +78,10 @@ class TransferOperationsImpl(
       Transfer(
         pp(personIdentifier, prisonCode),
         prisonCode,
-        reasonCode?.let { rd.get(it) },
+        rd.get(requireNotNull(reasonCode ?: movement?.reasonCode) { "Reason must be provided" }),
         rd.get(statusCode.name),
-        destinationCode,
-        logisticsCode?.let { rd.get(it) },
+        destinationCode ?: movement?.destinationCode,
+        (logisticsCode ?: movement?.logisticsCode)?.let { rd.get(it) },
         stage,
         legacyId,
         id,

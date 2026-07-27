@@ -17,5 +17,5 @@ data class ApplyScheduleComments(override val comments: String?) :
     }
   }
 
-  override fun domainEvent(entity: Transfer) = ScheduleCommentsChanged(entity.person.identifier, entity.id)
+  override fun domainEvent(entity: Transfer) = ScheduleCommentsChanged(entity.person.identifier, entity.id, entity.stage)
 }
