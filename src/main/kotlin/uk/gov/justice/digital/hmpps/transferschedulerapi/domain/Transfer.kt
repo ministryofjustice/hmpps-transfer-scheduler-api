@@ -305,16 +305,16 @@ final class Transfer(
     this.legacyId = legacyId
   }
 
-  fun makeUnscheduled(action: MakeUnscheduled, rdProvider: RdProvider) = apply {
+  fun makeUnscheduled(action: MakeUnscheduled) = apply {
     checkNotNull(movement)
-    withPlan(null, rdProvider)
-    withSchedule(null)
-    applyLegacyId(null)
-    stage = TransferStage.UNSCHEDULED
     movement!!.also {
-      applyDestination(ApplyDestination(it.destinationCode))
-      applyReason(ApplyReason(it.reason.code), rdProvider)
-      applyLogistics(ApplyLogistics(it.logistics.code), rdProvider)
+      destinationCode = it.destinationCode
+      reason = it.reason
+      logistics = it.logistics
+      stage = TransferStage.UNSCHEDULED
+      plan = null
+      schedule = null
+      legacyId = null
     }
     appliedActions += action
   }

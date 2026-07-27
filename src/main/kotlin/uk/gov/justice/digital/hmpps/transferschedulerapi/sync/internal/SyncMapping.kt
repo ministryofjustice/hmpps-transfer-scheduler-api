@@ -14,6 +14,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.A
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyLogistics
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyReason
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.CancelTransfer
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.CompleteTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ExpireTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.PlanTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ScheduleTransfer
@@ -116,6 +117,8 @@ fun Movement.syncIdsFromLegacyId(): Pair<Long, Long>? {
 fun Movement.syncMovement(): SyncMovement {
   val legacyIdParts = syncIdsFromLegacyId()
   return SyncMovement(
+    id,
+    transfer.takeIf { it.stage == TransferStage.SCHEDULED }?.id,
     legacyIdParts?.first,
     legacyIdParts?.second,
     occurredAt,
@@ -123,7 +126,15 @@ fun Movement.syncMovement(): SyncMovement {
     logistics.code,
     transfer.prisonCode,
     destinationCode,
-    null,
+    transfer.status.code == TransferStatus.Code.IN_TRANSIT.name,
     comments,
   )
+}
+
+fun Movement.updateFrom(request: SyncMovement, transfer: Transfer, rdProvider: RdProvider) = apply {
+  applyTransfer(transfer)
+  match(request, rdProvider)
+  if (request.active != true && transfer.status.code != TransferStatus.Code.COMPLETED.name) {
+    transfer.complete(CompleteTransfer, rdProvider)
+  }
 }

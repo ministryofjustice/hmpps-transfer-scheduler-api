@@ -8,16 +8,10 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.Tr
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferInTransit
 import uk.gov.justice.digital.hmpps.transferschedulerapi.exception.ConflictException
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.MovementRequest
-import java.time.LocalDateTime
 
-data class ApplyTransit(
-  override val occurredAt: LocalDateTime,
-  override val destinationCode: String,
-  override val reasonCode: String,
-  override val logisticsCode: String,
-  override val comments: String?,
-) : TransferAction,
-  MovementRequest {
+data class ApplyTransit(val request: MovementRequest) :
+  TransferAction,
+  MovementRequest by request {
   companion object {
     private val VALID_STATUSES = setOf(IN_TRANSIT.name, SCHEDULED.name)
   }

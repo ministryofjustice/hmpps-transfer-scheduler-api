@@ -26,6 +26,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferMovementR
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.MovementRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.movement.ApplyDestination
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.movement.ApplyLogistics
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.movement.ApplyMovementComments
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.movement.ApplyOccurredAt
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.movement.ApplyReason
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.movement.MovementAction
@@ -115,11 +116,11 @@ final class Movement(
   override fun deletionEvents(): Set<DomainEventPublication> = setOf(TransferMovementDeleted(transfer.person.identifier, transfer.id, id).publication(id))
 
   fun match(request: MovementRequest, rdProvider: RdProvider) = apply {
-    occurredAt = request.occurredAt
+    applyOccurredAt(ApplyOccurredAt(request.occurredAt))
     applyDestination(ApplyDestination(request.destinationCode))
     applyReason(ApplyReason(request.reasonCode), rdProvider)
     applyLogistics(ApplyLogistics(request.logisticsCode), rdProvider)
-    comments = request.comments
+    applyComments(ApplyMovementComments(request.comments))
     if (request is StringLegacyIdRequest) {
       legacyId = request.legacyId
     }
@@ -155,6 +156,13 @@ final class Movement(
   fun applyLogistics(action: ApplyLogistics, rdProvider: RdProvider) = apply {
     if (logistics.code != action.logisticsCode) {
       logistics = rdProvider.get(action.logisticsCode)
+      appliedActions += action
+    }
+  }
+
+  fun applyComments(action: ApplyMovementComments) = apply {
+    if (action changes comments) {
+      comments = action.comments
       appliedActions += action
     }
   }

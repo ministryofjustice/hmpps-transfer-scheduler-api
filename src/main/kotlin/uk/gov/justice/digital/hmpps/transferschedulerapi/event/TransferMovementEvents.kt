@@ -172,3 +172,26 @@ data class TransferMovementOccurredAtChanged(
     )
   }
 }
+
+data class TransferMovementCommentsChanged(
+  override val additionalInformation: TransferMovementInformation,
+  override val personReference: PersonReference,
+) : DomainEvent<TransferMovementInformation> {
+  override val eventType: String = EVENT_TYPE
+  override val description: String = DESCRIPTION
+  override val detailUrl: String = transferUrl(id)
+
+  companion object {
+    const val EVENT_TYPE = "person.transfer-movement.comments-changed"
+    const val DESCRIPTION = "The comments on a transfer movement have been changed"
+    operator fun invoke(
+      personIdentifier: String,
+      id: UUID,
+      movementId: UUID,
+      dataSource: DataSource = SchedulerContext.get().source,
+    ) = TransferMovementCommentsChanged(
+      TransferMovementInformation(id, movementId, dataSource),
+      PersonReference.withIdentifier(personIdentifier),
+    )
+  }
+}

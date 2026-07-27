@@ -7,6 +7,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.TransferReposito
 import uk.gov.justice.digital.hmpps.transferschedulerapi.exception.NotFoundException
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
 import uk.gov.justice.digital.hmpps.transferschedulerapi.service.history.TransferHistoryService
+import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncMovement
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncTransfer
 import java.util.UUID
 
@@ -14,10 +15,14 @@ import java.util.UUID
 @Service
 class RetrieveForSync(
   private val transferRepository: TransferRepository,
+  private val movementRepository: MovementRepository,
   private val transferHistoryService: TransferHistoryService,
 ) {
   fun transfer(id: UUID): SyncTransfer = transferRepository.findByIdOrNull(id)
     ?.takeIf { it.stage != TransferStage.UNSCHEDULED }
     ?.toSyncModel(transferHistoryService::getStatusChanges)
     ?: throw NotFoundException("Transfer not found")
+
+  fun movement(id: UUID): SyncMovement = movementRepository.findByIdOrNull(id)
+    ?.syncMovement() ?: throw NotFoundException("Movement not found")
 }

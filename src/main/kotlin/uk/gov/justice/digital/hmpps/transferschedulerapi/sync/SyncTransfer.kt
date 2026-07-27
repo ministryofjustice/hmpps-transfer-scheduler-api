@@ -137,6 +137,8 @@ data class SyncSchedule(
 }
 
 data class SyncMovement(
+  val dpsId: UUID?,
+  val dpsTransferId: UUID?,
   val offenderBookId: Long?,
   val movementSeq: Long?,
   override val occurredAt: LocalDateTime,

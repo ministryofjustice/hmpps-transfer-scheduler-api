@@ -32,9 +32,9 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.referenceda
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.wiremock.PrisonerSearchExtension.Companion.prisonerSearch
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.wiremock.PrisonerSearchServer.Companion.prisoner
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
+import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.ReferenceId
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncSchedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncTransfer
-import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncTransferResponse
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncUser
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncWaitlist
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.internal.syncSchedule
@@ -76,7 +76,7 @@ class SyncWaitingListTransferIntTest(
     val request =
       syncTransfer(waitlist = syncWaitList(), schedule = syncSchedule(eventStatus = SyncSchedule.PENDING))
     val user = syncUser()
-    val res = sendTransfer(prisoner.prisonerNumber, request, user).successResponse<SyncTransferResponse>()
+    val res = sendTransfer(prisoner.prisonerNumber, request, user).successResponse<ReferenceId>()
 
     val saved = requireNotNull(findTransfer(res.dpsId))
     assertThat(saved.status.code).isEqualTo(TransferStatus.Code.READY_TO_SCHEDULE.name)
@@ -110,7 +110,7 @@ class SyncWaitingListTransferIntTest(
     val request =
       transfer.toTestSyncModel().copy(syncSchedule = transfer.syncSchedule().copy(toAgyLocId = newDestination))
     val user = syncUser()
-    val res = sendTransfer(transfer.person.identifier, request, user).successResponse<SyncTransferResponse>()
+    val res = sendTransfer(transfer.person.identifier, request, user).successResponse<ReferenceId>()
 
     val saved = requireNotNull(findTransfer(res.dpsId))
     assertThat(saved.status.code).isEqualTo(TransferStatus.Code.READY_TO_SCHEDULE.name)
@@ -138,7 +138,7 @@ class SyncWaitingListTransferIntTest(
     val request =
       transfer.toTestSyncModel().copy(syncSchedule = transfer.syncSchedule().copy(toAgyLocId = null))
     val user = syncUser()
-    val res = sendTransfer(transfer.person.identifier, request, user).successResponse<SyncTransferResponse>()
+    val res = sendTransfer(transfer.person.identifier, request, user).successResponse<ReferenceId>()
 
     val saved = requireNotNull(findTransfer(res.dpsId))
     assertThat(saved.status.code).isEqualTo(TransferStatus.Code.PLANNING.name)
@@ -167,7 +167,7 @@ class SyncWaitingListTransferIntTest(
     val request =
       transfer.toTestSyncModel().copy(syncSchedule = transfer.syncSchedule().copy(eventSubType = newReason))
     val user = syncUser()
-    val res = sendTransfer(transfer.person.identifier, request, user).successResponse<SyncTransferResponse>()
+    val res = sendTransfer(transfer.person.identifier, request, user).successResponse<ReferenceId>()
 
     val saved = requireNotNull(findTransfer(res.dpsId))
     assertThat(saved.status.code).isEqualTo(TransferStatus.Code.READY_TO_SCHEDULE.name)
@@ -199,7 +199,7 @@ class SyncWaitingListTransferIntTest(
       transfer.toTestSyncModel().copy(syncSchedule = transfer.syncSchedule().copy(escortCode = newLogistics))
     assertThat(request.isReadyToSchedule).isTrue
     val user = syncUser()
-    val res = sendTransfer(transfer.person.identifier, request, user).successResponse<SyncTransferResponse>()
+    val res = sendTransfer(transfer.person.identifier, request, user).successResponse<ReferenceId>()
 
     val saved = requireNotNull(findTransfer(res.dpsId))
     assertThat(saved.status.code).isEqualTo(TransferStatus.Code.READY_TO_SCHEDULE.name)
@@ -226,7 +226,7 @@ class SyncWaitingListTransferIntTest(
 
     val request = transfer.toTestSyncModel().copy(syncSchedule = transfer.syncSchedule().copy(escortCode = null))
     val user = syncUser()
-    val res = sendTransfer(transfer.person.identifier, request, user).successResponse<SyncTransferResponse>()
+    val res = sendTransfer(transfer.person.identifier, request, user).successResponse<ReferenceId>()
 
     val saved = requireNotNull(findTransfer(res.dpsId))
     assertThat(saved.status.code).isEqualTo(TransferStatus.Code.PLANNING.name)
@@ -255,7 +255,7 @@ class SyncWaitingListTransferIntTest(
 
     val request = transfer.toTestSyncModel().copy(syncWaitlist = transfer.syncWaitList { emptyList() }!!.copy(transferPriority = newPriority))
     val user = syncUser()
-    val res = sendTransfer(transfer.person.identifier, request, user).successResponse<SyncTransferResponse>()
+    val res = sendTransfer(transfer.person.identifier, request, user).successResponse<ReferenceId>()
 
     val saved = requireNotNull(findTransfer(res.dpsId))
     assertThat(saved.status.code).isEqualTo(TransferStatus.Code.READY_TO_SCHEDULE.name)
@@ -286,7 +286,7 @@ class SyncWaitingListTransferIntTest(
         .copy(start = LocalDateTime.now().plusDays(5), eventStatus = SyncSchedule.SCHEDULED),
     )
     val user = syncUser()
-    val res = sendTransfer(transfer.person.identifier, request, user).successResponse<SyncTransferResponse>()
+    val res = sendTransfer(transfer.person.identifier, request, user).successResponse<ReferenceId>()
 
     val saved = requireNotNull(findTransfer(res.dpsId))
     assertThat(saved.status.code).isEqualTo(TransferStatus.Code.SCHEDULED.name)
@@ -319,7 +319,7 @@ class SyncWaitingListTransferIntTest(
         .copy(outcomeReasonCode = SyncWaitlist.OutcomeReasonCode.OIC, waitListStatus = SyncWaitlist.CANCELLED),
     )
     val user = syncUser()
-    val res = sendTransfer(transfer.person.identifier, request, user).successResponse<SyncTransferResponse>()
+    val res = sendTransfer(transfer.person.identifier, request, user).successResponse<ReferenceId>()
 
     val saved = requireNotNull(findTransfer(res.dpsId))
     assertThat(saved.status.code).isEqualTo(TransferStatus.Code.CANCELLED.name)

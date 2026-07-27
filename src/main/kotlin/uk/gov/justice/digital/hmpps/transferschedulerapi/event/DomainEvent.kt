@@ -41,6 +41,7 @@ import java.util.UUID
     JsonSubTypes.Type(value = TransferMovementRecategorised::class, name = TransferMovementRecategorised.EVENT_TYPE),
     JsonSubTypes.Type(value = TransferMovementLogisticsChanged::class, name = TransferMovementLogisticsChanged.EVENT_TYPE),
     JsonSubTypes.Type(value = TransferMovementOccurredAtChanged::class, name = TransferMovementOccurredAtChanged.EVENT_TYPE),
+    JsonSubTypes.Type(value = TransferMovementCommentsChanged::class, name = TransferMovementCommentsChanged.EVENT_TYPE),
   ],
 )
 sealed interface DomainEvent<T : AdditionalInformation> {

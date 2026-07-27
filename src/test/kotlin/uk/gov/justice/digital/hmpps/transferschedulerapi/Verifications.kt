@@ -2,6 +2,8 @@ package uk.gov.justice.digital.hmpps.transferschedulerapi
 
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.within
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Movement
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.MovementRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.PlanRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.ScheduleRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferRequest
@@ -61,6 +63,14 @@ infix fun PlanEntity.verifyAgainst(request: PlanRequest) {
 infix fun ScheduleEntity.verifyAgainst(request: ScheduleRequest) {
   assertThat(start.truncatedTo(ChronoUnit.SECONDS))
     .isCloseTo(request.start.truncatedTo(ChronoUnit.SECONDS), within(1, ChronoUnit.SECONDS))
+  assertThat(comments).isEqualTo(request.comments)
+}
+
+infix fun Movement.verifyAgainst(request: MovementRequest) {
+  assertThat(occurredAt.truncatedTo(ChronoUnit.SECONDS)).isEqualTo(request.occurredAt.truncatedTo(ChronoUnit.SECONDS))
+  assertThat(reason.code).isEqualTo(request.reasonCode)
+  assertThat(destinationCode).isEqualTo(request.destinationCode)
+  assertThat(logistics.code).isEqualTo(request.logisticsCode)
   assertThat(comments).isEqualTo(request.comments)
 }
 

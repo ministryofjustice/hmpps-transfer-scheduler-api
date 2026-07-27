@@ -7,6 +7,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.HmppsDomainEvent
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.PersonSummaryRepository
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.TransferRepository
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.ReferenceDataRepository
+import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.internal.MovementRepository
 
 @TestConfiguration
 class TestConfig(
@@ -15,6 +16,7 @@ class TestConfig(
   private val personSummaryRepository: PersonSummaryRepository,
   private val rdRepository: ReferenceDataRepository,
   private val transferRepository: TransferRepository,
+  private val movementRepository: MovementRepository,
 ) {
   @Bean
   fun hmppsDomainEventOperations(): HmppsDomainEventOperations = HmppsDomainEventOperationsImpl(transactionTemplate, hmppsDomainEventRepository)
@@ -24,4 +26,7 @@ class TestConfig(
 
   @Bean
   fun transferOperations(psOperations: PersonSummaryOperations): TransferOperations = TransferOperationsImpl(transactionTemplate, rdRepository, transferRepository, psOperations)
+
+  @Bean
+  fun movementOperations(): MovementOperations = MovementTransferOperationsImpl(movementRepository)
 }

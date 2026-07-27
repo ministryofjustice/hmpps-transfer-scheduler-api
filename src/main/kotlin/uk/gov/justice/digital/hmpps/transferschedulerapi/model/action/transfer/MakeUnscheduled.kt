@@ -13,6 +13,6 @@ data object MakeUnscheduled : TransferAction {
     if (entity.status.code !in VALID_STATUSES) {
       throw ConflictException("Cannot make unscheduled from ${entity.status.code}")
     }
-    entity.makeUnscheduled(this, rdProvider)
+    entity.makeUnscheduled(this)
   }
 }
