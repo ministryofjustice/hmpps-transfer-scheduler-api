@@ -6,10 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus
 import uk.gov.justice.digital.hmpps.transferschedulerapi.access.Roles
 import uk.gov.justice.digital.hmpps.transferschedulerapi.context.SchedulerContext.Companion.SYSTEM_USERNAME
-import uk.gov.justice.digital.hmpps.transferschedulerapi.context.set
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.IdGenerator.newUuid
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
-import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.username
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.IntegrationTestBase
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperations
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.movement
@@ -87,12 +85,12 @@ class SyncRetrieveMovementIntTest(
 
   private fun retrieveMovement(
     id: UUID,
-    role: String? = Roles.TRANSFER_SYNC,
+    role: String? = Roles.NOMIS_SYNC,
   ) = retrieveMovement(id.toString(), role)
 
   private fun retrieveMovement(
     id: String,
-    role: String? = Roles.TRANSFER_SYNC,
+    role: String? = Roles.NOMIS_SYNC,
   ) = webTestClient
     .get()
     .uri(RETRIEVE_MOVEMENT_URL, id)

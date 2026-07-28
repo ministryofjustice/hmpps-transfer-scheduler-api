@@ -30,7 +30,7 @@ fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer.asModel(pr
   person(),
   prisonProvider(prisonCode),
   status.asCodedDescription(),
-  requireNotNull(reason).asCodedDescription(),
+  reason.asCodedDescription(),
   destinationCode?.let { prisonProvider(it) },
   logistics?.asCodedDescription(),
   plan(),

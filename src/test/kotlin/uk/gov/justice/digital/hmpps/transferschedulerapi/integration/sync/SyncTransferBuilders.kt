@@ -67,7 +67,7 @@ fun syncSchedule(
 fun syncMovement(
   dpsTransferId: UUID? = null,
   offenderBookId: Long = newId(),
-  movementSeq: Long = newId(),
+  movementSeq: Int = newId().toInt(),
   occurredAt: LocalDateTime = LocalDateTime.now(),
   movementReasonCode: String = TransferReasonCode.randomCode(),
   escortCode: String = TransferLogisticsCode.randomCode(),

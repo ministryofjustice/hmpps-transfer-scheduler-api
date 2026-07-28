@@ -25,7 +25,6 @@ abstract class ReferenceData(
   val id: UUID,
 ) {
   companion object {
-    val CODE = ReferenceData::code.name
     val SEQUENCE_NUMBER = ReferenceData::sequenceNumber.name
   }
 }

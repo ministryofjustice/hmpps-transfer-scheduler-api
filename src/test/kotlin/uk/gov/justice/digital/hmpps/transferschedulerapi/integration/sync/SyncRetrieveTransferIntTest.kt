@@ -143,12 +143,12 @@ class SyncRetrieveTransferIntTest(
 
   private fun retrieveTransfer(
     id: UUID,
-    role: String? = Roles.TRANSFER_SYNC,
+    role: String? = Roles.NOMIS_SYNC,
   ) = retrieveTransfer(id.toString(), role)
 
   private fun retrieveTransfer(
     id: String,
-    role: String? = Roles.TRANSFER_SYNC,
+    role: String? = Roles.NOMIS_SYNC,
   ) = webTestClient
     .get()
     .uri(RETRIEVE_TRANSFER_URL, id)

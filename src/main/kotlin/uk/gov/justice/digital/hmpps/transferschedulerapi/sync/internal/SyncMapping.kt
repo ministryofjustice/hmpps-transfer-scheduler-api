@@ -9,10 +9,12 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.Tr
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.PLANNING
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.READY_TO_SCHEDULE
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.SCHEDULED
+import uk.gov.justice.digital.hmpps.transferschedulerapi.exception.ConflictException
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyDestination
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyLogistics
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyReason
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyTransit
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.CancelTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.CompleteTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ExpireTransfer
@@ -105,12 +107,22 @@ fun Transfer.statusForSchedule(): String = when (TransferStatus.Code.valueOf(sta
   else -> SyncSchedule.PENDING
 }
 
-fun Movement.syncIdsFromLegacyId(): Pair<Long, Long>? {
+fun Transfer.addMovement(request: SyncMovement, rdProvider: RdProvider): Movement {
+  if (movement != null) throw ConflictException("Movement already exists")
+  if (request.active == true) {
+    applyTransit(ApplyTransit(request), rdProvider)
+  } else {
+    withMovement(request, rdProvider).complete(CompleteTransfer, rdProvider)
+  }
+  return requireNotNull(movement)
+}
+
+fun Movement.syncIdsFromLegacyId(): Pair<Long, Int>? {
   val parts = legacyId?.split("_")
   return if (parts?.size != 2) {
     null
   } else {
-    parts[0].toLong() to parts[1].toLong()
+    parts[0].toLong() to parts[1].toInt()
   }
 }
 

@@ -8,6 +8,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.model.PlanRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.ScheduleRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
+import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.internal.LegacyData
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.UUID
@@ -68,6 +69,12 @@ data class SyncTransfer(
   override fun initialStage(): TransferStage = syncSchedule
     .takeIf { it.isScheduled || it.isExpired || (syncWaitlist?.isCancelled != true && syncSchedule.isCancelled) || it.isCompleted }
     ?.let { TransferStage.SCHEDULED } ?: TransferStage.PLANNING
+
+  fun legacyData(): LegacyData? = if (syncWaitlist?.legacyData() == null && syncSchedule.legacyData() == null) {
+    null
+  } else {
+    LegacyData(syncWaitlist?.legacyData(), syncSchedule.legacyData())
+  }
 }
 
 data class SyncWaitlist(
@@ -93,6 +100,8 @@ data class SyncWaitlist(
     ADMI("Administrative"),
     TRANS("Insufficient Transport"),
   }
+
+  fun legacyData() = LegacyData.WaitList(statusDate, approved, approvedUsername, cancellationReason)
 
   companion object {
     const val CANCELLED = "CAN"
@@ -127,6 +136,12 @@ data class SyncSchedule(
   @JsonIgnore
   val isCompleted = eventStatus == COMPLETED
 
+  fun legacyData() = if (outcomeReasonCode == null && hiddenCommentText == null) {
+    null
+  } else {
+    LegacyData.Schedule(hiddenCommentText, outcomeReasonCode)
+  }
+
   companion object {
     const val CANCELLED = "CANC"
     const val COMPLETED = "COMP"
@@ -140,7 +155,7 @@ data class SyncMovement(
   val dpsId: UUID?,
   val dpsTransferId: UUID?,
   val offenderBookId: Long?,
-  val movementSeq: Long?,
+  val movementSeq: Int?,
   override val occurredAt: LocalDateTime,
   val movementReasonCode: String,
   val escortCode: String,

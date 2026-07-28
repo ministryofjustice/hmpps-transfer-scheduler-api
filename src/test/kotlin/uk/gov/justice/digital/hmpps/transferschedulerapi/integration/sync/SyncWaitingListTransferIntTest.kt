@@ -162,7 +162,7 @@ class SyncWaitingListTransferIntTest(
   @Test
   fun `200 - can recategorise a planned transfer`() {
     val transfer = givenTransfer(transfer(statusCode = TransferStatus.Code.READY_TO_SCHEDULE))
-    val newReason = generateSequence { TransferReasonCode.randomCode() }.first { it != transfer.reason?.code }
+    val newReason = generateSequence { TransferReasonCode.randomCode() }.first { it != transfer.reason.code }
 
     val request =
       transfer.toTestSyncModel().copy(syncSchedule = transfer.syncSchedule().copy(eventSubType = newReason))
@@ -349,7 +349,7 @@ class SyncWaitingListTransferIntTest(
     personIdentifier: String,
     request: SyncTransfer,
     syncUser: SyncUser,
-    role: String? = Roles.TRANSFER_SYNC,
+    role: String? = Roles.NOMIS_SYNC,
   ) = webTestClient
     .put()
     .uri(SYNC, personIdentifier)

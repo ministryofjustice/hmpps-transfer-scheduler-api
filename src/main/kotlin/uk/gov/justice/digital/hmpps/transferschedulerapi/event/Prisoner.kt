@@ -15,6 +15,7 @@ data class PrisonerUpdated(
 ) : DomainEvent<PrisonerUpdatedInformation> {
   override val eventType: String = EVENT_TYPE
   override val description: String = DESCRIPTION
+  override val detailUrl: String? = null
 
   companion object {
     const val EVENT_TYPE: String = "prisoner-offender-search.prisoner.updated"
@@ -30,6 +31,7 @@ data class PrisonerMerged(
 ) : DomainEvent<PrisonerMergedInformation> {
   override val eventType: String = EVENT_TYPE
   override val description: String = DESCRIPTION
+  override val detailUrl: String? = null
 
   companion object {
     const val EVENT_TYPE: String = "prison-offender-events.prisoner.merged"
@@ -53,6 +55,7 @@ data class PrisonerReceived(
 ) : DomainEvent<PrisonerReceivedInformation> {
   override val eventType: String = EVENT_TYPE
   override val description: String = DESCRIPTION
+  override val detailUrl: String? = null
 
   companion object {
     const val EVENT_TYPE: String = "prison-offender-search.prisoner.received"

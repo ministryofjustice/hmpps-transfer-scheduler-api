@@ -73,7 +73,7 @@ class MoveTransferIntTest(
 
   private fun moveTransfers(
     request: MoveTransfersRequest,
-    role: String? = Roles.TRANSFER_SYNC,
+    role: String? = Roles.NOMIS_SYNC,
   ) = webTestClient
     .put()
     .uri(MOVE_TRANSFER_URL)

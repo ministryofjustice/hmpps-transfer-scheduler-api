@@ -353,7 +353,7 @@ class SyncUnscheduledMovementIntTest(
     personIdentifier: String,
     request: SyncMovement,
     syncUser: SyncUser,
-    role: String? = Roles.TRANSFER_SYNC,
+    role: String? = Roles.NOMIS_SYNC,
   ) = webTestClient
     .put()
     .uri(SYNC, personIdentifier)
