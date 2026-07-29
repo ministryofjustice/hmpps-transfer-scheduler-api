@@ -37,6 +37,9 @@ interface TransferRepository :
 
   fun countAllByPersonIdentifier(personIdentifier: String): Int
 
+  @EntityGraph("transfer.all")
+  fun findAllByPersonIdentifier(personIdentifier: String): List<Transfer>
+
   @Query(
     """
     select tr.id from Transfer tr
