@@ -15,7 +15,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.internal.Transfers
 @Tag(name = OpenApiTags.SYNC)
 @RestController
 @RequestMapping("move/transfers")
-@PreAuthorize("hasRole('${Roles.TRANSFER_SYNC}')")
+@PreAuthorize("hasRole('${Roles.NOMIS_SYNC}')")
 class MoveTransferController(private val transfers: TransfersMove) {
   @PutMapping
   @ResponseStatus(HttpStatus.NO_CONTENT)

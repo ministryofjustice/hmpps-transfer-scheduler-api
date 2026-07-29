@@ -7,6 +7,7 @@ import org.springframework.data.jpa.domain.Specification
 import org.springframework.data.jpa.repository.EntityGraph
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor
+import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.findByIdOrNull
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferLogistics
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferReason
@@ -34,6 +35,23 @@ interface TransferRepository :
   override fun findAll(spec: Specification<Transfer>, pageable: Pageable): Page<Transfer>
 
   fun countAllByPersonIdentifier(personIdentifier: String): Int
+
+  @Query(
+    """
+    select tr.id from Transfer tr
+    where tr.legacyId in :legacyIds
+    union
+    select tr.id from Transfer tr
+    where tr.person.identifier = :personIdentifier
+    union 
+    select tr.id from Transfer tr
+    where tr.movement.id in :movementIds
+    union
+    select tr.id from Transfer tr
+    where tr.movement.legacyId in :movementLegacyIds
+  """,
+  )
+  fun findTransferIds(personIdentifier: String, legacyIds: Set<Long>, movementIds: Set<UUID>, movementLegacyIds: Set<String>): List<UUID>
 }
 
 fun TransferRepository.getTransfer(id: UUID): Transfer = findByIdOrNull(id) ?: throw NotFoundException("Transfer not found")

@@ -21,7 +21,7 @@ import java.util.UUID
 @Tag(name = OpenApiTags.SYNC)
 @RestController
 @RequestMapping("sync/transfers")
-@PreAuthorize("hasRole('${Roles.TRANSFER_SYNC}')")
+@PreAuthorize("hasRole('${Roles.NOMIS_SYNC}')")
 class SyncTransferController(
   private val transfer: TransferSync,
   private val retrieve: RetrieveForSync,

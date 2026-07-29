@@ -74,4 +74,4 @@ infix fun Movement.verifyAgainst(request: MovementRequest) {
   assertThat(comments).isEqualTo(request.comments)
 }
 
-private fun nullStateIsEqual(first: Any?, second: Any?): Boolean = (first == null && second == null) || (first != null && second != null)
+fun nullStateIsEqual(first: Any?, second: Any?): Boolean = (first == null && second == null) || (first != null && second != null)

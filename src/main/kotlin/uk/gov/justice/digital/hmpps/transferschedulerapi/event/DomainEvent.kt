@@ -53,9 +53,7 @@ sealed interface DomainEvent<T : AdditionalInformation> {
   val additionalInformation: T
   val personReference: PersonReference
   val detailUrl: String?
-    get() = null
-  val version: Int
-    get() = 1
+  val version: Int get() = 1
 
   @get:JsonIgnore
   val id: UUID

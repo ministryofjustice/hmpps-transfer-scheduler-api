@@ -13,9 +13,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.getTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.RdProvider
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.ReferenceDataRepository
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
-import uk.gov.justice.digital.hmpps.transferschedulerapi.exception.ConflictException
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyTransit
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.CompleteTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.service.PersonSummaryService
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.ReferenceId
@@ -48,16 +46,6 @@ class MovementSync(
     val saved = existing?.updateFrom(movement, transfer, rdProvider)
       ?: transfer.addMovement(movement, rdProvider)
     ReferenceId(saved.id)
-  }
-
-  private fun Transfer.addMovement(request: SyncMovement, rdProvider: RdProvider): Movement {
-    if (movement != null) throw ConflictException("Movement already exists")
-    if (request.active == true) {
-      applyTransit(ApplyTransit(request), rdProvider)
-    } else {
-      withMovement(request, rdProvider).complete(CompleteTransfer, rdProvider)
-    }
-    return requireNotNull(movement)
   }
 
   private fun SyncMovement.unscheduledTransfer(personIdentifier: String, rdProvider: RdProvider): Transfer {

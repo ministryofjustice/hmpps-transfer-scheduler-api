@@ -111,27 +111,27 @@ class ScheduleModificationsIntTest(
   @Test
   fun `200 - can change the reason for a transfer`() {
     val transfer = givenTransfer(transfer())
-    val newReasonCode = generateSequence { TransferReasonCode.randomCode() }.first { it != transfer.reason?.code }
+    val newReasonCode = generateSequence { TransferReasonCode.randomCode() }.first { it != transfer.reason.code }
     val action = ApplyReason(newReasonCode)
     val username = username()
     val givenReason = word(20)
 
     val res = applyAction(transfer.id, action, givenReason, username).successResponse<AuditHistory>()
-    val rdReason = rdRepository.rdProvider().get<TransferReason>(action.reasonCode!!)
+    val rdReason = rdRepository.rdProvider().get<TransferReason>(action.reasonCode)
     with(res.content.single()) {
       assertThat(domainEvents).containsExactly(TransferRecategorised.EVENT_TYPE)
       assertThat(reason).isEqualTo(givenReason)
       assertThat(changes).containsExactly(
         AuditedAction.Change(
           Transfer::reason.name,
-          transfer.reason?.description,
+          transfer.reason.description,
           rdReason.description,
         ),
       )
     }
 
     val saved = requireNotNull(findTransfer(transfer.id))
-    assertThat(saved.reason?.description).isEqualTo(rdReason.description)
+    assertThat(saved.reason.description).isEqualTo(rdReason.description)
 
     verifyAudit(
       saved,

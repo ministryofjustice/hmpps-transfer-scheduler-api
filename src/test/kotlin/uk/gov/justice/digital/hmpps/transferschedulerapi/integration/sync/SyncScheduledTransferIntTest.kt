@@ -200,7 +200,7 @@ class SyncScheduledTransferIntTest(
     personIdentifier: String,
     request: SyncTransfer,
     syncUser: SyncUser,
-    role: String? = Roles.TRANSFER_SYNC,
+    role: String? = Roles.NOMIS_SYNC,
   ) = webTestClient
     .put()
     .uri(SYNC, personIdentifier)

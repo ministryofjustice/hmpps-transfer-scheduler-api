@@ -137,12 +137,12 @@ class SyncDeleteTransferIntTest(
 
   private fun deleteTransfer(
     id: UUID,
-    role: String? = Roles.TRANSFER_SYNC,
+    role: String? = Roles.NOMIS_SYNC,
   ) = deleteTransfer(id.toString(), role)
 
   private fun deleteTransfer(
     id: String,
-    role: String? = Roles.TRANSFER_SYNC,
+    role: String? = Roles.NOMIS_SYNC,
   ) = webTestClient
     .delete()
     .uri(DELETE_TRANSFER_URL, id)

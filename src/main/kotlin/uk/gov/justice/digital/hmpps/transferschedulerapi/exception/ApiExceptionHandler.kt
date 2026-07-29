@@ -59,7 +59,7 @@ class ApiExceptionHandler {
         userMessage = "Invalid request",
         developerMessage = e.devMessage(),
       ),
-    ).also { LOG.error(e.message, it) }
+    ).also { LOG.error(e.message, e) }
 
   @ExceptionHandler(MethodArgumentTypeMismatchException::class)
   fun handleArgumentTypeMismatchException(e: MethodArgumentTypeMismatchException): ResponseEntity<ErrorResponse> = ResponseEntity
@@ -97,7 +97,7 @@ class ApiExceptionHandler {
         userMessage = "Data integrity conflict",
         developerMessage = e.devMessage(),
       ),
-    ).also { LOG.error(e.message, it) }
+    ).also { LOG.error(e.message, e) }
 
   @ExceptionHandler(Exception::class)
   fun handleException(e: Exception): ResponseEntity<ErrorResponse> = ResponseEntity
@@ -108,7 +108,7 @@ class ApiExceptionHandler {
         userMessage = "Unexpected error",
         developerMessage = e.devMessage(),
       ),
-    ).also { LOG.error(e.message, it) }
+    ).also { LOG.error(e.message, e) }
 
   companion object {
     private val LOG = LoggerFactory.getLogger(ApiExceptionHandler::class.java)
