@@ -19,7 +19,7 @@ class TransfersMove(
     SchedulerContext.get().copy(username = SYSTEM_USERNAME, reason = "Prisoner booking moved").set()
     val person = personSummaryService.getWithSave(request.to)
     transferRepository.findAllById(request.transferIds).forEach {
-      it.movePerson(person, it.prisonCode)
+      it.movePerson(person)
     }
     if (transferRepository.countAllByPersonIdentifier(request.from) == 0) {
       personSummaryService.findPersonSummary(request.from)?.also(personSummaryService::remove)

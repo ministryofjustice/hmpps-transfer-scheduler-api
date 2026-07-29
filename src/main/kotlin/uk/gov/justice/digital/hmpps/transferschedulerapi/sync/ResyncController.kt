@@ -61,7 +61,7 @@ data class ResyncMovement(
 
 data class AtAndBy(val at: LocalDateTime, val by: String)
 
-data class ResyncResponse(val transfers: List<TransferMapping>, val unscheduledMovements: List<TransferMovementMapping>)
+data class ResyncResponse(val transfers: Collection<TransferMapping>, val unscheduledMovements: Collection<TransferMovementMapping>)
 data class TransferMapping(val dpsId: UUID, val eventId: Long, val movement: TransferMovementMapping?)
 data class TransferMovementMapping(
   val dpsId: UUID,

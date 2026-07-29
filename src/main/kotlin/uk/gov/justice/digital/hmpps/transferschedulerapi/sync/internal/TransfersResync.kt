@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.hmpps.transferschedulerapi.sync.internal
 
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.transferschedulerapi.context.SchedulerContext
@@ -13,6 +14,8 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.TransferReposito
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.RdProvider
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.ReferenceDataRepository
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
+import uk.gov.justice.digital.hmpps.transferschedulerapi.event.InternalEvents
+import uk.gov.justice.digital.hmpps.transferschedulerapi.event.PlanningIncomplete
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
 import uk.gov.justice.digital.hmpps.transferschedulerapi.service.PersonSummaryService
 import uk.gov.justice.digital.hmpps.transferschedulerapi.service.asEntity
@@ -34,6 +37,7 @@ class TransfersResync(
   private val movementRepository: MovementRepository,
   private val msa: MigrationSystemAuditRepository,
   private val personSummaryService: PersonSummaryService,
+  private val aep: ApplicationEventPublisher,
 ) {
   fun all(personIdentifier: String, request: ResyncTransfersRequest): ResyncResponse {
     SchedulerContext.get().copy(username = SYSTEM_USERNAME, source = DataSource.NOMIS, migratingData = true).set()
@@ -49,16 +53,21 @@ class TransfersResync(
     val movementProvider =
       { id: UUID?, legacyId: String? -> existing.firstOrNull { it.movement?.id == id || it.movement?.legacyId == legacyId }?.movement }
 
-    val scheduled =
-      request.transfers.map { it.resync(person, transferProvider, movementProvider, rdProvider, maProvider) }
-    val unscheduled =
-      request.unscheduledMovements.map { it.resync(person, null, movementProvider, rdProvider, maProvider) }
+    val scheduled = request.transfers.associate { it.resync(person, transferProvider, movementProvider, rdProvider, maProvider) }
+    val unscheduled = request.unscheduledMovements.associate { it.resync(person, null, movementProvider, rdProvider, maProvider) }
 
-    val toKeep = removeNotInResync(scheduled, unscheduled, existing)
+    val toKeep = if (existing.isEmpty()) emptyList() else removeNotInResync(scheduled.keys, unscheduled.keys, existing)
     if (request.isEmpty() && toKeep.isEmpty()) {
       personSummaryService.remove(person)
     }
-    return ResyncResponse(scheduled, unscheduled)
+
+    val internalEvents = scheduled.values.filter { it.stage == TransferStage.PLANNING && it.plan == null }
+      .map { PlanningIncomplete(it.person.identifier, it.id) }
+    if (internalEvents.isNotEmpty()) {
+      aep.publishEvent(InternalEvents(internalEvents))
+    }
+
+    return ResyncResponse(scheduled.keys, unscheduled.keys)
   }
 
   private fun findAllTransfers(
@@ -78,13 +87,13 @@ class TransfersResync(
     movementProvider: (UUID?, String) -> Movement?,
     rdProvider: RdProvider,
     maProvider: MigrationAuditProvider,
-  ): TransferMapping {
+  ): Pair<TransferMapping, Transfer> {
     val tr = transferProvider(transfer.dpsId, requireNotNull(transfer.legacyId))
       ?.updateFrom(transfer, person, rdProvider)
       ?: transferRepository.save(transfer.asEntity(person, rdRepository.rdProvider()))
     val sm = movement?.resync(person, tr, movementProvider, rdProvider, maProvider)
     mergeMigrationAudit(tr.id, created, modified, maProvider, transfer.legacyData())
-    return TransferMapping(tr.id, requireNotNull(transfer.eventId), sm)
+    return TransferMapping(tr.id, requireNotNull(transfer.eventId), sm?.first) to tr
   }
 
   private fun ResyncMovement.resync(
@@ -93,7 +102,7 @@ class TransfersResync(
     movementProvider: (UUID?, String) -> Movement?,
     rdProvider: RdProvider,
     maProvider: MigrationAuditProvider,
-  ): TransferMovementMapping {
+  ): Pair<TransferMovementMapping, Movement> {
     val existing = movementProvider(movement.dpsId, requireNotNull(movement.legacyId))
     val wrapper = transfer
       ?: existing?.transfer.takeIf { it?.stage == TransferStage.UNSCHEDULED }
@@ -101,7 +110,7 @@ class TransfersResync(
     val mov = existing?.updateFrom(movement, wrapper, rdProvider)
       ?: wrapper.addMovement(movement, rdProvider)
     mergeMigrationAudit(mov.id, created, modified, maProvider, null)
-    return TransferMovementMapping(mov.id, requireNotNull(movement.offenderBookId), requireNotNull(movement.movementSeq))
+    return TransferMovementMapping(mov.id, requireNotNull(movement.offenderBookId), requireNotNull(movement.movementSeq)) to mov
   }
 
   private fun SyncMovement.unscheduledTransfer(person: PersonSummary, rdProvider: RdProvider): Transfer {
@@ -121,8 +130,8 @@ class TransfersResync(
   }
 
   private fun removeNotInResync(
-    scheduled: List<TransferMapping>,
-    unscheduled: List<TransferMovementMapping>,
+    scheduled: Set<TransferMapping>,
+    unscheduled: Set<TransferMovementMapping>,
     transfers: List<Transfer>,
   ): List<Transfer> {
     val movementIds = (scheduled.mapNotNull { it.movement?.dpsId } + unscheduled.map { it.dpsId }).toSet()

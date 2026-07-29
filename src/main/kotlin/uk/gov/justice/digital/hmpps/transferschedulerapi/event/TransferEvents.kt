@@ -322,7 +322,7 @@ data class TransferMovedToPlanning(
 
   companion object {
     const val EVENT_TYPE = "person.transfer.moved-to-planning"
-    const val DESCRIPTION = "A scheduled transfer has been moved to planning"
+    const val DESCRIPTION = "A transfer has been moved to planning"
     operator fun invoke(
       personIdentifier: String,
       id: UUID,

@@ -214,8 +214,11 @@ final class Transfer(
     movement = request?.let { movement?.match(request, rdProvider) ?: it.createNewMovement(this, rdProvider) }
   }
 
-  fun movePerson(person: PersonSummary, prisonCode: String) = apply {
+  fun movePerson(person: PersonSummary) = apply {
     this.person = person
+  }
+
+  fun movePrison(prisonCode: String) = apply {
     this.prisonCode = prisonCode
   }
 
@@ -240,11 +243,13 @@ final class Transfer(
     }
   }
 
-  fun applyPlan(action: PlanTransfer, rdProvider: RdProvider) = apply {
+  fun applyPlan(action: PlanTransfer, rdProvider: RdProvider, readyToSchedule: Boolean = true) = apply {
     if (action changes plan) {
+      val movedToPlanning = plan == null && !readyToSchedule
       withPlan(action, rdProvider)
+      plan?.takeIf { movedToPlanning }?.passAppliedAction(action)
     }
-    if (applyStatus(READY_TO_SCHEDULE, rdProvider)) {
+    if (readyToSchedule && applyStatus(READY_TO_SCHEDULE, rdProvider)) {
       stage = TransferStage.PLANNING
       appliedActions += action
     }

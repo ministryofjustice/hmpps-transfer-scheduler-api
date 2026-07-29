@@ -15,6 +15,8 @@ import java.util.UUID
     JsonSubTypes.Type(value = PrisonerUpdated::class, name = PrisonerUpdated.EVENT_TYPE),
     JsonSubTypes.Type(value = PrisonerReceived::class, name = PrisonerReceived.EVENT_TYPE),
 
+    JsonSubTypes.Type(value = PlanningIncomplete::class, name = PlanningIncomplete.EVENT_TYPE),
+
     JsonSubTypes.Type(value = TransferMigrated::class, name = TransferMigrated.EVENT_TYPE),
     JsonSubTypes.Type(value = TransferRecorded::class, name = TransferRecorded.EVENT_TYPE),
     JsonSubTypes.Type(value = TransferDeleted::class, name = TransferDeleted.EVENT_TYPE),

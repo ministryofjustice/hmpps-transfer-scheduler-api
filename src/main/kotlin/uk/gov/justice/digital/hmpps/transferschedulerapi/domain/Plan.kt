@@ -73,11 +73,19 @@ final class Plan(
     appliedActions = listOf()
   }
 
+  override fun initialEvents(): Set<DomainEventPublication> = appliedActions.mapNotNull {
+    it.domainEvent(transfer)?.publication(id)
+  }.toSet()
+
   override fun domainEvents(): Set<DomainEventPublication> = appliedActions.mapNotNull {
     it.domainEvent(transfer)?.publication(id)
   }.toSet()
 
-  fun match(request: PlanRequest, rdProvider: RdProvider) = apply {
+  internal fun passAppliedAction(action: TransferAction) = apply {
+    appliedActions += action
+  }
+
+  internal fun match(request: PlanRequest, rdProvider: RdProvider) = apply {
     applyRequestedOn(ApplyRequestedOn(request.requestedOn))
     applyPriority(ApplyPriority(request.priorityCode), rdProvider)
     applyComments(ApplyPlanComments(request.comments))

@@ -65,7 +65,7 @@ final class Schedule(
     it.domainEvent(transfer)?.publication(id)
   }.toSet()
 
-  fun match(request: ScheduleRequest) = apply {
+  internal fun match(request: ScheduleRequest) = apply {
     reschedule(RescheduleTransfer(request.start))
     applyComments(ApplyScheduleComments(request.comments))
   }

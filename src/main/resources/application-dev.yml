@@ -13,7 +13,7 @@ integration:
 service:
   active-prisons: "***"
   domain-events:
-    poll-interval: PT10s
+    poll-interval: PT1s
   api-base-url: "https://transfer-scheduler-api-dev.hmpps.service.justice.gov.uk"
 
 springdoc:

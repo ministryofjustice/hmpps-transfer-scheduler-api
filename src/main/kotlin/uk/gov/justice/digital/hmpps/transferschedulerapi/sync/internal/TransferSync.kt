@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.hmpps.transferschedulerapi.sync.internal
 
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -9,6 +10,9 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.context.set
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.TransferRepository
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.ReferenceDataRepository
+import uk.gov.justice.digital.hmpps.transferschedulerapi.event.InternalEvents
+import uk.gov.justice.digital.hmpps.transferschedulerapi.event.PlanningIncomplete
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.MakeUnscheduled
 import uk.gov.justice.digital.hmpps.transferschedulerapi.service.PersonSummaryService
 import uk.gov.justice.digital.hmpps.transferschedulerapi.service.asEntity
@@ -22,6 +26,7 @@ class TransferSync(
   private val rdRepository: ReferenceDataRepository,
   private val personSummaryService: PersonSummaryService,
   private val transferRepository: TransferRepository,
+  private val aep: ApplicationEventPublisher,
 ) {
   fun sync(personIdentifier: String, request: SyncTransferRequest): ReferenceId = with(request) {
     SchedulerContext.get().copy(
@@ -37,6 +42,11 @@ class TransferSync(
       )
       ?.updateFrom(transfer, person, rdRepository.rdProvider())
       ?: transferRepository.save(transfer.asEntity(person, rdRepository.rdProvider()))
+
+    if (saved.stage == TransferStage.PLANNING && saved.plan == null) {
+      aep.publishEvent(InternalEvents(PlanningIncomplete(saved.person.identifier, saved.id)))
+    }
+
     ReferenceId(saved.id)
   }
 
