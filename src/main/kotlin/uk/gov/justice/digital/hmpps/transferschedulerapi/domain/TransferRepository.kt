@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.findByIdOrNull
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferLogistics
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferPriority
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferReason
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
 import uk.gov.justice.digital.hmpps.transferschedulerapi.exception.NotFoundException
@@ -116,6 +117,12 @@ fun destinationCodeIn(codes: Set<String>) = Specification<Transfer> { tr, _, _ -
 fun logisticsCodeIn(codes: Set<String>) = Specification<Transfer> { tr, _, _ ->
   val logistics = tr.join<Transfer, TransferLogistics>(Transfer::logistics.name, JoinType.LEFT)
   logistics.get<String>(TransferReason::code.name).`in`(codes)
+}
+
+fun priorityCodeIn(codes: Set<TransferPriority.Code>) = Specification<Transfer> { tr, _, _ ->
+  val plan = tr.join<Transfer, Plan>(Transfer::plan.name, JoinType.INNER)
+  val priority = plan.join<Plan, TransferPriority>(Plan::priority.name, JoinType.INNER)
+  priority.get<String>(TransferPriority::code.name).`in`(codes.map { it.value })
 }
 
 fun matchesStage(stage: TransferStage) = Specification<Transfer> { tr, _, cb ->

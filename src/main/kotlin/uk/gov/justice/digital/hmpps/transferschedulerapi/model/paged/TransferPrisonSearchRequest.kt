@@ -24,7 +24,7 @@ data class TransferPrisonSearchRequest(
   val destinationCodes: Set<String> = emptySet(),
   @Schema(requiredMode = NOT_REQUIRED)
   val logisticsCodes: Set<String> = emptySet(),
-  val priorityCode: TransferPriority.Code? = null,
+  val priorityCodes: Set<TransferPriority.Code> = emptySet(),
   override val stage: TransferStage? = null,
   override val page: Int = 1,
   override val size: Int = 10,

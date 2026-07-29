@@ -13,6 +13,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.Pers
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.PersonSummaryOperations.Companion.personSummary
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperations
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.movement
+import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.plan
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.schedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.referencedata.TransferLogisticsCode
@@ -332,6 +333,64 @@ class TransferPrisonSearchIntTest(
     }
   }
 
+  @Test
+  fun `can filter transfers by priority`() {
+    val prison = prison()
+    prisonRegister.givenPrisons(setOf(prison))
+
+    val high = givenTransfer(
+      transfer(
+        prisonCode = prison.code,
+        schedule = schedule(),
+        plan = plan(priorityCode = TransferPriority.Code.HIGH.value),
+        statusCode = TransferStatus.Code.READY_TO_SCHEDULE,
+      ),
+    )
+    val med = givenTransfer(
+      transfer(
+        prisonCode = prison.code,
+        schedule = null,
+        plan = plan(priorityCode = TransferPriority.Code.MEDIUM.value),
+        statusCode = TransferStatus.Code.PLANNING,
+      ),
+    )
+    val low = givenTransfer(
+      transfer(
+        prisonCode = prison.code,
+        schedule = null,
+        plan = plan(priorityCode = TransferPriority.Code.LOW.value),
+        statusCode = TransferStatus.Code.PLANNING,
+      ),
+    )
+
+    val res1 = searchTransfers(
+      prison.code,
+      searchRequest(stage = TransferStage.PLANNING, priorities = setOf(TransferPriority.Code.HIGH)),
+    ).successResponse<TransferSearchResponse>()
+
+    assertThat(res1.content).hasSize(1)
+    assertThat(res1.metadata.totalElements).isEqualTo(1)
+    with(res1.content.single()) { this verifyAgainst high }
+
+    val res2 = searchTransfers(
+      prison.code,
+      searchRequest(stage = TransferStage.PLANNING, priorities = setOf(TransferPriority.Code.MEDIUM)),
+    ).successResponse<TransferSearchResponse>()
+
+    assertThat(res2.content).hasSize(1)
+    assertThat(res2.metadata.totalElements).isEqualTo(1)
+    with(res2.content.single()) { this verifyAgainst med }
+
+    val res3 = searchTransfers(
+      prison.code,
+      searchRequest(stage = TransferStage.PLANNING, priorities = setOf(TransferPriority.Code.LOW)),
+    ).successResponse<TransferSearchResponse>()
+
+    assertThat(res3.content).hasSize(1)
+    assertThat(res3.metadata.totalElements).isEqualTo(1)
+    with(res3.content.single()) { this verifyAgainst low }
+  }
+
   private fun searchRequest(
     start: LocalDate = LocalDate.now(),
     end: LocalDate = start.plusDays(30),
@@ -340,7 +399,7 @@ class TransferPrisonSearchIntTest(
     reasons: Set<String> = emptySet(),
     destinations: Set<String> = emptySet(),
     logistics: Set<String> = emptySet(),
-    priority: TransferPriority.Code? = null,
+    priorities: Set<TransferPriority.Code> = emptySet(),
     stage: TransferStage = TransferStage.SCHEDULED,
     page: Int = 1,
     size: Int = 10,
@@ -353,7 +412,7 @@ class TransferPrisonSearchIntTest(
     reasons,
     destinations,
     logistics,
-    priority,
+    priorities,
     stage,
     page,
     size,

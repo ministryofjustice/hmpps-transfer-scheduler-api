@@ -8,6 +8,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.TransferReposito
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.destinationCodeIn
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.logisticsCodeIn
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.matchesStage
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.priorityCodeIn
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.startsBetween
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.transferMatchesPersonIdentifier
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.transferMatchesPersonName
@@ -46,6 +47,7 @@ class SearchTransfers(
       startsBetween(start, end, stage),
       destinationCodes.takeIf { it.isNotEmpty() }?.let { destinationCodeIn(it) },
       logisticsCodes.takeIf { it.isNotEmpty() }?.let { logisticsCodeIn(it) },
+      priorityCodes.takeIf { it.isNotEmpty() }?.let { priorityCodeIn(it) },
       query?.let {
         if (it.isPersonIdentifier()) {
           transferMatchesPersonIdentifier(it, prisonCode)
