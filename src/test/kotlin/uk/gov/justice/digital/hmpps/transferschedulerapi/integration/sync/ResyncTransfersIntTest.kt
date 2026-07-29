@@ -15,7 +15,9 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Plan
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Schedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.publication
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferMigrated
+import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferMovedToPlanning
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferMovementMigrated
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.newId
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.personIdentifier
@@ -32,6 +34,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.wiremock.Pr
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.wiremock.PrisonerSearchServer.Companion.prisoner
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
 import uk.gov.justice.digital.hmpps.transferschedulerapi.nullStateIsEqual
+import uk.gov.justice.digital.hmpps.transferschedulerapi.service.IncompletePlanHandler
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.AtAndBy
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.ResyncMovement
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.ResyncResponse
@@ -284,6 +287,68 @@ class ResyncTransfersIntTest(
         SchedulerContext.get().copy(username = SYSTEM_USERNAME, source = DataSource.NOMIS),
       )
     }
+  }
+
+  @Test
+  fun `Incomplete planned transfers are completed by DPS`() {
+    val prisonCode = prisonCode()
+    val prisoner = prisonerSearch.givenPrisoner(prisoner(prisonCode))
+    val tr1 = resyncTransfer(transfer = syncTransfer(waitlist = null, schedule = syncSchedule(eventStatus = SyncSchedule.PENDING)))
+    val tr2 = resyncTransfer(transfer = syncTransfer(waitlist = null, schedule = syncSchedule(start = null, eventStatus = SyncSchedule.PENDING)))
+    val request = resyncRequest(listOf(tr1, tr2))
+
+    val res = sendTransfers(prisoner.prisonerNumber, request).successResponse<ResyncResponse>()
+    assertThat(res.transfers).hasSize(2)
+    assertThat(res.unscheduledMovements).isEmpty()
+
+    waitUntil { findTransfer(res.transfers.last().dpsId)?.plan != null }
+
+    val transfers = res.transfers.map { findTransfer(it.dpsId) }
+
+    val readyToSchedule = requireNotNull(transfers.first { it!!.legacyId == tr1.transfer.eventId })
+    assertThat(readyToSchedule.status.code).isEqualTo(TransferStatus.Code.READY_TO_SCHEDULE.name)
+    assertThat(readyToSchedule.stage).isEqualTo(TransferStage.PLANNING)
+
+    val planning = requireNotNull(transfers.first { it!!.legacyId == tr2.transfer.eventId })
+    assertThat(planning.status.code).isEqualTo(TransferStatus.Code.PLANNING.name)
+    assertThat(planning.stage).isEqualTo(TransferStage.PLANNING)
+
+    verifyAudit(
+      readyToSchedule.plan!!,
+      RevisionType.ADD,
+      setOf(
+        HmppsDomainEvent::class.simpleName!!,
+        Transfer::class.simpleName!!,
+        Plan::class.simpleName!!,
+      ),
+      SchedulerContext.get().copy(reason = IncompletePlanHandler.REASON),
+    )
+
+    verifyAudit(
+      planning.plan!!,
+      RevisionType.ADD,
+      setOf(
+        HmppsDomainEvent::class.simpleName!!,
+        Plan::class.simpleName!!,
+      ),
+      SchedulerContext.get().copy(reason = IncompletePlanHandler.REASON),
+    )
+
+    verifyEventPublications(
+      readyToSchedule.plan!!,
+      setOf(
+        TransferMovedToPlanning(prisoner.prisonerNumber, readyToSchedule.id, readyToSchedule.stage)
+          .publication(readyToSchedule.id),
+      ),
+    )
+
+    verifyEventPublications(
+      planning.plan!!,
+      setOf(
+        TransferMovedToPlanning(prisoner.prisonerNumber, planning.id, planning.stage)
+          .publication(planning.id),
+      ),
+    )
   }
 
   private infix fun LegacyData?.verifyAgainst(request: SyncTransfer) {

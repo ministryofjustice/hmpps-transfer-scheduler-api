@@ -16,6 +16,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.publication
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferCancelled
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferLogisticsChanged
+import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferMovedToPlanning
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferPlanned
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferRecategorised
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferRelocated
@@ -32,6 +33,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.referenceda
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.wiremock.PrisonerSearchExtension.Companion.prisonerSearch
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.wiremock.PrisonerSearchServer.Companion.prisoner
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
+import uk.gov.justice.digital.hmpps.transferschedulerapi.service.IncompletePlanHandler
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.ReferenceId
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncSchedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncTransfer
@@ -64,8 +66,7 @@ class SyncWaitingListTransferIntTest(
       syncTransfer(waitlist = syncWaitList(), schedule = syncSchedule()),
       syncUser(),
       Roles.TRANSFER_SCHEDULER_UI,
-    )
-      .expectStatus().isForbidden
+    ).expectStatus().isForbidden
   }
 
   @Test
@@ -73,8 +74,7 @@ class SyncWaitingListTransferIntTest(
     val prisonCode = prisonCode()
     val prisoner = prisonerSearch.givenPrisoner(prisoner(prisonCode))
 
-    val request =
-      syncTransfer(waitlist = syncWaitList(), schedule = syncSchedule(eventStatus = SyncSchedule.PENDING))
+    val request = syncTransfer(waitlist = syncWaitList(), schedule = syncSchedule(eventStatus = SyncSchedule.PENDING))
     val user = syncUser()
     val res = sendTransfer(prisoner.prisonerNumber, request, user).successResponse<ReferenceId>()
 
@@ -342,6 +342,69 @@ class SyncWaitingListTransferIntTest(
     verifyEventPublications(
       saved,
       setOf(TransferCancelled(transfer.person.identifier, saved.id, saved.stage, DataSource.NOMIS).publication(saved.id)),
+    )
+  }
+
+  @Test
+  fun `Incomplete planned transfer is completed by DPS in planning`() {
+    val prisonCode = prisonCode()
+    val prisoner = prisonerSearch.givenPrisoner(prisoner(prisonCode))
+
+    val request = syncTransfer(waitlist = null, schedule = syncSchedule(start = null, eventStatus = SyncSchedule.PENDING))
+    val user = syncUser()
+    val res = sendTransfer(prisoner.prisonerNumber, request, user).successResponse<ReferenceId>()
+
+    waitUntil { findTransfer(res.dpsId)?.plan != null }
+
+    val saved = requireNotNull(findTransfer(res.dpsId))
+    assertThat(saved.status.code).isEqualTo(TransferStatus.Code.PLANNING.name)
+    assertThat(saved.stage).isEqualTo(TransferStage.PLANNING)
+
+    verifyAudit(
+      saved.plan!!,
+      RevisionType.ADD,
+      setOf(
+        HmppsDomainEvent::class.simpleName!!,
+        Plan::class.simpleName!!,
+      ),
+      SchedulerContext.get().copy(reason = IncompletePlanHandler.REASON),
+    )
+
+    verifyEventPublications(
+      saved.plan!!,
+      setOf(TransferMovedToPlanning(prisoner.prisonerNumber, saved.id, saved.stage).publication(saved.id)),
+    )
+  }
+
+  @Test
+  fun `Incomplete planned transfer is completed by DPS - ready to schedule`() {
+    val prisonCode = prisonCode()
+    val prisoner = prisonerSearch.givenPrisoner(prisoner(prisonCode))
+
+    val request = syncTransfer(waitlist = null, schedule = syncSchedule(eventStatus = SyncSchedule.PENDING))
+    val user = syncUser()
+    val res = sendTransfer(prisoner.prisonerNumber, request, user).successResponse<ReferenceId>()
+
+    waitUntil { findTransfer(res.dpsId)?.plan != null }
+
+    val saved = requireNotNull(findTransfer(res.dpsId))
+    assertThat(saved.status.code).isEqualTo(TransferStatus.Code.READY_TO_SCHEDULE.name)
+    assertThat(saved.stage).isEqualTo(TransferStage.PLANNING)
+
+    verifyAudit(
+      saved.plan!!,
+      RevisionType.ADD,
+      setOf(
+        HmppsDomainEvent::class.simpleName!!,
+        Transfer::class.simpleName!!,
+        Plan::class.simpleName!!,
+      ),
+      SchedulerContext.get().copy(reason = IncompletePlanHandler.REASON),
+    )
+
+    verifyEventPublications(
+      saved.plan!!,
+      setOf(TransferMovedToPlanning(prisoner.prisonerNumber, saved.id, saved.stage).publication(saved.id)),
     )
   }
 

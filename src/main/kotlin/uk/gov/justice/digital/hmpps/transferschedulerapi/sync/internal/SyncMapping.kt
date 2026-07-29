@@ -29,7 +29,8 @@ import java.util.UUID
 
 fun Transfer.updateFrom(request: SyncTransfer, personSummary: PersonSummary, rdProvider: RdProvider): Transfer = apply {
   applyLegacyId(legacyId)
-  movePerson(personSummary, request.syncSchedule.agyLocId)
+  movePerson(personSummary)
+  movePrison(request.syncSchedule.agyLocId)
   applyDestination(ApplyDestination(request.destinationCode))
   applyLogistics(ApplyLogistics(request.logisticsCode), rdProvider)
   applyReason(ApplyReason(request.reasonCode), rdProvider)
