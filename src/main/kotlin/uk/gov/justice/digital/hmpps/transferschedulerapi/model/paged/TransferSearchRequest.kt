@@ -11,6 +11,7 @@ import org.springframework.data.domain.Sort.by
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.PersonSummary.Companion.FIRST_NAME
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.PersonSummary.Companion.IDENTIFIER
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.PersonSummary.Companion.LAST_NAME
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Plan
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Schedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.ReferenceData.Companion.SEQUENCE_NUMBER
@@ -35,15 +36,13 @@ interface TransferSearchRequest :
   val reasonCodes: Set<String>
     get() = emptySet()
 
-  override fun validSortFields(): Set<String> = setOf(SCHEDULE_START, FIRST_NAME, LAST_NAME, REASON, STATUS)
+  override fun validSortFields(): Set<String> = setOf(PLAN_REQUESTED, SCHEDULE_START, REASON, STATUS)
 
   override fun buildSort(field: String, direction: Direction): Sort = when (field) {
-    LAST_NAME -> sortByPersonName(direction)
-    FIRST_NAME -> sortByPersonName(direction, PERSON_FIRST_NAME, PERSON_LAST_NAME)
+    PLAN_REQUESTED -> by(direction, "${PLAN}_${PLAN_REQUESTED}").and(sortByPersonName())
     SCHEDULE_START -> by(direction, "${SCHEDULE}_${SCHEDULE_START}").and(sortByPersonName())
     STATUS -> by(direction, "${field}_${SEQUENCE_NUMBER}").and(sortByPersonName())
     REASON -> by(direction, "${field}_description").and(sortByPersonName())
-
     else -> throw IllegalArgumentException("Unrecognised sort field")
   }
 
@@ -51,15 +50,12 @@ interface TransferSearchRequest :
     direction: Direction = Direction.ASC,
     first: String = PERSON_LAST_NAME,
     second: String = PERSON_FIRST_NAME,
-  ) = by(
-    direction,
-    first,
-    second,
-    "${PERSON}_$IDENTIFIER",
-  )
+  ) = by(direction, first, second, "${PERSON}_$IDENTIFIER")
 
   companion object {
     internal const val FROM = "from"
+    internal val PLAN = Transfer::plan.name
+    internal val PLAN_REQUESTED = Plan::requestedOn.name
     internal val SCHEDULE = Transfer::schedule.name
     internal val SCHEDULE_START = Schedule::start.name
     internal val REASON = Transfer::reason.name
