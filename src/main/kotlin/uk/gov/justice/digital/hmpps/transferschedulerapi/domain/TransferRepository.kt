@@ -9,15 +9,18 @@ import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.findByIdOrNull
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.PersonSummary.Companion.IDENTIFIER
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferLogistics
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferPriority
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferReason
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
 import uk.gov.justice.digital.hmpps.transferschedulerapi.exception.NotFoundException
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.clashes.ClashRange
 import java.time.LocalDate
 import java.util.Optional
 import java.util.UUID
+import kotlin.collections.map
 
 interface TransferRepository :
   JpaRepository<Transfer, UUID>,
@@ -130,4 +133,18 @@ fun priorityCodeIn(codes: Set<TransferPriority.Code>) = Specification<Transfer> 
 
 fun matchesStage(stage: TransferStage) = Specification<Transfer> { tr, _, cb ->
   cb.equal(tr.get<TransferStage>(Transfer::stage.name), stage)
+}
+
+fun clashesFor(personIdentifiers: Set<String>, ranges: Set<ClashRange>) = Specification<Transfer> { tr, _, cb ->
+  val schedule = tr.join<Transfer, Schedule>(Transfer::schedule.name, JoinType.INNER)
+  val rangeRestrictions = ranges.map {
+    cb.and(
+      cb.greaterThan(schedule.get(Schedule::start.name), it.start.toLocalDate()),
+      cb.lessThan(schedule.get(Schedule::start.name), it.end.toLocalDate().plusDays(1)),
+    )
+  }
+  cb.and(
+    tr.get<Any>(Transfer::person.name).get<String>(IDENTIFIER).`in`(personIdentifiers),
+    cb.or(rangeRestrictions),
+  )
 }
