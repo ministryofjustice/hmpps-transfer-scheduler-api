@@ -1,6 +1,6 @@
 package uk.gov.justice.digital.hmpps.transferschedulerapi.model
 
-import net.minidev.json.annotate.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonIgnore
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
 import java.time.LocalDate
 import java.time.LocalDateTime
