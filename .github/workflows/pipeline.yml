@@ -79,6 +79,8 @@ jobs:
     secrets: inherit
   deploy_dev:
     name: Deploy to the development environment
+    concurrency:
+      group: deploy-dev
     needs:
       - build
       - helm_lint
@@ -89,6 +91,8 @@ jobs:
       app_version: '${{ needs.build.outputs.app_version }}'
   deploy_preprod:
     name: Deploy to pre-production environment
+    concurrency:
+      group: deploy-preprod
     needs:
       - build
       - helm_lint
@@ -99,6 +103,8 @@ jobs:
       app_version: '${{ needs.build.outputs.app_version }}'
   deploy_prod:
     name: Deploy to production environment
+    concurrency:
+      group: deploy-prod
     needs:
       - build
       - deploy_dev
