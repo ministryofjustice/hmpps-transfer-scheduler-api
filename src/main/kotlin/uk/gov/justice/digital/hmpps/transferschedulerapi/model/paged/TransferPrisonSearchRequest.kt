@@ -3,6 +3,7 @@ package uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
+import io.swagger.v3.oas.annotations.media.DiscriminatorMapping
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.media.Schema.RequiredMode.NOT_REQUIRED
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferPriority
@@ -21,18 +22,33 @@ interface QueryRequest {
   val query: String?
 }
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXISTING_PROPERTY, property = "stage")
+const val PLANNING = "PLANNING"
+const val SCHEDULED = "SCHEDULED"
+
+@Schema(
+  discriminatorProperty = "stage",
+  discriminatorMapping = [
+    DiscriminatorMapping(value = PLANNING, schema = PlanningSearchRequest::class),
+    DiscriminatorMapping(value = SCHEDULED, schema = ScheduledSearchRequest::class),
+  ],
+)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXISTING_PROPERTY, property = "stage", visible = true)
 @JsonSubTypes(
   value = [
-    JsonSubTypes.Type(value = PlanningSearchRequest::class, name = "PLANNING"),
-    JsonSubTypes.Type(value = ScheduledSearchRequest::class, name = "SCHEDULED"),
+    JsonSubTypes.Type(value = PlanningSearchRequest::class, name = PLANNING),
+    JsonSubTypes.Type(value = ScheduledSearchRequest::class, name = SCHEDULED),
   ],
 )
 sealed interface PrisonTransferSearchRequest :
   TransferSearchRequest,
   StageRequest {
+  @get:Schema(requiredMode = NOT_REQUIRED)
   val destinationCodes: Set<String>
+
+  @get:Schema(requiredMode = NOT_REQUIRED)
   val logisticsCodes: Set<String>
+
+  @get:Schema(type = "string")
   override val stage: TransferStage
 }
 
@@ -43,15 +59,10 @@ data class PlanningSearchRequest(
   override val start: LocalDate? = null,
   override val end: LocalDate? = null,
   override val query: String? = null,
-  @Schema(requiredMode = NOT_REQUIRED)
   override val statusCodes: Set<TransferStatus.Code> = emptySet(),
-  @Schema(requiredMode = NOT_REQUIRED)
   override val reasonCodes: Set<String> = emptySet(),
-  @Schema(requiredMode = NOT_REQUIRED)
   override val destinationCodes: Set<String> = emptySet(),
-  @Schema(requiredMode = NOT_REQUIRED)
   override val logisticsCodes: Set<String> = emptySet(),
-  @Schema(requiredMode = NOT_REQUIRED)
   val priorityCodes: Set<TransferPriority.Code> = emptySet(),
   override val page: Int = 1,
   override val size: Int = 10,
@@ -75,13 +86,9 @@ data class ScheduledSearchRequest(
   override val start: LocalDate,
   override val end: LocalDate,
   override val query: String? = null,
-  @Schema(requiredMode = NOT_REQUIRED)
   override val statusCodes: Set<TransferStatus.Code> = emptySet(),
-  @Schema(requiredMode = NOT_REQUIRED)
   override val reasonCodes: Set<String> = emptySet(),
-  @Schema(requiredMode = NOT_REQUIRED)
   override val destinationCodes: Set<String> = emptySet(),
-  @Schema(requiredMode = NOT_REQUIRED)
   override val logisticsCodes: Set<String> = emptySet(),
   override val page: Int = 1,
   override val size: Int = 10,

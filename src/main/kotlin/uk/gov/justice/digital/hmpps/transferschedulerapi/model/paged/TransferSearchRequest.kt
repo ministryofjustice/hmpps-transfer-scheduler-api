@@ -1,5 +1,7 @@
 package uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged
 
+import io.swagger.v3.oas.annotations.media.Schema
+import io.swagger.v3.oas.annotations.media.Schema.RequiredMode.NOT_REQUIRED
 import org.springframework.data.domain.Sort
 import org.springframework.data.domain.Sort.Direction
 import org.springframework.data.domain.Sort.by
@@ -16,7 +18,10 @@ interface TransferSearchRequest :
   PagedRequest,
   StartAndEnd<LocalDate> {
 
+  @get:Schema(requiredMode = NOT_REQUIRED)
   val statusCodes: Set<TransferStatus.Code>
+
+  @get:Schema(requiredMode = NOT_REQUIRED)
   val reasonCodes: Set<String>
 
   override fun validSortFields(): Set<String> = setOf(REASON, STATUS)

@@ -38,10 +38,7 @@ class ClashesIntTest(
 
   @Test
   fun `403 forbidden without correct role`() {
-    getClashes(
-      clashRequest(),
-      Roles.allExcept(Roles.SCHEDULE_CLASHES_RO).toList(),
-    ).expectStatus().isForbidden
+    getClashes(clashRequest(), Roles.allExcept(Roles.SCHEDULE_CLASHES_RO).toList()).expectStatus().isForbidden
   }
 
   @ParameterizedTest
