@@ -261,6 +261,16 @@ class PlanModificationsIntTest(
   }
 
   @Test
+  fun `409 - cannot revert an incomplete scheduled transfer to planning`() {
+    val transfer = givenTransfer(transfer(destinationCode = null, plan = null))
+    val action = PlanTransfer(LocalDate.now(), "1", word(10))
+    val username = username()
+    val givenReason = word(10)
+
+    applyAction(transfer.id, action, givenReason, username).expectStatus().isEqualTo(HttpStatus.CONFLICT)
+  }
+
+  @Test
   fun `200 - can schedule a planned transfer`() {
     val transfer = givenTransfer(transfer(schedule = null, statusCode = READY_TO_SCHEDULE))
     val action = ScheduleTransfer(LocalDateTime.now().plusDays(7), word(20))

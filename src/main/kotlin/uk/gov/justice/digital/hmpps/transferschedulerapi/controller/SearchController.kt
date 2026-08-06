@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.transferschedulerapi.access.Roles
 import uk.gov.justice.digital.hmpps.transferschedulerapi.config.OpenApiTags.UI
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged.TransferPrisonSearchRequest
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged.PrisonTransferSearchRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged.TransferSearchResponse
 import uk.gov.justice.digital.hmpps.transferschedulerapi.service.SearchTransfers
 
@@ -24,6 +24,6 @@ class SearchController(
   @PostMapping("/prisons/{prisonCode}/transfers")
   fun findTransfersForPrison(
     @PathVariable prisonCode: String,
-    @Valid @RequestBody request: TransferPrisonSearchRequest,
+    @Valid @RequestBody request: PrisonTransferSearchRequest,
   ): TransferSearchResponse = transfers.findForPrison(prisonCode, request)
 }

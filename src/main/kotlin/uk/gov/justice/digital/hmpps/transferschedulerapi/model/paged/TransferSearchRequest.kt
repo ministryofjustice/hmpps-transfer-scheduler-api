@@ -1,16 +1,12 @@
 package uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged
 
-import io.swagger.v3.oas.annotations.media.Schema
-import io.swagger.v3.oas.annotations.media.Schema.RequiredMode.NOT_REQUIRED
 import jakarta.validation.Constraint
 import jakarta.validation.ConstraintValidator
 import jakarta.validation.ConstraintValidatorContext
 import org.springframework.data.domain.Sort
 import org.springframework.data.domain.Sort.Direction
 import org.springframework.data.domain.Sort.by
-import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.PersonSummary.Companion.FIRST_NAME
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.PersonSummary.Companion.IDENTIFIER
-import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.PersonSummary.Companion.LAST_NAME
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Plan
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Schedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer
@@ -28,32 +24,22 @@ interface TransferSearchRequest :
   PagedRequest,
   StartAndEnd<LocalDate> {
 
-  @get:Schema(requiredMode = NOT_REQUIRED)
   val statusCodes: Set<TransferStatus.Code>
-    get() = emptySet()
-
-  @get:Schema(requiredMode = NOT_REQUIRED)
   val reasonCodes: Set<String>
-    get() = emptySet()
 
-  override fun validSortFields(): Set<String> = setOf(PLAN_REQUESTED, SCHEDULE_START, REASON, STATUS)
+  override fun validSortFields(): Set<String> = setOf(REASON, STATUS)
 
   override fun buildSort(field: String, direction: Direction): Sort = when (field) {
-    PLAN_REQUESTED -> by(direction, "${PLAN}_${PLAN_REQUESTED}").and(sortByPersonName())
-    SCHEDULE_START -> by(direction, "${SCHEDULE}_${SCHEDULE_START}").and(sortByPersonName())
-    STATUS -> by(direction, "${field}_${SEQUENCE_NUMBER}").and(sortByPersonName())
-    REASON -> by(direction, "${field}_description").and(sortByPersonName())
+    PLAN_REQUESTED -> by(direction, "${PLAN}_${PLAN_REQUESTED}").and(sortByPersonIdentifier())
+    SCHEDULE_START -> by(direction, "${SCHEDULE}_${SCHEDULE_START}").and(sortByPersonIdentifier())
+    STATUS -> by(direction, "${field}_${SEQUENCE_NUMBER}").and(sortByPersonIdentifier())
+    REASON -> by(direction, "${field}_description").and(sortByPersonIdentifier())
     else -> throw IllegalArgumentException("Unrecognised sort field")
   }
 
-  private fun sortByPersonName(
-    direction: Direction = Direction.ASC,
-    first: String = PERSON_LAST_NAME,
-    second: String = PERSON_FIRST_NAME,
-  ) = by(direction, first, second, "${PERSON}_$IDENTIFIER")
+  private fun sortByPersonIdentifier(direction: Direction = Direction.ASC) = by(direction, "${PERSON}_$IDENTIFIER")
 
   companion object {
-    internal const val FROM = "from"
     internal val PLAN = Transfer::plan.name
     internal val PLAN_REQUESTED = Plan::requestedOn.name
     internal val SCHEDULE = Transfer::schedule.name
@@ -61,8 +47,6 @@ interface TransferSearchRequest :
     internal val REASON = Transfer::reason.name
     internal val STATUS = Transfer::status.name
     internal val PERSON = Transfer::person.name
-    internal val PERSON_LAST_NAME = "${PERSON}_${LAST_NAME}"
-    internal val PERSON_FIRST_NAME = "${PERSON}_${FIRST_NAME}"
   }
 }
 
@@ -84,14 +68,13 @@ class MonthBetweenValidator : ConstraintValidator<ValidDateRange, StartAndEnd<*>
   }
 
   override fun isValid(request: StartAndEnd<*>, context: ConstraintValidatorContext): Boolean = with(request) {
-    return if (start == null || end == null) {
-      false
-    } else {
+    return start == null &&
+      end == null ||
+      !(start == null || end == null) &&
       when (start) {
         is LocalDate -> DAYS.between(start as LocalDate, end as LocalDate) <= daysBetween
         is LocalDateTime -> Duration.between(start, end).toDays() <= daysBetween
         else -> throw UnsupportedOperationException("${start!!::class.simpleName} is not supported by this validator")
       }
-    }
   }
 }

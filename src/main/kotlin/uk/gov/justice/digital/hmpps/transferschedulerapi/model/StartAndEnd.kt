@@ -30,14 +30,12 @@ annotation class ValidStartAndEnd(
 
 class StartAndEndValidator : ConstraintValidator<ValidStartAndEnd, StartAndEnd<*>> {
   override fun isValid(request: StartAndEnd<*>, context: ConstraintValidatorContext): Boolean = with(request) {
-    return if (start == null || end == null) {
-      true
-    } else {
+    return start == null ||
+      end == null ||
       when (start) {
         is LocalDate -> !Period.between(start as LocalDate, end as LocalDate).isNegative
         is LocalDateTime -> Duration.between(start, end).isPositive
         else -> throw UnsupportedOperationException("${start!!::class.simpleName} is not supported by this validator")
       }
-    }
   }
 }
