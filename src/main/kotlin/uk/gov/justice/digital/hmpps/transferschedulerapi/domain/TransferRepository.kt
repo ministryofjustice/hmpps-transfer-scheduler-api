@@ -20,7 +20,6 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.model.clashes.ClashRang
 import java.time.LocalDate
 import java.util.Optional
 import java.util.UUID
-import kotlin.collections.map
 
 interface TransferRepository :
   JpaRepository<Transfer, UUID>,
@@ -58,7 +57,12 @@ interface TransferRepository :
     where tr.movement.legacyId in :movementLegacyIds
   """,
   )
-  fun findTransferIds(personIdentifier: String, legacyIds: Set<Long>, movementIds: Set<UUID>, movementLegacyIds: Set<String>): List<UUID>
+  fun findTransferIds(
+    personIdentifier: String,
+    legacyIds: Set<Long>,
+    movementIds: Set<UUID>,
+    movementLegacyIds: Set<String>,
+  ): List<UUID>
 }
 
 fun TransferRepository.getTransfer(id: UUID): Transfer = findByIdOrNull(id) ?: throw NotFoundException("Transfer not found")
@@ -87,8 +91,8 @@ fun transferMatchesPersonName(name: String, prisonCode: String?) = Specification
   )
 }
 
-fun startsBetween(start: LocalDate, end: LocalDate, stage: TransferStage?) = Specification<Transfer> { tr, _, cb ->
-  if (stage == TransferStage.SCHEDULED) {
+fun startsBetween(start: LocalDate?, end: LocalDate?) = Specification<Transfer> { tr, _, cb ->
+  if (start != null && end != null) {
     val schedule = tr.join<Transfer, Schedule>(Transfer::schedule.name, JoinType.INNER)
     cb.and(
       cb.greaterThanOrEqualTo(schedule.get(Schedule::start.name), start.atStartOfDay()),
@@ -96,14 +100,16 @@ fun startsBetween(start: LocalDate, end: LocalDate, stage: TransferStage?) = Spe
     )
   } else {
     val schedule = tr.join<Transfer, Schedule>(Transfer::schedule.name, JoinType.LEFT)
-    cb.or(
-      cb.isNull(schedule),
-      cb.and(
-        cb.greaterThanOrEqualTo(schedule.get(Schedule::start.name), start.atStartOfDay()),
-        cb.lessThan(schedule.get(Schedule::start.name), end.plusDays(1).atStartOfDay()),
-      ),
-    )
+    cb.isNull(schedule)
   }
+}
+
+fun requestedOnBetween(start: LocalDate, end: LocalDate) = Specification<Transfer> { tr, _, cb ->
+  val plan = tr.join<Transfer, Plan>(Transfer::plan.name, JoinType.INNER)
+  cb.and(
+    cb.greaterThanOrEqualTo(plan.get(Plan::requestedOn.name), start),
+    cb.lessThanOrEqualTo(plan.get(Plan::requestedOn.name), end),
+  )
 }
 
 fun transferStatusCodeIn(codes: Set<TransferStatus.Code>) = Specification<Transfer> { tr, _, _ ->

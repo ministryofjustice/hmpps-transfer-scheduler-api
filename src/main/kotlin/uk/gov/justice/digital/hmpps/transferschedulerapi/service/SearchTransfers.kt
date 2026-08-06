@@ -9,6 +9,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.destinationCodeI
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.logisticsCodeIn
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.matchesStage
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.priorityCodeIn
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.requestedOnBetween
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.startsBetween
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.transferMatchesPersonIdentifier
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.transferMatchesPersonName
@@ -18,9 +19,10 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.transferReasonCo
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.transferStatusCodeIn
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.prisonersearch.Prisoner
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.prisonregister.PrisonRegisterClient
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.StageRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged.PageMetadata
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged.TransferPrisonSearchRequest
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged.PlanningSearchRequest
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged.PrisonTransferSearchRequest
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged.QueryRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged.TransferSearchRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged.TransferSearchResponse
 
@@ -29,26 +31,22 @@ class SearchTransfers(
   private val transferRepository: TransferRepository,
   private val prisonRegister: PrisonRegisterClient,
 ) {
-  fun findForPrison(prisonCode: String, request: TransferPrisonSearchRequest): TransferSearchResponse = transferRepository.findAll(request.asSpecification(prisonCode), request.pageable()).asSearchResponse()
+  fun findForPrison(prisonCode: String, request: PrisonTransferSearchRequest): TransferSearchResponse = transferRepository.findAll(request.asSpecification(prisonCode), request.pageable()).asSearchResponse()
 
   private fun TransferSearchRequest.defaults(): List<Specification<Transfer>> = listOfNotNull(
     statusCodes.takeIf { it.isNotEmpty() }?.let { transferStatusCodeIn(it) },
     reasonCodes.takeIf { it.isNotEmpty() }?.let { transferReasonCodeIn(it) },
-    if (this is StageRequest) {
-      this.stage?.let { matchesStage(it) }
-    } else {
-      null
-    },
   )
 
-  private fun TransferPrisonSearchRequest.asSpecification(prisonCode: String): Specification<Transfer> = (
+  private fun PrisonTransferSearchRequest.asSpecification(prisonCode: String): Specification<Transfer> = (
     listOfNotNull(
       transferMatchesPrisonCode(prisonCode),
-      startsBetween(start, end, stage),
+      matchesStage(stage),
+      if (this is PlanningSearchRequest && isRequestedOnSearch()) requestedOnBetween(start!!, end!!) else startsBetween(start, end),
       destinationCodes.takeIf { it.isNotEmpty() }?.let { destinationCodeIn(it) },
       logisticsCodes.takeIf { it.isNotEmpty() }?.let { logisticsCodeIn(it) },
-      priorityCodes.takeIf { it.isNotEmpty() }?.let { priorityCodeIn(it) },
-      query?.let {
+      if (this is PlanningSearchRequest) priorityCodes.takeIf { it.isNotEmpty() }?.let { priorityCodeIn(it) } else null,
+      (this.takeIf { it is QueryRequest } as? QueryRequest)?.query?.let {
         if (it.isPersonIdentifier()) {
           transferMatchesPersonIdentifier(it, prisonCode)
         } else {
