@@ -8,6 +8,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.Tr
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.StageRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.ValidDateRange
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.ValidStartAndEnd
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged.TransferSearchRequest.Companion.PLAN_REQUESTED
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged.TransferSearchRequest.Companion.REASON

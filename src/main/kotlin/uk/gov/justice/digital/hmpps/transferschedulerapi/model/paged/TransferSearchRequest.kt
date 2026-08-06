@@ -1,8 +1,5 @@
 package uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged
 
-import jakarta.validation.Constraint
-import jakarta.validation.ConstraintValidator
-import jakarta.validation.ConstraintValidatorContext
 import org.springframework.data.domain.Sort
 import org.springframework.data.domain.Sort.Direction
 import org.springframework.data.domain.Sort.by
@@ -13,12 +10,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.ReferenceData.Companion.SEQUENCE_NUMBER
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.StartAndEnd
-import java.time.Duration
 import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.temporal.ChronoUnit.DAYS
-import kotlin.properties.Delegates
-import kotlin.reflect.KClass
 
 interface TransferSearchRequest :
   PagedRequest,
@@ -47,34 +39,5 @@ interface TransferSearchRequest :
     internal val REASON = Transfer::reason.name
     internal val STATUS = Transfer::status.name
     internal val PERSON = Transfer::person.name
-  }
-}
-
-@Target(AnnotationTarget.CLASS)
-@Retention(AnnotationRetention.RUNTIME)
-@Constraint(validatedBy = [MonthBetweenValidator::class])
-annotation class ValidDateRange(
-  val daysBetween: Int = 31,
-  val message: String = "Invalid date range",
-  val groups: Array<KClass<*>> = [],
-  val payload: Array<KClass<out Any>> = [],
-)
-
-class MonthBetweenValidator : ConstraintValidator<ValidDateRange, StartAndEnd<*>> {
-  private var daysBetween by Delegates.notNull<Int>()
-
-  override fun initialize(constraintAnnotation: ValidDateRange) {
-    daysBetween = constraintAnnotation.daysBetween
-  }
-
-  override fun isValid(request: StartAndEnd<*>, context: ConstraintValidatorContext): Boolean = with(request) {
-    return start == null &&
-      end == null ||
-      !(start == null || end == null) &&
-      when (start) {
-        is LocalDate -> DAYS.between(start as LocalDate, end as LocalDate) <= daysBetween
-        is LocalDateTime -> Duration.between(start, end).toDays() <= daysBetween
-        else -> throw UnsupportedOperationException("${start!!::class.simpleName} is not supported by this validator")
-      }
   }
 }
