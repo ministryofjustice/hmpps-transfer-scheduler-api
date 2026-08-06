@@ -3,6 +3,7 @@ package uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
+import io.swagger.v3.oas.annotations.media.DiscriminatorMapping
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.media.Schema.RequiredMode.NOT_REQUIRED
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferPriority
@@ -21,11 +22,21 @@ interface QueryRequest {
   val query: String?
 }
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXISTING_PROPERTY, property = "stage")
+const val PLANNING = "PLANNING"
+const val SCHEDULED = "SCHEDULED"
+
+@Schema(
+  discriminatorProperty = "stage",
+  discriminatorMapping = [
+    DiscriminatorMapping(value = PLANNING, schema = PlanningSearchRequest::class),
+    DiscriminatorMapping(value = SCHEDULED, schema = ScheduledSearchRequest::class),
+  ],
+)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXISTING_PROPERTY, property = "stage", visible = true)
 @JsonSubTypes(
   value = [
-    JsonSubTypes.Type(value = PlanningSearchRequest::class, name = "PLANNING"),
-    JsonSubTypes.Type(value = ScheduledSearchRequest::class, name = "SCHEDULED"),
+    JsonSubTypes.Type(value = PlanningSearchRequest::class, name = PLANNING),
+    JsonSubTypes.Type(value = ScheduledSearchRequest::class, name = SCHEDULED),
   ],
 )
 sealed interface PrisonTransferSearchRequest :
@@ -33,6 +44,8 @@ sealed interface PrisonTransferSearchRequest :
   StageRequest {
   val destinationCodes: Set<String>
   val logisticsCodes: Set<String>
+
+  @get:Schema(type = "string")
   override val stage: TransferStage
 }
 
