@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import io.swagger.v3.oas.annotations.media.Schema
@@ -38,6 +39,7 @@ sealed interface PrisonTransferSearchRequest :
 @ValidStartAndEnd
 @ValidDateRange(31)
 data class PlanningSearchRequest(
+  val startAndEndType: StartAndEndType = StartAndEndType.START,
   override val start: LocalDate? = null,
   override val end: LocalDate? = null,
   override val query: String? = null,
@@ -57,7 +59,14 @@ data class PlanningSearchRequest(
 ) : PrisonTransferSearchRequest,
   QueryRequest {
   override val stage: TransferStage = TransferStage.PLANNING
-  override fun validSortFields(): Set<String> = setOf(SCHEDULE_START, REASON, STATUS)
+  override fun validSortFields(): Set<String> = setOf(PLAN_REQUESTED, SCHEDULE_START, REASON, STATUS)
+  enum class StartAndEndType {
+    REQUESTED_ON,
+    START,
+  }
+
+  @JsonIgnore
+  fun isRequestedOnSearch(): Boolean = startAndEndType == StartAndEndType.REQUESTED_ON && start != null && end != null
 }
 
 @ValidStartAndEnd
@@ -80,5 +89,5 @@ data class ScheduledSearchRequest(
 ) : PrisonTransferSearchRequest,
   QueryRequest {
   override val stage: TransferStage = TransferStage.SCHEDULED
-  override fun validSortFields(): Set<String> = setOf(PLAN_REQUESTED, SCHEDULE_START, REASON, STATUS)
+  override fun validSortFields(): Set<String> = setOf(SCHEDULE_START, REASON, STATUS)
 }

@@ -104,6 +104,14 @@ fun startsBetween(start: LocalDate?, end: LocalDate?) = Specification<Transfer> 
   }
 }
 
+fun requestedOnBetween(start: LocalDate, end: LocalDate) = Specification<Transfer> { tr, _, cb ->
+  val plan = tr.join<Transfer, Plan>(Transfer::plan.name, JoinType.INNER)
+  cb.and(
+    cb.greaterThanOrEqualTo(plan.get(Plan::requestedOn.name), start),
+    cb.lessThanOrEqualTo(plan.get(Plan::requestedOn.name), end),
+  )
+}
+
 fun transferStatusCodeIn(codes: Set<TransferStatus.Code>) = Specification<Transfer> { tr, _, _ ->
   val status = tr.join<Transfer, TransferStatus>(Transfer::status.name, JoinType.INNER)
   status.get<TransferStatus.Code>(TransferStatus::code.name).`in`(codes.map { it.name })

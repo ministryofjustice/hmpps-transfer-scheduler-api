@@ -9,6 +9,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.destinationCodeI
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.logisticsCodeIn
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.matchesStage
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.priorityCodeIn
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.requestedOnBetween
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.startsBetween
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.transferMatchesPersonIdentifier
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.transferMatchesPersonName
@@ -41,7 +42,7 @@ class SearchTransfers(
     listOfNotNull(
       transferMatchesPrisonCode(prisonCode),
       matchesStage(stage),
-      startsBetween(start, end),
+      if (this is PlanningSearchRequest && isRequestedOnSearch()) requestedOnBetween(start!!, end!!) else startsBetween(start, end),
       destinationCodes.takeIf { it.isNotEmpty() }?.let { destinationCodeIn(it) },
       logisticsCodes.takeIf { it.isNotEmpty() }?.let { logisticsCodeIn(it) },
       if (this is PlanningSearchRequest) priorityCodes.takeIf { it.isNotEmpty() }?.let { priorityCodeIn(it) } else null,

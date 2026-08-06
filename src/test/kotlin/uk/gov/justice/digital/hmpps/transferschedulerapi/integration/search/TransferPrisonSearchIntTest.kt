@@ -4,8 +4,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus
-import sun.nio.cs.Surrogate.high
-import sun.nio.cs.Surrogate.low
 import uk.gov.justice.digital.hmpps.transferschedulerapi.access.Roles
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferPriority
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
@@ -24,8 +22,10 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.wiremock.Pr
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.wiremock.PrisonerRegisterExtension.Companion.prisonRegister
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged.PlanningSearchRequest
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged.PlanningSearchRequest.StartAndEndType.REQUESTED_ON
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged.PrisonTransferSearchRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged.ScheduledSearchRequest
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged.TransferSearchRequest.Companion.PLAN_REQUESTED
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged.TransferSearchResponse
 import uk.gov.justice.digital.hmpps.transferschedulerapi.verifyAgainst
 import java.time.LocalDate
@@ -63,7 +63,7 @@ class TransferPrisonSearchIntTest(
   }
 
   @Test
-  fun `can find transfers by date`() {
+  fun `can find transfers by start date`() {
     val prison = prisonRegister.givenPrison()
     val start = LocalDate.now().plusDays(2)
     val end = start.plusDays(3)
@@ -86,6 +86,35 @@ class TransferPrisonSearchIntTest(
     assertThat(res.content).hasSize(3)
     assertThat(res.metadata.totalElements).isEqualTo(3)
     assertThat(res.content.map { it.id }).containsExactlyElementsOf(transfers.subList(1, 4).map { it.id })
+  }
+
+  @Test
+  fun `can find planned transfers by requested on date`() {
+    val prison = prisonRegister.givenPrison()
+    val start = LocalDate.now().plusDays(2)
+    val end = start.plusDays(3)
+
+    val transfers = (0..5).map {
+      val requestedOn = start.minusDays(1).plusDays(it.toLong())
+      givenTransfer(
+        transfer(
+          prisonCode = prison.code,
+          schedule = null,
+          plan = plan(requestedOn = requestedOn),
+          reasonCode = TransferReasonCode.randomCode(),
+          statusCode = TransferStatus.Code.PLANNING,
+          stage = TransferStage.PLANNING,
+        ),
+      )
+    }
+
+    val res = searchTransfers(
+      prison.code,
+      searchRequest(start = start, end = end, startAndEndType = REQUESTED_ON, stage = TransferStage.PLANNING, sort = PLAN_REQUESTED),
+    ).successResponse<TransferSearchResponse>()
+    assertThat(res.content).hasSize(4)
+    assertThat(res.metadata.totalElements).isEqualTo(4)
+    assertThat(res.content.map { it.id }).containsExactlyElementsOf(transfers.subList(1, 5).map { it.id }.reversed())
   }
 
   @Test
@@ -368,7 +397,12 @@ class TransferPrisonSearchIntTest(
 
     val res1 = searchTransfers(
       prison.code,
-      searchRequest(start = null, end = null, stage = TransferStage.PLANNING, priorities = setOf(TransferPriority.Code.HIGH)),
+      searchRequest(
+        start = null,
+        end = null,
+        stage = TransferStage.PLANNING,
+        priorities = setOf(TransferPriority.Code.HIGH),
+      ),
     ).successResponse<TransferSearchResponse>()
 
     assertThat(res1.content).hasSize(1)
@@ -377,7 +411,12 @@ class TransferPrisonSearchIntTest(
 
     val res2 = searchTransfers(
       prison.code,
-      searchRequest(start = null, end = null, stage = TransferStage.PLANNING, priorities = setOf(TransferPriority.Code.MEDIUM)),
+      searchRequest(
+        start = null,
+        end = null,
+        stage = TransferStage.PLANNING,
+        priorities = setOf(TransferPriority.Code.MEDIUM),
+      ),
     ).successResponse<TransferSearchResponse>()
 
     assertThat(res2.content).hasSize(1)
@@ -386,7 +425,12 @@ class TransferPrisonSearchIntTest(
 
     val res3 = searchTransfers(
       prison.code,
-      searchRequest(start = null, end = null, stage = TransferStage.PLANNING, priorities = setOf(TransferPriority.Code.LOW)),
+      searchRequest(
+        start = null,
+        end = null,
+        stage = TransferStage.PLANNING,
+        priorities = setOf(TransferPriority.Code.LOW),
+      ),
     ).successResponse<TransferSearchResponse>()
 
     assertThat(res3.content).hasSize(1)
@@ -442,11 +486,13 @@ class TransferPrisonSearchIntTest(
     logistics: Set<String> = emptySet(),
     priorities: Set<TransferPriority.Code> = emptySet(),
     stage: TransferStage = TransferStage.SCHEDULED,
+    startAndEndType: PlanningSearchRequest.StartAndEndType = PlanningSearchRequest.StartAndEndType.START,
     page: Int = 1,
     size: Int = 10,
     sort: String = "start,asc",
   ): PrisonTransferSearchRequest = when (stage) {
     TransferStage.PLANNING -> PlanningSearchRequest(
+      startAndEndType = startAndEndType,
       start,
       end,
       query,
@@ -459,6 +505,7 @@ class TransferPrisonSearchIntTest(
       size,
       sort,
     )
+
     TransferStage.SCHEDULED -> ScheduledSearchRequest(
       requireNotNull(start),
       requireNotNull(end),
@@ -471,6 +518,7 @@ class TransferPrisonSearchIntTest(
       size,
       sort,
     )
+
     TransferStage.UNSCHEDULED -> throw IllegalArgumentException("Cannot search for unscheduled")
   }
 
