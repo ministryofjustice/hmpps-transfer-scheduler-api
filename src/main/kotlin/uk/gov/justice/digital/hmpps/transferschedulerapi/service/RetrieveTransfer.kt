@@ -5,6 +5,7 @@ import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.TransferRepository
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.getTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.prisonregister.PrisonRegisterClient
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.IntegrationResponse
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Transfer
 import java.util.UUID
 
@@ -25,4 +26,6 @@ class RetrieveTransfer(
     )
     return transfer.asModel(prisons::get)
   }
+
+  fun forIntegration(id: UUID): IntegrationResponse = IntegrationResponse(transferRepository.getTransfer(id).forIntegration())
 }

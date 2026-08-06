@@ -11,11 +11,12 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.Tran
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.wiremock.PrisonRegisterMockServer.Companion.prison
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.wiremock.PrisonerRegisterExtension.Companion.prisonRegister
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Transfer
-import uk.gov.justice.digital.hmpps.transferschedulerapi.verifyAgainst
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.IntegrationResponse
+import uk.gov.justice.digital.hmpps.transferschedulerapi.nullStateIsEqual
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 
-class RetrieveTransferIntTest(
+class RetrieveIntegrationTransferIntTest(
   @Autowired transferOps: TransferOperations,
 ) : IntegrationTestBase(),
   TransferOperations by transferOps {
@@ -31,7 +32,7 @@ class RetrieveTransferIntTest(
 
   @Test
   fun `403 forbidden without correct role`() {
-    retrieveTransfer(newUuid(), role = "ROLE_ANY__OTHER").expectStatus().isForbidden
+    retrieveTransfer(newUuid(), role = Roles.TRANSFER_SCHEDULER_UI).expectStatus().isForbidden
   }
 
   @Test
@@ -51,10 +52,8 @@ class RetrieveTransferIntTest(
     prisonRegister.givenPrisons(setOf(prison, destination))
     val transfer = givenTransfer(transfer(prisonCode = prison.code, destinationCode = destination.code, movement = movement()))
 
-    val res = retrieveTransfer(transfer.id).successResponse<Transfer>()
-    res verifyAgainst transfer
-    assertThat(res.prison.name).isEqualTo(prison.name)
-    assertThat(res.destination!!.name).isEqualTo(destination.name)
+    val res = retrieveTransfer(transfer.id).successResponse<IntegrationResponse>()
+    res.data verifyAgainst transfer
   }
 
   @Test
@@ -65,10 +64,8 @@ class RetrieveTransferIntTest(
     val transfer = givenTransfer(transfer(prisonCode = prison.code, destinationCode = destination.code, movement = null))
     assertThat(transfer.movement).isNull()
 
-    val res = retrieveTransfer(transfer.id).successResponse<Transfer>()
-    res verifyAgainst transfer
-    assertThat(res.prison.name).isEqualTo(prison.name)
-    assertThat(res.destination!!.name).isEqualTo(destination.name)
+    val res = retrieveTransfer(transfer.id).successResponse<IntegrationResponse>()
+    res.data verifyAgainst transfer
   }
 
   @Test
@@ -80,10 +77,8 @@ class RetrieveTransferIntTest(
     assertThat(transfer.schedule).isNull()
     assertThat(transfer.movement).isNull()
 
-    val res = retrieveTransfer(transfer.id).successResponse<Transfer>()
+    val res = retrieveTransfer(transfer.id).successResponse<IntegrationResponse>().data
     res verifyAgainst transfer
-    assertThat(res.prison.name).isEqualTo(prison.name)
-    assertThat(res.destination!!.name).isEqualTo(destination.name)
     assertThat(res.schedule).isNull()
   }
 
@@ -96,39 +91,19 @@ class RetrieveTransferIntTest(
     assertThat(transfer.plan).isNull()
     assertThat(transfer.movement).isNull()
 
-    val res = retrieveTransfer(transfer.id).successResponse<Transfer>()
+    val res = retrieveTransfer(transfer.id).successResponse<IntegrationResponse>().data
     res verifyAgainst transfer
-    assertThat(res.prison.name).isEqualTo(prison.name)
-    assertThat(res.destination!!.name).isEqualTo(destination.name)
     assertThat(res.plan).isNull()
-  }
-
-  @Test
-  fun `200 - can retrieve transfer with no subparts - invalid data from nomis`() {
-    val prison = prison()
-    val destination = prison()
-    prisonRegister.givenPrisons(setOf(prison, destination))
-    val transfer = givenTransfer(transfer(prisonCode = prison.code, destinationCode = destination.code, plan = null, schedule = null, movement = null))
-    assertThat(transfer.plan).isNull()
-    assertThat(transfer.schedule).isNull()
-    assertThat(transfer.movement).isNull()
-
-    val res = retrieveTransfer(transfer.id).successResponse<Transfer>()
-    res verifyAgainst transfer
-    assertThat(res.prison.name).isEqualTo(prison.name)
-    assertThat(res.destination!!.name).isEqualTo(destination.name)
-    assertThat(res.plan).isNull()
-    assertThat(res.schedule).isNull()
   }
 
   private fun retrieveTransfer(
     id: UUID,
-    role: String? = Roles.TRANSFER_SCHEDULER_UI,
+    role: String? = listOf(Roles.TRANSFER_RO, Roles.TRANSFER_RW).random(),
   ) = retrieveTransfer(id.toString(), role)
 
   private fun retrieveTransfer(
     id: String,
-    role: String? = Roles.TRANSFER_SCHEDULER_UI,
+    role: String? = listOf(Roles.TRANSFER_RO, Roles.TRANSFER_RW).random(),
   ) = webTestClient
     .get()
     .uri(RETRIEVE_TRANSFER_URL, id)
@@ -136,6 +111,38 @@ class RetrieveTransferIntTest(
     .exchange()
 
   companion object {
-    const val RETRIEVE_TRANSFER_URL = "/transfers/{id}"
+    const val RETRIEVE_TRANSFER_URL = "/integrations/transfers/{id}"
   }
+}
+
+private infix fun IntegrationResponse.Transfer.verifyAgainst(transfer: uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer) {
+  assertThat(id).isEqualTo(transfer.id)
+  assertThat(personIdentifier).isEqualTo(transfer.person.identifier)
+  assertThat(status.code).isEqualTo(transfer.status.code)
+  assertThat(reason.code).isEqualTo(transfer.reason.code)
+  assertThat(prisonCode).isEqualTo(transfer.prisonCode)
+  assertThat(destinationCode).isEqualTo(transfer.destinationCode)
+  assertThat(logistics?.code).isEqualTo(transfer.logistics?.code)
+  check(nullStateIsEqual(plan, transfer.plan)) { "Invalid plan state" }
+  check(nullStateIsEqual(schedule, transfer.schedule)) { "Invalid schedule state" }
+  check(nullStateIsEqual(movement, transfer.movement)) { "Invalid movement state" }
+  plan?.also { it verifyAgainst transfer.plan!! }
+  schedule?.also { it verifyAgainst transfer.schedule!! }
+  movement?.also { it verifyAgainst transfer.movement!! }
+}
+
+private infix fun IntegrationResponse.Plan.verifyAgainst(plan: uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Plan) {
+  assertThat(requestedOn).isEqualTo(plan.requestedOn)
+  assertThat(priority.code).isEqualTo(plan.priority.code)
+  assertThat(comments).isEqualTo(plan.comments)
+}
+
+private infix fun IntegrationResponse.Schedule.verifyAgainst(schedule: uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Schedule) {
+  assertThat(start.truncatedTo(ChronoUnit.SECONDS)).isEqualTo(schedule.start.truncatedTo(ChronoUnit.SECONDS))
+  assertThat(comments).isEqualTo(schedule.comments)
+}
+
+private infix fun IntegrationResponse.Movement.verifyAgainst(movement: uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Movement) {
+  assertThat(occurredAt.truncatedTo(ChronoUnit.SECONDS)).isEqualTo(movement.occurredAt.truncatedTo(ChronoUnit.SECONDS))
+  assertThat(comments).isEqualTo(movement.comments)
 }

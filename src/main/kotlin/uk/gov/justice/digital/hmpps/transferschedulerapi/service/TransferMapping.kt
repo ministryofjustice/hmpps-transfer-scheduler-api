@@ -3,6 +3,7 @@ package uk.gov.justice.digital.hmpps.transferschedulerapi.service
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.PersonSummary
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.PrisonProvider
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.RdProvider
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.IntegrationResponse
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Movement
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Person
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Plan
@@ -50,5 +51,32 @@ private fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer.sc
 }
 
 private fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer.movement(prisonProvider: PrisonProvider): Movement? = with(movement) {
-  this?.let { Movement(occurredAt, prisonProvider(destinationCode), reason.asCodedDescription(), logistics.asCodedDescription(), comments) }
+  this?.let {
+    Movement(
+      occurredAt,
+      prisonProvider(destinationCode),
+      reason.asCodedDescription(),
+      logistics.asCodedDescription(),
+      comments,
+    )
+  }
 }
+
+fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer.forIntegration() = IntegrationResponse.Transfer(
+  id,
+  person.identifier,
+  prisonCode,
+  status.asCodedDescription(),
+  reason.asCodedDescription(),
+  destinationCode,
+  logistics?.asCodedDescription(),
+  plan?.forIntegration(),
+  schedule?.forIntegration(),
+  movement?.forIntegration(),
+)
+
+fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Plan.forIntegration() = IntegrationResponse.Plan(requestedOn, priority.asCodedDescription(), comments)
+
+fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Schedule.forIntegration() = IntegrationResponse.Schedule(start, comments)
+
+fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Movement.forIntegration() = IntegrationResponse.Movement(occurredAt, comments)
