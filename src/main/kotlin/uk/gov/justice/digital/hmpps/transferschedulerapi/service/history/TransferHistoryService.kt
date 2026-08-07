@@ -130,7 +130,7 @@ class TransferHistoryService(
 
   private fun List<AuditedEntity>.changes(): List<Pair<AuditRevision, List<AuditedAction.Change>>> = mapIndexed { idx, audited ->
     if (idx == 0) {
-      audited.revision to listOf()
+      audited.revision to audited.state.initialState()
     } else {
       audited.revision to audited.state.changesFrom(this[idx - 1].state)
     }
@@ -176,6 +176,18 @@ class TransferHistoryService(
     is Schedule if previous is Schedule -> Schedule.auditedProperties().changesBetween(previous, this)
     is Movement if previous is Movement -> Movement.auditedProperties().changesBetween(previous, this)
     else -> return emptyList()
+  }
+
+  private fun Identifiable.initialState(): List<AuditedAction.Change> = when (this) {
+    is Transfer -> listOf()
+    is Plan -> Plan.auditedProperties().initialValues(this)
+    is Schedule -> Schedule.auditedProperties().initialValues(this)
+    is Movement -> Movement.auditedProperties().initialValues(this)
+    else -> return emptyList()
+  }
+
+  private fun <T : Identifiable> List<KMutableProperty1<T, out Any?>>.initialValues(new: T) = mapNotNull { p ->
+    p(new).asChangeValue()?.let { v -> AuditedAction.Change(p.name, null, v) }
   }
 
   private fun <T : Identifiable> List<KMutableProperty1<T, out Any?>>.changesBetween(previous: T, new: T) = mapNotNull {
