@@ -184,6 +184,21 @@ class PlanModificationsIntTest(
           "Scheduled",
           "Ready to schedule",
         ),
+        AuditedAction.Change(
+          Plan::requestedOn.name,
+          null,
+          ISO_LOCAL_DATE.format(action.requestedOn),
+        ),
+        AuditedAction.Change(
+          Plan::priority.name,
+          null,
+          "Low",
+        ),
+        AuditedAction.Change(
+          Plan::comments.name,
+          null,
+          action.comments,
+        ),
       )
     }
 
@@ -277,7 +292,7 @@ class PlanModificationsIntTest(
   @Test
   fun `200 - can schedule a planned transfer`() {
     val transfer = givenTransfer(transfer(schedule = null, statusCode = READY_TO_SCHEDULE))
-    val action = ScheduleTransfer(LocalDateTime.now().plusDays(7), word(20))
+    val action = ScheduleTransfer(LocalDateTime.now().plusDays(7).truncatedTo(ChronoUnit.SECONDS), word(20))
     val username = username()
     val givenReason = word(10)
 
@@ -290,6 +305,16 @@ class PlanModificationsIntTest(
           Transfer::status.name,
           "Ready to schedule",
           "Scheduled",
+        ),
+        AuditedAction.Change(
+          Schedule::start.name,
+          null,
+          ISO_LOCAL_DATE_TIME.format(action.start),
+        ),
+        AuditedAction.Change(
+          Schedule::comments.name,
+          null,
+          action.comments,
         ),
       )
     }
@@ -369,6 +394,11 @@ class PlanModificationsIntTest(
           Transfer::status.name,
           "Awaiting details",
           "Ready to schedule",
+        ),
+        AuditedAction.Change(
+          Schedule::start.name,
+          null,
+          ISO_LOCAL_DATE_TIME.format(action.start),
         ),
       )
     }
