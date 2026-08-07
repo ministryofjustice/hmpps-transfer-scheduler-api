@@ -53,6 +53,8 @@ spring:
     date-format: "yyyy-MM-dd HH:mm:ss"
     default-property-inclusion: non_null
 
+  mvc.servlet.load-on-startup: 1
+
   security:
     oauth2:
       resourceserver:
