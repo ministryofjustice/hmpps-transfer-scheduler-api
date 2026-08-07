@@ -22,6 +22,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferCancelled
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferLogisticsChanged
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferRecategorised
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferRelocated
+import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferRescheduled
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.personIdentifier
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.username
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.word
@@ -38,11 +39,14 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.A
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyLogistics
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyReason
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyScheduleComments
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyScheduleStart
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.CancelTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ScheduleTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.TransferAction
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.TransferActions
 import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 class ScheduleModificationsIntTest(
@@ -67,6 +71,44 @@ class ScheduleModificationsIntTest(
   @Test
   fun `404 - not found if uuid does not exist`() {
     applyAction(newUuid(), ApplyDestination("ANY")).errorResponse(HttpStatus.NOT_FOUND)
+  }
+
+  @Test
+  fun `200 - can change start time for a scheduled transfer`() {
+    val transfer = givenTransfer(transfer())
+    val action = ApplyScheduleStart(LocalDateTime.now().plusDays(14).truncatedTo(ChronoUnit.SECONDS))
+    val username = username()
+    val givenReason = word(20)
+
+    val res = applyAction(transfer.id, action, givenReason, username).successResponse<AuditHistory>()
+    with(res.content.single()) {
+      assertThat(domainEvents).containsExactly(TransferRescheduled.EVENT_TYPE)
+      assertThat(reason).isEqualTo(givenReason)
+      assertThat(changes).containsExactly(
+        AuditedAction.Change(
+          Schedule::start.name,
+          ISO_LOCAL_DATE_TIME.format(transfer.schedule!!.start),
+          ISO_LOCAL_DATE_TIME.format(action.start),
+        ),
+      )
+    }
+
+    val saved = requireNotNull(findTransfer(transfer.id))
+    assertThat(saved.schedule!!.start).isEqualTo(action.start)
+
+    verifyAudit(
+      saved.schedule!!,
+      RevisionType.MOD,
+      setOf(HmppsDomainEvent::class.simpleName!!, Schedule::class.simpleName!!),
+      SchedulerContext.get().copy(username = username, reason = givenReason),
+    )
+
+    verifyEventPublications(
+      saved.schedule!!,
+      setOf(
+        TransferRescheduled(saved.person.identifier, saved.id, saved.stage).publication(saved.id),
+      ),
+    )
   }
 
   @Test

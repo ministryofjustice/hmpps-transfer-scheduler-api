@@ -3,6 +3,7 @@ package uk.gov.justice.digital.hmpps.transferschedulerapi.domain
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.PLANNING
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.READY_TO_SCHEDULE
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.SCHEDULED
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.valueOf
 import uk.gov.justice.digital.hmpps.transferschedulerapi.exception.ConflictException
 
@@ -27,6 +28,7 @@ class StatusValidator(val transfer: Transfer) {
 
     private val PREDICATES: Map<TransferStatus.Code, (Transfer) -> Boolean> = mapOf(
       READY_TO_SCHEDULE to { tr -> tr.isReadyToSchedule() },
+      SCHEDULED to { tr -> tr.isReadyToSchedule() },
     )
   }
 }
