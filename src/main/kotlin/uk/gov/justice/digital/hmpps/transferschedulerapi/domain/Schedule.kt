@@ -14,7 +14,7 @@ import jakarta.validation.constraints.NotNull
 import org.hibernate.envers.Audited
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.ScheduleRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyScheduleComments
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.RescheduleTransfer
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyScheduleStart
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.TransferAction
 import java.time.LocalDateTime
 import java.util.UUID
@@ -66,11 +66,11 @@ final class Schedule(
   }.toSet()
 
   internal fun match(request: ScheduleRequest) = apply {
-    reschedule(RescheduleTransfer(request.start))
+    reschedule(ApplyScheduleStart(request.start))
     applyComments(ApplyScheduleComments(request.comments))
   }
 
-  fun reschedule(action: RescheduleTransfer) = apply {
+  fun reschedule(action: ApplyScheduleStart) = apply {
     if (action changes this) {
       start = action.start
       appliedActions += action

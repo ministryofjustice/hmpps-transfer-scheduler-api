@@ -24,6 +24,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.event.PlanRequestedOnCh
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferCancelled
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferMovedToPlanning
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferReprioritised
+import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferRescheduled
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferScheduled
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.personIdentifier
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.username
@@ -41,6 +42,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.A
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyPlanComments
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyPriority
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyRequestedOn
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyScheduleStart
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.CancelTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.PlanTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ScheduleTransfer
@@ -50,6 +52,8 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.verifyAgainst
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter.ISO_LOCAL_DATE
+import java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 class PlanModificationsIntTest(
@@ -308,6 +312,88 @@ class PlanModificationsIntTest(
       setOf(
         TransferScheduled(saved.person.identifier, saved.id, saved.stage).publication(saved.id),
       ),
+    )
+  }
+
+  @Test
+  fun `200 - can reschedule a planned transfer`() {
+    val transfer = givenTransfer(transfer(statusCode = READY_TO_SCHEDULE))
+    val action = ApplyScheduleStart(LocalDateTime.now().plusDays(9).truncatedTo(ChronoUnit.SECONDS))
+    val username = username()
+    val givenReason = word(20)
+
+    val res = applyAction(transfer.id, action, givenReason, username).successResponse<AuditHistory>()
+    with(res.content.single()) {
+      assertThat(domainEvents).containsExactly(TransferRescheduled.EVENT_TYPE)
+      assertThat(reason).isEqualTo(givenReason)
+      assertThat(changes).containsExactly(
+        AuditedAction.Change(
+          Schedule::start.name,
+          ISO_LOCAL_DATE_TIME.format(transfer.schedule!!.start),
+          ISO_LOCAL_DATE_TIME.format(action.start),
+        ),
+      )
+    }
+
+    val saved = requireNotNull(findTransfer(transfer.id))
+    assertThat(saved.schedule!!.start).isEqualTo(action.start)
+
+    verifyAudit(
+      saved.schedule!!,
+      RevisionType.MOD,
+      setOf(HmppsDomainEvent::class.simpleName!!, Schedule::class.simpleName!!),
+      SchedulerContext.get().copy(username = username, reason = givenReason),
+    )
+
+    verifyEventPublications(
+      saved.schedule!!,
+      setOf(
+        TransferRescheduled(saved.person.identifier, saved.id, saved.stage).publication(saved.id),
+      ),
+    )
+  }
+
+  @Test
+  fun `200 - can move a planned transfer to ready to schedule by adding start time`() {
+    val transfer = givenTransfer(transfer(schedule = null, statusCode = PLANNING))
+    val action = ApplyScheduleStart(LocalDateTime.now().plusDays(9).truncatedTo(ChronoUnit.SECONDS))
+    val username = username()
+    val givenReason = word(20)
+
+    val res = applyAction(transfer.id, action, givenReason, username).successResponse<AuditHistory>()
+    with(res.content.single()) {
+      assertThat(domainEvents).isEmpty()
+      assertThat(reason).isEqualTo(givenReason)
+      assertThat(changes).containsExactly(
+        AuditedAction.Change(
+          Transfer::status.name,
+          "Awaiting details",
+          "Ready to schedule",
+        ),
+      )
+    }
+
+    val saved = requireNotNull(findTransfer(transfer.id))
+    assertThat(saved.schedule!!.start).isEqualTo(action.start)
+    assertThat(saved.status.code).isEqualTo(READY_TO_SCHEDULE.name)
+
+    verifyAudit(
+      saved,
+      RevisionType.MOD,
+      setOf(Transfer::class.simpleName!!, Schedule::class.simpleName!!),
+      SchedulerContext.get().copy(username = username, reason = givenReason),
+    )
+
+    verifyAudit(
+      saved.schedule!!,
+      RevisionType.ADD,
+      setOf(Transfer::class.simpleName!!, Schedule::class.simpleName!!),
+      SchedulerContext.get().copy(username = username, reason = givenReason),
+    )
+
+    verifyEventPublications(
+      saved,
+      setOf(),
     )
   }
 

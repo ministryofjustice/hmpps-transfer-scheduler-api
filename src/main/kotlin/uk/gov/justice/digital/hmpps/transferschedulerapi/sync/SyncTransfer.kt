@@ -22,19 +22,19 @@ data class SyncTransfer(
   val syncSchedule: SyncSchedule,
 ) : NumericLegacyIdRequest,
   TransferRequest {
-  @get:JsonIgnore
+  @JsonIgnore
   override val legacyId: Long? = eventId
 
-  @get:JsonIgnore
+  @JsonIgnore
   override val reasonCode: String = syncSchedule.eventSubType
 
-  @get:JsonIgnore
+  @JsonIgnore
   override val destinationCode: String? = syncSchedule.toAgyLocId
 
-  @get:JsonIgnore
+  @JsonIgnore
   override val logisticsCode: String? = syncSchedule.escortCode
 
-  @get:JsonIgnore
+  @JsonIgnore
   override val plan: PlanRequest? = syncWaitlist?.let {
     object : PlanRequest {
       override val requestedOn: LocalDate = it.requestDate
@@ -43,7 +43,7 @@ data class SyncTransfer(
     }
   }
 
-  @get:JsonIgnore
+  @JsonIgnore
   override val schedule: ScheduleRequest? = syncSchedule.start?.let {
     object : ScheduleRequest {
       override val start: LocalDateTime = it
@@ -51,10 +51,10 @@ data class SyncTransfer(
     }
   }
 
-  @get:JsonIgnore
+  @JsonIgnore
   val isCancelled: Boolean = syncSchedule.isCancelled
 
-  @get:JsonIgnore
+  @JsonIgnore
   val isExpired: Boolean = syncSchedule.isExpired
 
   override fun initialStatusCode(): TransferStatus.Code = when {
@@ -166,8 +166,14 @@ data class SyncMovement(
   override val comments: String?,
 ) : StringLegacyIdRequest,
   MovementRequest {
+
+  @JsonIgnore
   override val reasonCode: String = movementReasonCode
+
+  @JsonIgnore
   override val destinationCode: String = toAgyLocId
+
+  @JsonIgnore
   override val logisticsCode: String = escortCode
 
   @JsonIgnore
