@@ -1,5 +1,8 @@
 package uk.gov.justice.digital.hmpps.transferschedulerapi.integration.prisonersearch
 
+import com.fasterxml.jackson.annotation.JsonIgnore
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.PersonSummary
+
 data class PrisonerNumbers(
   val prisonerNumbers: Set<String>,
 )
@@ -21,7 +24,21 @@ data class Prisoner(
       Prisoner::lastPrisonId.name,
       Prisoner::cellLocation.name,
     )
-
-    const val PATTERN: String = "\\w\\d{4}\\w{2}"
   }
 }
+
+data class Prisoners(val content: List<Prisoner>) {
+  private val map = content.associateBy { it.prisonerNumber }
+
+  fun personIdentifiers(): Set<String> = map.keys
+
+  @JsonIgnore
+  val size = map.keys.size
+
+  @JsonIgnore
+  fun isEmpty() = map.keys.isEmpty()
+
+  operator fun get(prisonerNumber: String): Prisoner? = map[prisonerNumber]
+}
+
+fun PersonSummary.asPrisoner() = Prisoner(identifier, firstName, lastName, prisonCode, prisonCode, cellLocation)

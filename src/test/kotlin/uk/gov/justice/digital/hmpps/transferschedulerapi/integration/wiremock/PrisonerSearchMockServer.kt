@@ -2,9 +2,12 @@ package uk.gov.justice.digital.hmpps.transferschedulerapi.integration.wiremock
 
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
+import com.github.tomakehurst.wiremock.client.WireMock.equalTo
 import com.github.tomakehurst.wiremock.client.WireMock.equalToJson
+import com.github.tomakehurst.wiremock.client.WireMock.get
 import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
+import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import org.junit.jupiter.api.extension.AfterAllCallback
 import org.junit.jupiter.api.extension.BeforeAllCallback
 import org.junit.jupiter.api.extension.BeforeEachCallback
@@ -15,6 +18,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerat
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.word
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.prisonersearch.Prisoner
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.prisonersearch.PrisonerNumbers
+import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.prisonersearch.Prisoners
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.wiremock.WiremockConfig.mockServerConfig
 
 class PrisonerSearchServer : WireMockServer(mockServerConfig(9000)) {
@@ -37,6 +41,23 @@ class PrisonerSearchServer : WireMockServer(mockServerConfig(9000)) {
         ),
     )
     return prisoners
+  }
+
+  fun givenMatchingPrisoners(
+    prisonCode: String,
+    prisoners: Prisoners,
+    query: String? = null,
+  ): StubMapping {
+    val request = get(urlPathEqualTo("/prison/$prisonCode/prisoners")).withBearerToken()
+    query?.takeIf { it.isNotBlank() }?.also { request.withQueryParam("term", equalTo(query)) }
+    return stubFor(
+      request.willReturn(
+        aResponse()
+          .withHeader("Content-Type", "application/json")
+          .withBody(jsonMapper().writeValueAsString(prisoners))
+          .withStatus(200),
+      ),
+    )
   }
 
   companion object {

@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus
 import uk.gov.justice.digital.hmpps.transferschedulerapi.access.Roles
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferPriority
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.prisonCode
@@ -16,10 +17,14 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.Tran
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.plan
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.schedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.transfer
+import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.prisonersearch.Prisoners
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.referencedata.TransferLogisticsCode
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.referencedata.TransferReasonCode
+import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.search.TransferPrisonSearchIntTest.Companion.prisoners
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.wiremock.PrisonRegisterMockServer.Companion.prison
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.wiremock.PrisonerRegisterExtension.Companion.prisonRegister
+import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.wiremock.PrisonerSearchExtension.Companion.prisonerSearch
+import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.wiremock.PrisonerSearchServer.Companion.prisoner
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged.PlanningSearchRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged.PlanningSearchRequest.StartAndEndType.REQUESTED_ON
@@ -81,6 +86,8 @@ class TransferPrisonSearchIntTest(
       )
     }
 
+    prisonerSearch.givenMatchingPrisoners(prison.code, transfers.prisoners(prison.code))
+
     val res = searchTransfers(prison.code, searchRequest(start = start, end = end, stage = TransferStage.PLANNING))
       .successResponse<TransferSearchResponse>()
     assertThat(res.content).hasSize(3)
@@ -108,9 +115,17 @@ class TransferPrisonSearchIntTest(
       )
     }
 
+    prisonerSearch.givenMatchingPrisoners(prison.code, transfers.prisoners(prison.code))
+
     val res = searchTransfers(
       prison.code,
-      searchRequest(start = start, end = end, startAndEndType = REQUESTED_ON, stage = TransferStage.PLANNING, sort = PLAN_REQUESTED),
+      searchRequest(
+        start = start,
+        end = end,
+        startAndEndType = REQUESTED_ON,
+        stage = TransferStage.PLANNING,
+        sort = PLAN_REQUESTED,
+      ),
     ).successResponse<TransferSearchResponse>()
     assertThat(res.content).hasSize(4)
     assertThat(res.metadata.totalElements).isEqualTo(4)
@@ -124,7 +139,9 @@ class TransferPrisonSearchIntTest(
     prisonRegister.givenPrisons(setOf(prison, destination))
 
     val toFind = givenTransfer(transfer(prisonCode = prison.code, destinationCode = destination.code))
-    givenTransfer(transfer())
+    val notFound = givenTransfer(transfer())
+
+    prisonerSearch.givenMatchingPrisoners(prison.code, listOf(toFind, notFound).prisoners(prison.code))
 
     val res = searchTransfers(prison.code, searchRequest()).successResponse<TransferSearchResponse>()
 
@@ -144,7 +161,9 @@ class TransferPrisonSearchIntTest(
     prisonRegister.givenPrisons(setOf(prison, destination))
 
     val toFind = givenTransfer(transfer(prisonCode = prison.code, destinationCode = destination.code))
-    givenTransfer(transfer(prisonCode = prison.code))
+    val notFound = givenTransfer(transfer(prisonCode = prison.code))
+
+    prisonerSearch.givenMatchingPrisoners(prison.code, listOf(toFind, notFound).prisoners(prison.code))
 
     val res = searchTransfers(prison.code, searchRequest(destinations = setOf(destination.code)))
       .successResponse<TransferSearchResponse>()
@@ -166,6 +185,8 @@ class TransferPrisonSearchIntTest(
 
     val toFind = givenTransfer(transfer(prisonCode = prison.code, destinationCode = destination.code))
     givenTransfer(transfer(prisonCode = prison.code))
+
+    prisonerSearch.givenMatchingPrisoners(prison.code, listOf(toFind).prisoners(prison.code), toFind.person.identifier)
 
     val res = searchTransfers(prison.code, searchRequest(query = toFind.person.identifier))
       .successResponse<TransferSearchResponse>()
@@ -189,6 +210,7 @@ class TransferPrisonSearchIntTest(
     givenTransfer(transfer(prisonCode = prison.code))
 
     toFind.person.nameFormats().forEach {
+      prisonerSearch.givenMatchingPrisoners(prison.code, listOf(toFind).prisoners(prison.code), it)
       val res = searchTransfers(prison.code, searchRequest(query = it))
         .successResponse<TransferSearchResponse>()
 
@@ -210,7 +232,7 @@ class TransferPrisonSearchIntTest(
     val fPerson = givenPersonSummary(personSummary(prisonCode = prison.code))
     val nfPerson = givenPersonSummary(personSummary(prisonCode = anotherPrisonCode))
 
-    val fApp = givenTransfer(
+    val fTr = givenTransfer(
       transfer(
         prisonCode = prison.code,
         personIdentifier = fPerson.identifier,
@@ -223,12 +245,14 @@ class TransferPrisonSearchIntTest(
       ),
     )
 
+    prisonerSearch.givenMatchingPrisoners(prison.code, listOf(fTr).prisoners(prison.code))
+
     val res = searchTransfers(prison.code, searchRequest()).successResponse<TransferSearchResponse>()
     assertThat(res.content.size).isEqualTo(1)
     assertThat(res.metadata.totalElements).isEqualTo(1)
     with(res.content.single()) {
       assertThat(person.identifier).isEqualTo(fPerson.identifier)
-      assertThat(id).isEqualTo(fApp.id)
+      assertThat(id).isEqualTo(fTr.id)
     }
   }
 
@@ -240,9 +264,10 @@ class TransferPrisonSearchIntTest(
     val reasonCode = TransferReasonCode.randomCode()
     val anotherCode = generateSequence { TransferReasonCode.randomCode() }.first { it != reasonCode }
 
-    val toFind =
-      givenTransfer(transfer(prisonCode = prison.code, destinationCode = destination.code, reasonCode = reasonCode))
-    givenTransfer(transfer(prisonCode = prison.code, destinationCode = destination.code, reasonCode = anotherCode))
+    val toFind = givenTransfer(transfer(prisonCode = prison.code, destinationCode = destination.code, reasonCode = reasonCode))
+    val notFound = givenTransfer(transfer(prisonCode = prison.code, destinationCode = destination.code, reasonCode = anotherCode))
+
+    prisonerSearch.givenMatchingPrisoners(prison.code, listOf(toFind, notFound).prisoners(prison.code))
 
     val res = searchTransfers(prison.code, searchRequest(reasons = setOf(reasonCode)))
       .successResponse<TransferSearchResponse>()
@@ -271,7 +296,9 @@ class TransferPrisonSearchIntTest(
         logisticsCode = logisticsCode,
       ),
     )
-    givenTransfer(transfer(prisonCode = prison.code, destinationCode = destination.code, logisticsCode = anotherCode))
+    val notFound = givenTransfer(transfer(prisonCode = prison.code, destinationCode = destination.code, logisticsCode = anotherCode))
+
+    prisonerSearch.givenMatchingPrisoners(prison.code, listOf(toFind, notFound).prisoners(prison.code))
 
     val res = searchTransfers(prison.code, searchRequest(logistics = setOf(logisticsCode)))
       .successResponse<TransferSearchResponse>()
@@ -301,6 +328,8 @@ class TransferPrisonSearchIntTest(
     assertThat(planning.status.code).isEqualTo(TransferStatus.Code.READY_TO_SCHEDULE.name)
     val scheduled = givenTransfer(transfer(prisonCode = prison.code, destinationCode = destination.code))
     assertThat(scheduled.status.code).isEqualTo(TransferStatus.Code.SCHEDULED.name)
+
+    prisonerSearch.givenMatchingPrisoners(prison.code, listOf(planning, scheduled).prisoners(prison.code))
 
     val res1 = searchTransfers(prison.code, searchRequest(stage = TransferStage.PLANNING))
       .successResponse<TransferSearchResponse>()
@@ -342,6 +371,8 @@ class TransferPrisonSearchIntTest(
     assertThat(inTransit.status.code).isEqualTo(TransferStatus.Code.IN_TRANSIT.name)
     val scheduled = givenTransfer(transfer(prisonCode = prison.code, destinationCode = destination.code))
     assertThat(scheduled.status.code).isEqualTo(TransferStatus.Code.SCHEDULED.name)
+
+    prisonerSearch.givenMatchingPrisoners(prison.code, listOf(inTransit, scheduled).prisoners(prison.code))
 
     val res1 = searchTransfers(prison.code, searchRequest(statuses = setOf(TransferStatus.Code.IN_TRANSIT)))
       .successResponse<TransferSearchResponse>()
@@ -394,6 +425,8 @@ class TransferPrisonSearchIntTest(
         statusCode = TransferStatus.Code.PLANNING,
       ),
     )
+
+    prisonerSearch.givenMatchingPrisoners(prison.code, listOf(high, med, low).prisoners(prison.code))
 
     val res1 = searchTransfers(
       prison.code,
@@ -458,6 +491,8 @@ class TransferPrisonSearchIntTest(
         statusCode = TransferStatus.Code.PLANNING,
       ),
     )
+
+    prisonerSearch.givenMatchingPrisoners(prison.code, listOf(rts, planned).prisoners(prison.code))
 
     val res1 = searchTransfers(
       prison.code,
@@ -535,5 +570,7 @@ class TransferPrisonSearchIntTest(
 
   companion object {
     const val URL_TO_TEST = "/search/prisons/{prisonCode}/transfers"
+    private fun List<Transfer>.prisoners(prisonCode: String) = Prisoners(map { it.prisoner(prisonCode) })
+    private fun Transfer.prisoner(prisonCode: String) = prisoner(prisonCode, person.identifier)
   }
 }

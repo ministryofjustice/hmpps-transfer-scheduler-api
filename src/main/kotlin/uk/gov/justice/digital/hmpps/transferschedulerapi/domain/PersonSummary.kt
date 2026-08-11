@@ -5,16 +5,9 @@ import jakarta.persistence.Entity
 import jakarta.persistence.Id
 import jakarta.persistence.Table
 import jakarta.persistence.Version
-import jakarta.persistence.criteria.CriteriaBuilder
-import jakarta.persistence.criteria.Join
-import jakarta.persistence.criteria.Predicate
 import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Size
 import org.springframework.data.jpa.repository.JpaRepository
-import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.PersonSummary.Companion.FIRST_NAME
-import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.PersonSummary.Companion.IDENTIFIER
-import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.PersonSummary.Companion.LAST_NAME
-import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.PersonSummary.Companion.PRISON_CODE
 
 @Entity
 @Table(name = "person_summary")
@@ -74,25 +67,3 @@ final class PersonSummary(
 }
 
 interface PersonSummaryRepository : JpaRepository<PersonSummary, String>
-
-fun <T> Join<T, PersonSummary>.matchesName(cb: CriteriaBuilder, name: String): Predicate {
-  val matches = name.replace(",", " ").split("\\s".toRegex())
-    .filter { it.isNotBlank() }
-    .map {
-      cb.or(
-        cb.like(cb.lower(this[LAST_NAME]), "%${it.lowercase()}%", '\\'),
-        cb.like(cb.lower(this[FIRST_NAME]), "%${it.lowercase()}%", '\\'),
-      )
-    }.toTypedArray()
-  return cb.and(*matches)
-}
-
-fun <T> Join<T, PersonSummary>.matchesIdentifier(
-  cb: CriteriaBuilder,
-  identifier: String,
-): Predicate = cb.equal(get<String>(IDENTIFIER), identifier.uppercase())
-
-fun <T> Join<T, PersonSummary>.matchesPrisonCode(
-  cb: CriteriaBuilder,
-  prisonCode: String,
-): Predicate = cb.equal(get<String>(PRISON_CODE), prisonCode)

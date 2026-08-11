@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.TransferRepository
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.getTransfer
+import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.prisonersearch.asPrisoner
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.prisonregister.PrisonRegisterClient
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.IntegrationResponse
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Transfer
@@ -24,7 +25,7 @@ class RetrieveTransfer(
         transfer.movement?.destinationCode,
       ),
     )
-    return transfer.asModel(prisons::get)
+    return transfer.asModel(prisons::get) { _ -> transfer.person.asPrisoner() }
   }
 
   fun forIntegration(id: UUID): IntegrationResponse = IntegrationResponse(transferRepository.getTransfer(id).forIntegration())

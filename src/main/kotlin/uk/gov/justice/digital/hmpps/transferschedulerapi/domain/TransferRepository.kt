@@ -71,24 +71,8 @@ fun transferMatchesPrisonCode(prisonCode: String) = Specification<Transfer> { tr
   cb.equal(tr.get<String>(Transfer::prisonCode.name), prisonCode)
 }
 
-fun transferMatchesPersonPrisonCode(prisonCode: String) = Specification<Transfer> { tr, _, cb ->
-  tr.join<Transfer, PersonSummary>(Transfer::person.name, JoinType.INNER).matchesPrisonCode(cb, prisonCode)
-}
-
-fun transferMatchesPersonIdentifier(personIdentifier: String, prisonCode: String?) = Specification<Transfer> { tr, _, cb ->
-  val person = tr.join<Transfer, PersonSummary>(Transfer::person.name, JoinType.INNER)
-  cb.and(
-    person.matchesIdentifier(cb, personIdentifier),
-    prisonCode?.let { person.matchesPrisonCode(cb, it) } ?: cb.conjunction(),
-  )
-}
-
-fun transferMatchesPersonName(name: String, prisonCode: String?) = Specification<Transfer> { tr, _, cb ->
-  val person = tr.join<Transfer, PersonSummary>(Transfer::person.name, JoinType.INNER)
-  cb.and(
-    person.matchesName(cb, name),
-    prisonCode?.let { person.matchesPrisonCode(cb, it) } ?: cb.conjunction(),
-  )
+fun transferPersonIdentifierIn(personIdentifiers: Set<String>) = Specification<Transfer> { tr, _, cb ->
+  tr.get<Any>(Transfer::person.name).get<String>(IDENTIFIER).`in`(personIdentifiers)
 }
 
 fun startsBetween(start: LocalDate?, end: LocalDate?) = Specification<Transfer> { tr, _, cb ->

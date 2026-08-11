@@ -3,6 +3,7 @@ package uk.gov.justice.digital.hmpps.transferschedulerapi.service
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.PersonSummary
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.PrisonProvider
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.RdProvider
+import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.prisonersearch.Prisoner
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.IntegrationResponse
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Movement
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Person
@@ -26,9 +27,12 @@ fun TransferRequest.asEntity(person: PersonSummary, rdProvider: RdProvider) = uk
   .withPlan(plan, rdProvider)
   .withSchedule(schedule)
 
-fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer.asModel(prisonProvider: PrisonProvider) = Transfer(
+fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer.asModel(
+  prisonProvider: PrisonProvider,
+  prisonerProvider: (String) -> Prisoner,
+) = Transfer(
   id,
-  person(),
+  prisonerProvider(person.identifier).asPerson(),
   prisonProvider(prisonCode),
   status.asCodedDescription(),
   reason.asCodedDescription(),
@@ -40,7 +44,7 @@ fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer.asModel(pr
   stage,
 )
 
-private fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer.person() = Person(person.identifier, person.firstName, person.lastName)
+private fun Prisoner.asPerson() = Person(prisonerNumber, firstName, lastName)
 
 private fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer.plan(): Plan? = with(plan) {
   this?.let { Plan(requestedOn, priority.asCodedDescription(), comments) }
