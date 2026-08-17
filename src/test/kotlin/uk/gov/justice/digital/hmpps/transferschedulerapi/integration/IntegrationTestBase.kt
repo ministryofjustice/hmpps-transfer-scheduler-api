@@ -33,7 +33,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.Re
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.DomainEvent
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TestConfig
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.container.LocalStackContainer
-import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.container.LocalStackContainer.setLocalStackProperties
+import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.container.LocalStackContainer.setMiniStackProperties
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.container.PostgresContainer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.wiremock.HmppsAuthApiExtension
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.wiremock.ManageUsersExtension
@@ -207,7 +207,7 @@ abstract class IntegrationTestBase {
       }
 
       System.setProperty("aws.region", "eu-west-2")
-      localStackContainer?.also { setLocalStackProperties(it, registry) }
+      localStackContainer?.also { setMiniStackProperties(it, registry) }
     }
   }
 }
