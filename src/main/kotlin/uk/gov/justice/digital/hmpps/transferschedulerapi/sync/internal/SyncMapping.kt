@@ -35,7 +35,7 @@ fun Transfer.updateFrom(request: SyncTransfer, personSummary: PersonSummary, rdP
   applyLogistics(ApplyLogistics(request.logisticsCode), rdProvider)
   applyReason(ApplyReason(request.reasonCode), rdProvider)
   if (status.code == SCHEDULED.name && request.plan != null && request.syncSchedule.isPending) {
-    with(request.plan) { applyPlan(PlanTransfer(requestedOn, priorityCode, comments), rdProvider) }
+    with(request.plan) { applyPlan(PlanTransfer(requestedOn, priorityCode, comments), rdProvider, isReadyToSchedule()) }
   } else {
     withPlan(request.plan, rdProvider)
   }

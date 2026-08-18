@@ -301,7 +301,7 @@ class ResyncTransfersIntTest(
     assertThat(res.transfers).hasSize(2)
     assertThat(res.unscheduledMovements).isEmpty()
 
-    waitUntil { findTransfer(res.transfers.last().dpsId)?.plan != null }
+    waitUntil { res.transfers.all { findTransfer(it.dpsId)?.plan != null } }
 
     val transfers = res.transfers.map { findTransfer(it.dpsId) }
 
