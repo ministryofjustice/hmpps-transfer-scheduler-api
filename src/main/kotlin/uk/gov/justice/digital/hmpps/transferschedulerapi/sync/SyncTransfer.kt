@@ -122,7 +122,7 @@ data class SyncSchedule(
   val escortCode: String?,
 ) {
   @JsonIgnore
-  val isPending = eventSubType == PENDING
+  val isPending = eventStatus == PENDING
 
   @JsonIgnore
   val isCancelled = eventStatus == CANCELLED

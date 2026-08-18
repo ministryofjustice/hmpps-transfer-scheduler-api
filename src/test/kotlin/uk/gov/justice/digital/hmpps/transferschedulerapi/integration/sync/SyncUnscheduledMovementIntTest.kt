@@ -79,6 +79,7 @@ class SyncUnscheduledMovementIntTest(
     assertThat(transfer.stage == TransferStage.UNSCHEDULED)
     movement verifyAgainst request
     assertThat(res.dpsId).isEqualTo(movement.id)
+    assertThat(movement.legacyId).isEqualTo("${request.offenderBookId}_${request.movementSeq}")
 
     verifyAudit(
       movement,
@@ -130,6 +131,7 @@ class SyncUnscheduledMovementIntTest(
     assertThat(transfer.stage == TransferStage.UNSCHEDULED)
     movement verifyAgainst request
     assertThat(res.dpsId).isEqualTo(movement.id)
+    assertThat(movement.legacyId).isEqualTo("${request.offenderBookId}_${request.movementSeq}")
 
     verifyAudit(
       movement,
@@ -187,6 +189,7 @@ class SyncUnscheduledMovementIntTest(
     assertThat(transfer.status.code).isEqualTo(TransferStatus.Code.COMPLETED.name)
     assertThat(transfer.stage).isEqualTo(TransferStage.UNSCHEDULED)
     movement verifyAgainst request
+    assertThat(movement.legacyId).isEqualTo("${request.offenderBookId}_${request.movementSeq}")
 
     verifyAudit(
       movement,
@@ -234,6 +237,7 @@ class SyncUnscheduledMovementIntTest(
     assertThat(transfer.status.code).isEqualTo(TransferStatus.Code.IN_TRANSIT.name)
     assertThat(transfer.stage).isEqualTo(TransferStage.UNSCHEDULED)
     movement verifyAgainst request
+    assertThat(movement.legacyId).isEqualTo("${request.offenderBookId}_${request.movementSeq}")
 
     verifyAudit(
       movement,
@@ -290,6 +294,7 @@ class SyncUnscheduledMovementIntTest(
     assertThat(transfer.status.code).isEqualTo(TransferStatus.Code.COMPLETED.name)
     assertThat(transfer.stage).isEqualTo(TransferStage.UNSCHEDULED)
     movement verifyAgainst request
+    assertThat(movement.legacyId).isEqualTo("${request.offenderBookId}_${request.movementSeq}")
 
     verifyAudit(
       movement,
@@ -331,6 +336,7 @@ class SyncUnscheduledMovementIntTest(
     assertThat(transfer.status.code).isEqualTo(TransferStatus.Code.COMPLETED.name)
     assertThat(transfer.stage).isEqualTo(TransferStage.UNSCHEDULED)
     movement verifyAgainst request
+    assertThat(movement.legacyId).isEqualTo("${request.offenderBookId}_${request.movementSeq}")
 
     verifyAudit(
       transfer,

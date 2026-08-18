@@ -13,6 +13,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.publication
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferLogisticsChanged
+import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferMovedToPlanning
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferRecategorised
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferRelocated
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferRescheduled
@@ -29,6 +30,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.wiremock.Pr
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Schedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.ReferenceId
+import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncSchedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncUser
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.internal.syncSchedule
@@ -193,6 +195,33 @@ class SyncScheduledTransferIntTest(
     verifyEventPublications(
       saved.schedule!!,
       setOf(TransferRescheduled(transfer.person.identifier, saved.id, saved.stage, DataSource.NOMIS).publication(saved.id)),
+    )
+  }
+
+  @Test
+  fun `200 - can revert a scheduled transfer to planning`() {
+    val transfer = givenTransfer(transfer())
+
+    val request = transfer.toTestSyncModel().copy(syncSchedule = transfer.syncSchedule().copy(eventStatus = SyncSchedule.PENDING))
+    val user = syncUser()
+    val res = sendTransfer(transfer.person.identifier, request, user).successResponse<ReferenceId>()
+
+    val saved = requireNotNull(findTransfer(res.dpsId))
+    assertThat(saved.status.code).isEqualTo(TransferStatus.Code.READY_TO_SCHEDULE.name)
+    assertThat(saved.stage).isEqualTo(TransferStage.PLANNING)
+    saved verifyAgainst request
+
+    verifyAudit(
+      saved,
+      RevisionType.MOD,
+      setOf(HmppsDomainEvent::class.simpleName!!, Transfer::class.simpleName!!),
+      SchedulerContext.get()
+        .copy(username = user.username, caseloadId = user.activeCaseloadId, source = DataSource.NOMIS),
+    )
+
+    verifyEventPublications(
+      saved,
+      setOf(TransferMovedToPlanning(transfer.person.identifier, saved.id, saved.stage, DataSource.NOMIS).publication(saved.id)),
     )
   }
 

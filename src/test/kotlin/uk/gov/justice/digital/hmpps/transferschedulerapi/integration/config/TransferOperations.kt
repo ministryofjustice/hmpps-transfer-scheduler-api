@@ -9,6 +9,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.TransferReposito
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.RdProvider
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.ReferenceDataRepository
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
+import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.newId
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.personIdentifier
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.prisonCode
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.word
@@ -20,6 +21,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.model.MovementRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.PlanRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.ScheduleRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
+import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.StringLegacyIdRequest
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
@@ -115,12 +117,14 @@ class TransferOperationsImpl(
       reasonCode: String = TransferReasonCode.randomCode(),
       logisticsCode: String = TransferLogisticsCode.randomCode(),
       comments: String? = word(30),
-    ) = object : MovementRequest {
+      legacyId: String? = "${newId()}_${newId()}",
+    ): MovementRequest = object : MovementRequest, StringLegacyIdRequest {
       override val occurredAt: LocalDateTime = occurredAt
       override val destinationCode: String = destinationCode
       override val reasonCode: String = reasonCode
       override val logisticsCode: String = logisticsCode
       override val comments: String? = comments
+      override val legacyId: String? = legacyId
     }
   }
 }

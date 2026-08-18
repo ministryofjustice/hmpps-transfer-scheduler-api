@@ -8,9 +8,11 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.Tr
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferInTransit
 import uk.gov.justice.digital.hmpps.transferschedulerapi.exception.ConflictException
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.MovementRequest
+import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.StringLegacyIdRequest
 
 data class ApplyTransit(val request: MovementRequest) :
   TransferAction,
+  StringLegacyIdRequest,
   MovementRequest by request {
   companion object {
     private val VALID_STATUSES = setOf(IN_TRANSIT.name, SCHEDULED.name)
@@ -22,6 +24,8 @@ data class ApplyTransit(val request: MovementRequest) :
     }
     entity.applyTransit(this, rdProvider)
   }
+
+  override val legacyId: String? = if (request is StringLegacyIdRequest) request.legacyId else null
 
   override fun domainEvent(entity: Transfer) = TransferInTransit(entity.person.identifier, entity.id, entity.stage)
 
