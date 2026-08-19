@@ -28,7 +28,7 @@ class StatusValidator(val transfer: Transfer) {
 
     private val PREDICATES: Map<TransferStatus.Code, (Transfer) -> Boolean> = mapOf(
       READY_TO_SCHEDULE to { tr -> tr.isReadyToSchedule() },
-      SCHEDULED to { tr -> tr.isReadyToSchedule() },
+      SCHEDULED to { with(it) { logistics != null && destinationCode != null && schedule != null } },
     )
   }
 }
