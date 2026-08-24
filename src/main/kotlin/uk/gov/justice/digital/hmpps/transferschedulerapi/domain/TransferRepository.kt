@@ -18,6 +18,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.exception.NotFoundExcep
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.clashes.ClashRange
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.util.Optional
 import java.util.UUID
 
@@ -41,6 +42,8 @@ interface TransferRepository :
 
   @EntityGraph("transfer.all")
   fun findAllByPersonIdentifier(personIdentifier: String): List<Transfer>
+
+  fun findByStatusIdAndScheduleStartBefore(statusId: UUID, before: LocalDateTime): List<Transfer>
 
   @Query(
     """
