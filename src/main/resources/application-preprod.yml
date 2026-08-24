@@ -15,3 +15,5 @@ service:
   domain-events:
     poll-interval: PT0.5s
   api-base-url: "https://transfer-scheduler-api-preprod.hmpps.service.justice.gov.uk"
+  transfer-expiration:
+    cron: "0 0 7 * * *"

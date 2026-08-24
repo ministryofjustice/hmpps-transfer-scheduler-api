@@ -247,7 +247,10 @@ final class Transfer(
     if (action changes plan) {
       val movedToPlanning = plan == null && !readyToSchedule
       withPlan(action, rdProvider)
-      plan?.takeIf { movedToPlanning }?.passAppliedAction(action)?.also { stage = TransferStage.PLANNING }
+      plan?.takeIf { movedToPlanning }?.passAppliedAction(action)?.also {
+        stage = TransferStage.PLANNING
+        applyStatus(PLANNING, rdProvider)
+      }
     }
     if (readyToSchedule && applyStatus(READY_TO_SCHEDULE, rdProvider)) {
       stage = TransferStage.PLANNING

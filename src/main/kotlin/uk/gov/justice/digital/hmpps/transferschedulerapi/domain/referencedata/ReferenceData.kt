@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata
 
+import jakarta.annotation.PostConstruct
 import jakarta.persistence.CacheRetrieveMode
 import jakarta.persistence.Column
 import jakarta.persistence.EntityManager
@@ -41,6 +42,11 @@ class ReferenceDataRepository(
   fun findAllByType(clazz: KClass<out ReferenceData>): List<ReferenceData> = entityManager.createQuery("from ${clazz.qualifiedName}", clazz.java).cacheable().resultList
 
   fun rdProvider(): RdProvider = RdProvider(findAll())
+
+  @PostConstruct
+  fun init() {
+    findAll()
+  }
 }
 
 fun Query.cacheable(): Query = setHint(AvailableHints.HINT_CACHEABLE, true)
