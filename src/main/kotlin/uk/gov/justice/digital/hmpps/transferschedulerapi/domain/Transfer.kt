@@ -123,10 +123,7 @@ final class Transfer(
   @ManyToOne(optional = false)
   @JoinColumn(name = "status_id", nullable = false)
   var status: TransferStatus = status
-    private set(value) {
-      if (value == field) return
-      field = StatusValidator(this) valid value
-    }
+    private set
 
   @Fetch(FetchMode.JOIN)
   @Audited(targetAuditMode = NOT_AUDITED)
@@ -200,7 +197,9 @@ final class Transfer(
     TransferDeleted(person.identifier, id, stage).publication(id),
   )
 
-  fun isReadyToSchedule(): Boolean = plan != null && logistics != null && destinationCode != null && schedule != null
+  fun isReadyToSchedule(): Boolean = plan != null && isSchedulable()
+
+  fun isSchedulable(): Boolean = logistics != null && destinationCode != null && schedule != null
 
   fun withPlan(request: PlanRequest?, rdProvider: RdProvider) = apply {
     plan = request?.let { plan?.match(it, rdProvider) ?: it.createNewPlan(this, rdProvider) }
@@ -243,17 +242,19 @@ final class Transfer(
     }
   }
 
-  fun applyPlan(action: PlanTransfer, rdProvider: RdProvider, readyToSchedule: Boolean = true) = apply {
+  fun applyPlan(action: PlanTransfer, rdProvider: RdProvider) = apply {
+    val readyToSchedule = isSchedulable()
     if (action changes plan) {
       val movedToPlanning = plan == null && !readyToSchedule
       withPlan(action, rdProvider)
-      plan?.takeIf { movedToPlanning }?.passAppliedAction(action)?.also {
-        stage = TransferStage.PLANNING
-        applyStatus(PLANNING, rdProvider)
-      }
+      plan?.takeIf { movedToPlanning }?.passAppliedAction(action)
     }
-    if (readyToSchedule && applyStatus(READY_TO_SCHEDULE, rdProvider)) {
-      stage = TransferStage.PLANNING
+    stage = TransferStage.PLANNING
+    val statusChanged = when (readyToSchedule) {
+      true -> applyStatus(READY_TO_SCHEDULE, rdProvider)
+      false -> applyStatus(PLANNING, rdProvider)
+    }
+    if (statusChanged) {
       appliedActions += action
     }
   }

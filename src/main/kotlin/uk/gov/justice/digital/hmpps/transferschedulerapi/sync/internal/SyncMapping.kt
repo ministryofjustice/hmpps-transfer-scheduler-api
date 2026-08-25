@@ -2,7 +2,6 @@ package uk.gov.justice.digital.hmpps.transferschedulerapi.sync.internal
 
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Movement
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.PersonSummary
-import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.StatusValidator.Companion.PRE_SCHEDULED_STATUSES
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.RdProvider
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
@@ -27,6 +26,8 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncWaitlist
 import java.util.UUID
 
+val PRE_SCHEDULED_STATUSES: Set<TransferStatus.Code> = setOf(PLANNING, READY_TO_SCHEDULE)
+
 fun Transfer.updateFrom(request: SyncTransfer, personSummary: PersonSummary, rdProvider: RdProvider): Transfer = apply {
   applyLegacyId(legacyId)
   movePerson(personSummary)
@@ -35,7 +36,7 @@ fun Transfer.updateFrom(request: SyncTransfer, personSummary: PersonSummary, rdP
   applyLogistics(ApplyLogistics(request.logisticsCode), rdProvider)
   applyReason(ApplyReason(request.reasonCode), rdProvider)
   if (status.code == SCHEDULED.name && request.plan != null && request.syncSchedule.isPending) {
-    with(request.plan) { applyPlan(PlanTransfer(requestedOn, priorityCode, comments), rdProvider, isReadyToSchedule()) }
+    with(request.plan) { applyPlan(PlanTransfer(requestedOn, priorityCode, comments), rdProvider) }
   } else {
     withPlan(request.plan, rdProvider)
   }

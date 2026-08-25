@@ -56,9 +56,11 @@ class SyncReconciliationRetrievalIntTest(
     assertThat(res.transfers).hasSize(3)
     assertThat(res.unscheduledMovements).hasSize(1)
 
-    planned verifyAgainst res.transfers.first { it.dpsId == planned.id }
-    scheduled verifyAgainst res.transfers.first { it.dpsId == scheduled.id }
-    schMov verifyAgainst res.transfers.first { it.dpsId == schMov.id }
+    planned verifyAgainst res.transfers.first { it.transfer.dpsId == planned.id }.transfer
+    scheduled verifyAgainst res.transfers.first { it.transfer.dpsId == scheduled.id }.transfer
+    val schMovRes = res.transfers.first { it.transfer.dpsId == schMov.id }
+    schMov verifyAgainst schMovRes.transfer
+    schMov.movement!! verifyAgainst schMovRes.movement!!
     unMov.movement!! verifyAgainst res.unscheduledMovements.first { it.dpsId == unMov.movement!!.id }
   }
 

@@ -10,8 +10,8 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
 import uk.gov.justice.digital.hmpps.transferschedulerapi.service.history.StatusChanged
 import uk.gov.justice.digital.hmpps.transferschedulerapi.service.history.TransferHistoryService
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.ReconciliationResponse
+import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.ReconciliationTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncMovement
-import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncTransfer
 import java.util.UUID
 
@@ -33,11 +33,11 @@ class RetrieveForSync(
   fun all(personIdentifier: String): ReconciliationResponse {
     val all = transferRepository.findAllByPersonIdentifier(personIdentifier)
       .mapNotNull { it.forReconciliation(transferHistoryService::getStatusChanges) }
-    return ReconciliationResponse(all.filterIsInstance<SyncTransfer>(), all.filterIsInstance<SyncMovement>())
+    return ReconciliationResponse(all.filterIsInstance<ReconciliationTransfer>(), all.filterIsInstance<SyncMovement>())
   }
 }
 
-private fun Transfer.forReconciliation(statusChanges: (UUID) -> List<StatusChanged>): SyncRequest? = when (stage) {
+private fun Transfer.forReconciliation(statusChanges: (UUID) -> List<StatusChanged>): Any? = when (stage) {
   TransferStage.UNSCHEDULED -> movement?.syncMovement()
-  else -> toSyncModel(statusChanges)
+  else -> ReconciliationTransfer(toSyncModel(statusChanges), movement?.syncMovement())
 }

@@ -27,7 +27,6 @@ class IncompletePlanHandler(
       tr.applyPlan(
         PlanTransfer(created.occurredAt.toLocalDate(), TransferPriority.Code.LOW.value, REASON),
         rdRepository.rdProvider(),
-        tr.logistics != null && tr.destinationCode != null && tr.schedule != null,
       )
     }
   }

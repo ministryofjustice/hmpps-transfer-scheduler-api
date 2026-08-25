@@ -280,13 +280,58 @@ class PlanModificationsIntTest(
   }
 
   @Test
-  fun `409 - cannot revert an incomplete scheduled transfer to planning`() {
+  fun `200 ok - can revert an incomplete scheduled transfer to planning`() {
     val transfer = givenTransfer(transfer(destinationCode = null, plan = null))
     val action = PlanTransfer(LocalDate.now(), "1", word(10))
     val username = username()
     val givenReason = word(10)
 
-    applyAction(transfer.id, action, givenReason, username).expectStatus().isEqualTo(HttpStatus.CONFLICT)
+    val res = applyAction(transfer.id, action, givenReason, username).successResponse<AuditHistory>()
+    with(res.content.single()) {
+      assertThat(domainEvents).containsExactly(TransferMovedToPlanning.EVENT_TYPE)
+      assertThat(reason).isEqualTo(givenReason)
+      assertThat(changes).containsExactlyInAnyOrder(
+        AuditedAction.Change(
+          Transfer::status.name,
+          "Scheduled",
+          "Awaiting details",
+        ),
+        AuditedAction.Change(
+          Plan::requestedOn.name,
+          null,
+          ISO_LOCAL_DATE.format(action.requestedOn),
+        ),
+        AuditedAction.Change(
+          Plan::priority.name,
+          null,
+          "High",
+        ),
+        AuditedAction.Change(
+          Plan::comments.name,
+          null,
+          action.comments,
+        ),
+      )
+    }
+
+    val saved = requireNotNull(findTransfer(transfer.id))
+    assertThat(saved.status.code).isEqualTo(PLANNING.name)
+    assertThat(saved.stage).isEqualTo(TransferStage.PLANNING)
+    saved.plan!! verifyAgainst action
+
+    verifyAudit(
+      saved,
+      RevisionType.MOD,
+      setOf(HmppsDomainEvent::class.simpleName!!, Transfer::class.simpleName!!, Plan::class.simpleName!!),
+      SchedulerContext.get().copy(username = username, reason = givenReason),
+    )
+
+    verifyEventPublications(
+      saved,
+      setOf(
+        TransferMovedToPlanning(saved.person.identifier, saved.id, saved.stage).publication(saved.id),
+      ),
+    )
   }
 
   @Test

@@ -19,4 +19,5 @@ class ReconciliationController(private val retrieve: RetrieveForSync) {
   fun reconcile(@PathVariable personIdentifier: String): ReconciliationResponse = retrieve.all(personIdentifier)
 }
 
-data class ReconciliationResponse(val transfers: List<SyncTransfer>, val unscheduledMovements: List<SyncMovement>)
+data class ReconciliationResponse(val transfers: List<ReconciliationTransfer>, val unscheduledMovements: List<SyncMovement>)
+data class ReconciliationTransfer(val transfer: SyncTransfer, val movement: SyncMovement?)
