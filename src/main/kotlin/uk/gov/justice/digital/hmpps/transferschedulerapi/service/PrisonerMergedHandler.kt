@@ -27,10 +27,8 @@ class PrisonerMergedHandler(
         }
         personSummaryService.remove(person)
       }
-      // TODO: uncomment when endpoint available
-      // migrationClient.requestRepair(pmi.removedNomsNumber)
+      migrationClient.requestRepair(pmi.removedNomsNumber)
     }
-    // TODO: uncomment when endpoint available
-    // migrationClient.requestRepair(pmi.nomsNumber)
+    migrationClient.requestRepair(pmi.nomsNumber)
   }
 }
