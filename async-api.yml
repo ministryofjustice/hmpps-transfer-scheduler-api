@@ -1,0 +1,158 @@
+asyncapi: 3.0.0
+info:
+  title: HMPPS Transfer Scheduler
+  version: 1.0.0
+  description: Reflect changes to Transfers
+
+servers:
+  development:
+    host: "hmpps-domain-events-dev.live-1.cloud-platform.service.justice.gov.uk"
+    protocol: sqs
+    description: Development Environment
+  preproduction:
+    host: "hmpps-domain-events-preprod.live-1.cloud-platform.service.justice.gov.uk"
+    protocol: sqs
+    description: Pre-production Environment
+  production:
+    host: "hmpps-domain-events-prod.live-1.cloud-platform.service.justice.gov.uk"
+    protocol: sqs
+    description: Production Environment
+
+components:
+  messages:
+    person.transfer.cancelled:
+      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/transfers/schedules/transfer-cancelled.yaml
+    person.transfer.completed:
+      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/transfers/schedules/transfer-completed.yaml
+    person.transfer.deleted:
+      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/transfers/schedules/transfer-deleted.yaml
+    person.transfer.expired:
+      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/transfers/schedules/transfer-expired.yaml
+    person.transfer.in-transit:
+      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/transfers/schedules/transfer-in-transit.yaml
+    person.transfer.logistics-changed:
+      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/transfers/schedules/transfer-logistics-changed.yaml
+    person.transfer.moved-to-planning:
+      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/transfers/schedules/transfer-moved-to-planning.yaml
+    person.transfer.planned:
+      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/transfers/schedules/transfer-planned.yaml
+    person.transfer.planning-comments-changed:
+      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/transfers/schedules/transfer-planning-comments-changed.yaml
+    person.transfer.planning-requested-changed:
+      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/transfers/schedules/transfer-planning-requested-changed.yaml
+    person.transfer.recategorised:
+      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/transfers/schedules/transfer-recategorised.yaml
+    person.transfer.recorded:
+      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/transfers/schedules/transfer-recorded.yaml
+    person.transfer.relocated:
+      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/transfers/schedules/transfer-relocated.yaml
+    person.transfer.reprioritised:
+      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/transfers/schedules/transfer-reprioritised.yaml
+    person.transfer.rescheduled:
+      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/transfers/schedules/transfer-rescheduled.yaml
+    person.transfer.schedule-comments-changed:
+      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/transfers/schedules/transfer-schedule-comments-changed.yaml
+    person.transfer.scheduled:
+      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/transfers/schedules/transfer-scheduled.yaml
+
+
+    person.transfer-movement.comments-changed:
+      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/transfers/movements/transfer-movement-comments-changed.yaml
+    person.transfer-movement.deleted:
+      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/transfers/movements/transfer-movement-deleted.yaml
+    person.transfer-movement.occurred-at-changed:
+      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/transfers/movements/transfer-movement-occurred-at-changed.yaml
+    person.transfer-movement.recategorised:
+      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/transfers/movements/transfer-movement-recategorised.yaml
+    person.transfer-movement.recorded:
+      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/transfers/movements/transfer-movement-recorded.yaml
+    person.transfer-movement.relocated:
+      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/transfers/movements/transfer-movement-relocated.yaml
+
+
+channels:
+  hmpps-domain-events:
+    description: HMPPS domain events SNS topic
+    bindings:
+      sns:
+        name: domainevents
+    messages:
+      person.transfer.cancelled:
+        $ref: '#/components/messages/person.transfer.cancelled'
+      person.transfer.completed:
+        $ref: '#/components/messages/person.transfer.completed'
+      person.transfer.deleted:
+        $ref: '#/components/messages/person.transfer.deleted'
+      person.transfer.expired:
+        $ref: '#/components/messages/person.transfer.expired'
+      person.transfer.in-transit:
+        $ref: '#/components/messages/person.transfer.in-transit'
+      person.transfer.logistics-changed:
+        $ref: '#/components/messages/person.transfer.logistics-changed'
+      person.transfer.moved-to-planning:
+        $ref: '#/components/messages/person.transfer.moved-to-planning'
+      person.transfer.planned:
+        $ref: '#/components/messages/person.transfer.planned'
+      person.transfer.planning-comments-changed:
+        $ref: '#/components/messages/person.transfer.planning-comments-changed'
+      person.transfer.planning-requested-changed:
+        $ref: '#/components/messages/person.transfer.planning-requested-changed'
+      person.transfer.recategorised:
+        $ref: '#/components/messages/person.transfer.recategorised'
+      person.transfer.recorded:
+        $ref: '#/components/messages/person.transfer.recorded'
+      person.transfer.relocated:
+        $ref: '#/components/messages/person.transfer.relocated'
+      person.transfer.reprioritised:
+        $ref: '#/components/messages/person.transfer.reprioritised'
+      person.transfer.rescheduled:
+        $ref: '#/components/messages/person.transfer.rescheduled'
+      person.transfer.schedule-comments-changed:
+        $ref: '#/components/messages/person.transfer.schedule-comments-changed'
+      person.transfer.scheduled:
+        $ref: '#/components/messages/person.transfer.scheduled'
+
+      person.transfer-movement.comments-changed:
+        $ref: '#/components/messages/person.transfer-movement.comments-changed'
+      person.transfer-movement.deleted:
+        $ref: '#/components/messages/person.transfer-movement.deleted'
+      person.transfer-movement.occurred-at-changed:
+        $ref: '#/components/messages/person.transfer-movement.occurred-at-changed'
+      person.transfer-movement.recategorised:
+        $ref: '#/components/messages/person.transfer-movement.recategorised'
+      person.transfer-movement.recorded:
+        $ref: '#/components/messages/person.transfer-movement.recorded'
+      person.transfer-movement.relocated:
+        $ref: '#/components/messages/person.transfer-movement.relocated'
+
+operations:
+  publish-event:
+    action: send
+    channel:
+      $ref: '#/channels/hmpps-domain-events'
+    messages:
+      - $ref: '#/channels/hmpps-domain-events/messages/person.transfer.cancelled'
+      - $ref: '#/channels/hmpps-domain-events/messages/person.transfer.completed'
+      - $ref: '#/channels/hmpps-domain-events/messages/person.transfer.deleted'
+      - $ref: '#/channels/hmpps-domain-events/messages/person.transfer.expired'
+      - $ref: '#/channels/hmpps-domain-events/messages/person.transfer.in-transit'
+      - $ref: '#/channels/hmpps-domain-events/messages/person.transfer.logistics-changed'
+      - $ref: '#/channels/hmpps-domain-events/messages/person.transfer.moved-to-planning'
+      - $ref: '#/channels/hmpps-domain-events/messages/person.transfer.planned'
+      - $ref: '#/channels/hmpps-domain-events/messages/person.transfer.planning-comments-changed'
+      - $ref: '#/channels/hmpps-domain-events/messages/person.transfer.planning-requested-changed'
+      - $ref: '#/channels/hmpps-domain-events/messages/person.transfer.recategorised'
+      - $ref: '#/channels/hmpps-domain-events/messages/person.transfer.recorded'
+      - $ref: '#/channels/hmpps-domain-events/messages/person.transfer.relocated'
+      - $ref: '#/channels/hmpps-domain-events/messages/person.transfer.reprioritised'
+      - $ref: '#/channels/hmpps-domain-events/messages/person.transfer.rescheduled'
+      - $ref: '#/channels/hmpps-domain-events/messages/person.transfer.schedule-comments-changed'
+      - $ref: '#/channels/hmpps-domain-events/messages/person.transfer.scheduled'
+
+      - $ref: '#/channels/hmpps-domain-events/messages/person.transfer-movement.comments-changed'
+      - $ref: '#/channels/hmpps-domain-events/messages/person.transfer-movement.deleted'
+      - $ref: '#/channels/hmpps-domain-events/messages/person.transfer-movement.occurred-at-changed'
+      - $ref: '#/channels/hmpps-domain-events/messages/person.transfer-movement.recategorised'
+      - $ref: '#/channels/hmpps-domain-events/messages/person.transfer-movement.recorded'
+      - $ref: '#/channels/hmpps-domain-events/messages/person.transfer-movement.relocated'
+

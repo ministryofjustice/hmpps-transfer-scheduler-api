@@ -53,7 +53,7 @@ class TransferHistoryService(
   fun getStatusChanges(id: UUID): List<StatusChanged> {
     val auditReader = AuditReaderFactory.get(entityManager)
     val transferChanges = auditReader.getRevisions(Transfer::class, id, null)
-    val audit = transferChanges.sortedBy { it.revision.timestamp }
+    val audit = transferChanges.sortedBy { it.revision.id }
     return audit.mapIndexedNotNull { idx, rev ->
       if (idx == 0) return@mapIndexedNotNull rev.statusChange(null)
       val prev = (audit[idx - 1].state as Transfer)
@@ -101,7 +101,7 @@ class TransferHistoryService(
 
   private fun AuditReader.getRevisions(clazz: KClass<*>, id: UUID, revisionId: Long?): List<AuditedEntity> {
     val history = createQuery()
-      .forRevisionsOfEntity(clazz.java, false, false)
+      .forRevisionsOfEntity(clazz.java, false, true)
       .add(AuditEntity.id().eq(id))
       .resultList.filterIsInstance<Array<*>>()
       .map { it.asAuditedEntity() }
