@@ -37,3 +37,7 @@ interface MovementRequest {
   val logisticsCode: String
   val comments: String?
 }
+
+interface PrisonRelatedRequest {
+  val prisonCode: String
+}

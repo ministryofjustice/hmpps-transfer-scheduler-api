@@ -59,6 +59,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.P
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ScheduleTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.TransferAction
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.StringLegacyIdRequest
+import java.time.LocalDateTime
 import java.util.UUID
 
 @NamedEntityGraph(
@@ -199,7 +200,10 @@ final class Transfer(
 
   fun isReadyToSchedule(): Boolean = plan != null && isSchedulable()
 
-  fun isSchedulable(): Boolean = logistics != null && destinationCode != null && schedule != null
+  fun isSchedulable(): Boolean = logistics != null &&
+    destinationCode != null &&
+    schedule != null &&
+    schedule!!.start.isAfter(LocalDateTime.now())
 
   fun withPlan(request: PlanRequest?, rdProvider: RdProvider) = apply {
     plan = request?.let { plan?.match(it, rdProvider) ?: it.createNewPlan(this, rdProvider) }

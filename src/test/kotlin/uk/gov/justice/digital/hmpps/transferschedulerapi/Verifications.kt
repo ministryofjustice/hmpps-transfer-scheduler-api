@@ -5,6 +5,7 @@ import org.assertj.core.api.Assertions.within
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Movement
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.MovementRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.PlanRequest
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.PrisonRelatedRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.ScheduleRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferRequest
 import java.time.temporal.ChronoUnit
@@ -45,6 +46,8 @@ infix fun ScheduleModel.verifyAgainst(schedule: ScheduleEntity) {
 }
 
 infix fun TransferEntity.verifyAgainst(request: TransferRequest) {
+  val expectedPrisonCode = if (request is PrisonRelatedRequest) prisonCode else person.prisonCode
+  assertThat(prisonCode).isEqualTo(expectedPrisonCode)
   assertThat(reason.code).isEqualTo(request.reasonCode)
   assertThat(destinationCode).isEqualTo(request.destinationCode)
   assertThat(logistics?.code).isEqualTo(request.logisticsCode)

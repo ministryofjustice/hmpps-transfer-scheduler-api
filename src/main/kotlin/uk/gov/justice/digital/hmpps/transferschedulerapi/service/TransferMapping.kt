@@ -7,6 +7,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.model.IntegrationRespon
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Movement
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Person
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Plan
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.PrisonRelatedRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Schedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferRequest
@@ -15,7 +16,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.NumericLegacyIdReq
 
 fun TransferRequest.asEntity(person: PersonSummary, rdProvider: RdProvider) = uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer(
   person,
-  requireNotNull(person.prisonCode),
+  if (this is PrisonRelatedRequest) prisonCode else requireNotNull(person.prisonCode),
   rdProvider.get(reasonCode),
   rdProvider.get(initialStatusCode().name),
   destinationCode,
