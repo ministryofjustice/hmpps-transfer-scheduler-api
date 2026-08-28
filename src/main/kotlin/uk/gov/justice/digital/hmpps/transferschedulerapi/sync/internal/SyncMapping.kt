@@ -5,6 +5,8 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.PersonSummary
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.RdProvider
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.COMPLETED
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.IN_TRANSIT
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.PLANNING
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.READY_TO_SCHEDULE
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.SCHEDULED
@@ -76,7 +78,7 @@ fun Transfer.syncWaitList(
     statusForWaitlist(),
     mostRecent?.occurredAt?.toLocalDate() ?: it.requestedOn,
     it.priority.code,
-    status.code == SCHEDULED.name,
+    status.code in setOf(SCHEDULED.name, IN_TRANSIT.name, COMPLETED.name),
     approvedBy?.username,
     if (status.code == TransferStatus.Code.CANCELLED.name) SyncWaitlist.OutcomeReasonCode.ADMI else null,
     it.comments,
@@ -102,7 +104,7 @@ fun Transfer.statusForWaitlist(): String = when (TransferStatus.Code.valueOf(sta
 }
 
 fun Transfer.statusForSchedule(): String = when (TransferStatus.Code.valueOf(status.code)) {
-  TransferStatus.Code.COMPLETED -> SyncSchedule.COMPLETED
+  COMPLETED -> SyncSchedule.COMPLETED
   TransferStatus.Code.CANCELLED -> SyncSchedule.CANCELLED
   TransferStatus.Code.EXPIRED -> SyncSchedule.EXPIRED
   SCHEDULED -> SyncSchedule.SCHEDULED
@@ -140,7 +142,7 @@ fun Movement.syncMovement(): SyncMovement {
     logistics.code,
     transfer.prisonCode,
     destinationCode,
-    transfer.status.code == TransferStatus.Code.IN_TRANSIT.name,
+    transfer.status.code == IN_TRANSIT.name,
     comments,
   )
 }
@@ -148,7 +150,7 @@ fun Movement.syncMovement(): SyncMovement {
 fun Movement.updateFrom(request: SyncMovement, transfer: Transfer, rdProvider: RdProvider) = apply {
   applyTransfer(transfer)
   match(request, rdProvider)
-  if (request.active != true && transfer.status.code != TransferStatus.Code.COMPLETED.name) {
+  if (request.active != true && transfer.status.code != COMPLETED.name) {
     transfer.complete(CompleteTransfer, rdProvider)
   }
 }

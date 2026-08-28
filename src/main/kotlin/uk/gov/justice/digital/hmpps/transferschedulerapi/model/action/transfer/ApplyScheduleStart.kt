@@ -3,8 +3,10 @@ package uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Schedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.RdProvider
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferPriority
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferRescheduled
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 
@@ -15,6 +17,11 @@ data class ApplyScheduleStart(
     val previouslyScheduled = entity.schedule != null
     if (previouslyScheduled) {
       entity.schedule?.reschedule(this)
+      if (entity.status.code == TransferStatus.Code.EXPIRED.name && start.isAfter(LocalDateTime.now())) {
+        entity.applyPlan(PlanTransfer(LocalDate.now(), TransferPriority.Code.LOW.name, null), rdProvider)
+      } else if (entity.status.code == TransferStatus.Code.SCHEDULED.name && !start.isAfter(LocalDateTime.now())) {
+        entity.applyStatus(TransferStatus.Code.EXPIRED, rdProvider)
+      }
     } else {
       entity.withSchedule(ScheduleTransfer(start, null))
       if (entity.status.code == TransferStatus.Code.PLANNING.name && entity.isReadyToSchedule()) {

@@ -104,7 +104,7 @@ class TransferOperationsImpl(
     }
 
     fun schedule(
-      start: LocalDateTime = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS),
+      start: LocalDateTime = LocalDateTime.now().plusDays(1).truncatedTo(ChronoUnit.SECONDS),
       comments: String? = word(30),
     ) = object : ScheduleRequest {
       override val start: LocalDateTime = start

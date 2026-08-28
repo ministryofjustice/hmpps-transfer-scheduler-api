@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.MovementRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.PlanRequest
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.PrisonRelatedRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.ScheduleRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
@@ -21,7 +22,11 @@ data class SyncTransfer(
   @JsonProperty("schedule")
   val syncSchedule: SyncSchedule,
 ) : NumericLegacyIdRequest,
+  PrisonRelatedRequest,
   TransferRequest {
+  @JsonIgnore
+  override val prisonCode: String = syncSchedule.agyLocId
+
   @JsonIgnore
   override val legacyId: Long? = eventId
 
