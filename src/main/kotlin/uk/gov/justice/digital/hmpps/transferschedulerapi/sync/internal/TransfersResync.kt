@@ -92,7 +92,8 @@ class TransfersResync(
       ?.updateFrom(transfer, person, rdProvider)
       ?: transferRepository.save(transfer.asEntity(person, rdRepository.rdProvider()))
     val sm = movement?.resync(person, tr, movementProvider, rdProvider, maProvider)
-    mergeMigrationAudit(tr.id, created, modified, maProvider, transfer.legacyData())
+    val prisonCodeDifferent: Boolean = movement?.movement?.fromAgyLocId?.let { it != tr.prisonCode } ?: false
+    mergeMigrationAudit(tr.id, created, modified, maProvider, transfer.legacyData(prisonCodeDifferent))
     return TransferMapping(tr.id, requireNotNull(transfer.eventId), sm?.first) to tr
   }
 

@@ -33,7 +33,9 @@ val PRE_SCHEDULED_STATUSES: Set<TransferStatus.Code> = setOf(PLANNING, READY_TO_
 fun Transfer.updateFrom(request: SyncTransfer, personSummary: PersonSummary, rdProvider: RdProvider): Transfer = apply {
   applyLegacyId(legacyId)
   movePerson(personSummary)
-  movePrison(request.syncSchedule.agyLocId)
+  if (movement == null) {
+    movePrison(request.syncSchedule.agyLocId)
+  }
   applyDestination(ApplyDestination(request.destinationCode))
   applyLogistics(ApplyLogistics(request.logisticsCode), rdProvider)
   applyReason(ApplyReason(request.reasonCode), rdProvider)
@@ -56,15 +58,19 @@ fun Transfer.updateFrom(request: SyncTransfer, personSummary: PersonSummary, rdP
   }
 }
 
-fun Transfer.toSyncModel(statusChanges: (UUID) -> List<StatusChanged>): SyncTransfer = SyncTransfer(
+fun Transfer.toSyncModel(
+  statusChanges: (UUID) -> List<StatusChanged>,
+  legacyDataProvider: (UUID) -> LegacyData?,
+): SyncTransfer = SyncTransfer(
   id,
   legacyId,
-  syncWaitList(statusChanges),
+  syncWaitList(statusChanges, legacyDataProvider),
   syncSchedule(),
 )
 
 fun Transfer.syncWaitList(
   statusChanges: (UUID) -> List<StatusChanged>,
+  legacyDataProvider: (UUID) -> LegacyData?,
 ) = plan?.let {
   val statusChanges = statusChanges(it.id).sortedByDescending { sc -> sc.occurredAt }
   val mostRecent = statusChanges.firstOrNull { sc -> sc.to in setOf(PLANNING, READY_TO_SCHEDULE, SCHEDULED) }
@@ -73,14 +79,19 @@ fun Transfer.syncWaitList(
   } else {
     null
   }
+  val legacyData = legacyDataProvider(it.id)
   SyncWaitlist(
     it.requestedOn,
     statusForWaitlist(),
-    mostRecent?.occurredAt?.toLocalDate() ?: it.requestedOn,
+    mostRecent?.occurredAt?.toLocalDate() ?: legacyData?.waitList?.statusDate ?: it.requestedOn,
     it.priority.code,
-    status.code in setOf(SCHEDULED.name, IN_TRANSIT.name, COMPLETED.name),
-    approvedBy?.username,
-    if (status.code == TransferStatus.Code.CANCELLED.name) SyncWaitlist.OutcomeReasonCode.ADMI else null,
+    status.code in setOf(SCHEDULED.name, IN_TRANSIT.name, COMPLETED.name) || legacyData?.waitList?.approved == true,
+    approvedBy?.username ?: legacyData?.waitList?.approvedUsername,
+    if (status.code == TransferStatus.Code.CANCELLED.name) {
+      legacyData?.waitList?.outcomeReasonCodeAsEnum() ?: SyncWaitlist.OutcomeReasonCode.ADMI
+    } else {
+      null
+    },
     it.comments,
   )
 }

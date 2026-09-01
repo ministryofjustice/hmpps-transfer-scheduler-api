@@ -21,23 +21,34 @@ class RetrieveForSync(
   private val transferRepository: TransferRepository,
   private val movementRepository: MovementRepository,
   private val transferHistoryService: TransferHistoryService,
+  private val msa: MigrationSystemAuditRepository,
 ) {
-  fun transfer(id: UUID): SyncTransfer = transferRepository.findByIdOrNull(id)
-    ?.takeIf { it.stage != TransferStage.UNSCHEDULED }
-    ?.toSyncModel(transferHistoryService::getStatusChanges)
-    ?: throw NotFoundException("Transfer not found")
+  fun transfer(id: UUID): SyncTransfer {
+    val transfer = transferRepository.findByIdOrNull(id)
+      ?.takeIf { it.stage != TransferStage.UNSCHEDULED }
+    val legacyData = msa.findByIdOrNull(id)?.data
+    return transfer?.toSyncModel(transferHistoryService::getStatusChanges) { _ -> legacyData }
+      ?: throw NotFoundException("Transfer not found")
+  }
 
   fun movement(id: UUID): SyncMovement = movementRepository.findByIdOrNull(id)
     ?.syncMovement() ?: throw NotFoundException("Movement not found")
 
   fun all(personIdentifier: String): ReconciliationResponse {
     val all = transferRepository.findAllByPersonIdentifier(personIdentifier)
-      .mapNotNull { it.forReconciliation(transferHistoryService::getStatusChanges) }
-    return ReconciliationResponse(all.filterIsInstance<ReconciliationTransfer>(), all.filterIsInstance<SyncMovement>())
+    val legacyData = msa.findAllById(all.map { it.id }).associateBy { it.id }
+    val mapped = all.mapNotNull { tr -> tr.forReconciliation(transferHistoryService::getStatusChanges) { legacyData[it]?.data } }
+    return ReconciliationResponse(
+      mapped.filterIsInstance<ReconciliationTransfer>(),
+      mapped.filterIsInstance<SyncMovement>(),
+    )
   }
 }
 
-private fun Transfer.forReconciliation(statusChanges: (UUID) -> List<StatusChanged>): Any? = when (stage) {
+private fun Transfer.forReconciliation(
+  statusChanges: (UUID) -> List<StatusChanged>,
+  legacyDataProvider: (UUID) -> LegacyData?,
+): Any? = when (stage) {
   TransferStage.UNSCHEDULED -> movement?.syncMovement()
-  else -> ReconciliationTransfer(toSyncModel(statusChanges), movement?.syncMovement())
+  else -> ReconciliationTransfer(toSyncModel(statusChanges, legacyDataProvider), movement?.syncMovement())
 }

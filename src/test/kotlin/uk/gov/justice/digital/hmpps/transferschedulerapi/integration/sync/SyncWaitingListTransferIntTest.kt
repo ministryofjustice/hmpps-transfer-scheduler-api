@@ -127,7 +127,14 @@ class SyncWaitingListTransferIntTest(
 
     verifyEventPublications(
       saved,
-      setOf(TransferRelocated(transfer.person.identifier, saved.id, saved.stage, DataSource.NOMIS).publication(saved.id)),
+      setOf(
+        TransferRelocated(
+          transfer.person.identifier,
+          saved.id,
+          saved.stage,
+          DataSource.NOMIS,
+        ).publication(saved.id),
+      ),
     )
   }
 
@@ -155,7 +162,14 @@ class SyncWaitingListTransferIntTest(
 
     verifyEventPublications(
       saved,
-      setOf(TransferRelocated(transfer.person.identifier, saved.id, saved.stage, DataSource.NOMIS).publication(saved.id)),
+      setOf(
+        TransferRelocated(
+          transfer.person.identifier,
+          saved.id,
+          saved.stage,
+          DataSource.NOMIS,
+        ).publication(saved.id),
+      ),
     )
   }
 
@@ -184,7 +198,14 @@ class SyncWaitingListTransferIntTest(
 
     verifyEventPublications(
       saved,
-      setOf(TransferRecategorised(transfer.person.identifier, saved.id, saved.stage, DataSource.NOMIS).publication(saved.id)),
+      setOf(
+        TransferRecategorised(
+          transfer.person.identifier,
+          saved.id,
+          saved.stage,
+          DataSource.NOMIS,
+        ).publication(saved.id),
+      ),
     )
   }
 
@@ -216,7 +237,11 @@ class SyncWaitingListTransferIntTest(
 
     verifyEventPublications(
       saved,
-      setOf(TransferLogisticsChanged(transfer.person.identifier, saved.id, saved.stage, DataSource.NOMIS).publication(saved.id)),
+      setOf(
+        TransferLogisticsChanged(transfer.person.identifier, saved.id, saved.stage, DataSource.NOMIS).publication(
+          saved.id,
+        ),
+      ),
     )
   }
 
@@ -243,7 +268,11 @@ class SyncWaitingListTransferIntTest(
 
     verifyEventPublications(
       saved,
-      setOf(TransferLogisticsChanged(transfer.person.identifier, saved.id, saved.stage, DataSource.NOMIS).publication(saved.id)),
+      setOf(
+        TransferLogisticsChanged(transfer.person.identifier, saved.id, saved.stage, DataSource.NOMIS).publication(
+          saved.id,
+        ),
+      ),
     )
   }
 
@@ -253,7 +282,8 @@ class SyncWaitingListTransferIntTest(
     val newPriority =
       generateSequence { TransferPriorityCode.randomCode() }.first { it != transfer.plan?.priority?.code }
 
-    val request = transfer.toTestSyncModel().copy(syncWaitlist = transfer.syncWaitList { emptyList() }!!.copy(transferPriority = newPriority))
+    val request = transfer.toTestSyncModel()
+      .copy(syncWaitlist = transfer.syncWaitList({ emptyList() }, { _ -> null })!!.copy(transferPriority = newPriority))
     val user = syncUser()
     val res = sendTransfer(transfer.person.identifier, request, user).successResponse<ReferenceId>()
 
@@ -272,7 +302,14 @@ class SyncWaitingListTransferIntTest(
 
     verifyEventPublications(
       saved.plan!!,
-      setOf(TransferReprioritised(transfer.person.identifier, saved.id, saved.stage, DataSource.NOMIS).publication(saved.id)),
+      setOf(
+        TransferReprioritised(
+          transfer.person.identifier,
+          saved.id,
+          saved.stage,
+          DataSource.NOMIS,
+        ).publication(saved.id),
+      ),
     )
   }
 
@@ -303,7 +340,14 @@ class SyncWaitingListTransferIntTest(
 
     verifyEventPublications(
       saved,
-      setOf(TransferScheduled(transfer.person.identifier, saved.id, saved.stage, DataSource.NOMIS).publication(saved.id)),
+      setOf(
+        TransferScheduled(
+          transfer.person.identifier,
+          saved.id,
+          saved.stage,
+          DataSource.NOMIS,
+        ).publication(saved.id),
+      ),
     )
   }
 
@@ -315,7 +359,7 @@ class SyncWaitingListTransferIntTest(
     val request = transfer.toTestSyncModel().copy(
       syncSchedule = transfer.syncSchedule()
         .copy(start = LocalDateTime.now().plusDays(5), eventStatus = SyncSchedule.CANCELLED),
-      syncWaitlist = transfer.syncWaitList { _ -> emptyList() }!!
+      syncWaitlist = transfer.syncWaitList({ _ -> emptyList() }, { _ -> null })!!
         .copy(outcomeReasonCode = SyncWaitlist.OutcomeReasonCode.OIC, waitListStatus = SyncWaitlist.CANCELLED),
     )
     val user = syncUser()
@@ -341,7 +385,14 @@ class SyncWaitingListTransferIntTest(
 
     verifyEventPublications(
       saved,
-      setOf(TransferCancelled(transfer.person.identifier, saved.id, saved.stage, DataSource.NOMIS).publication(saved.id)),
+      setOf(
+        TransferCancelled(
+          transfer.person.identifier,
+          saved.id,
+          saved.stage,
+          DataSource.NOMIS,
+        ).publication(saved.id),
+      ),
     )
   }
 
@@ -350,7 +401,8 @@ class SyncWaitingListTransferIntTest(
     val prisonCode = prisonCode()
     val prisoner = prisonerSearch.givenPrisoner(prisoner(prisonCode))
 
-    val request = syncTransfer(waitlist = null, schedule = syncSchedule(start = null, eventStatus = SyncSchedule.PENDING))
+    val request =
+      syncTransfer(waitlist = null, schedule = syncSchedule(start = null, eventStatus = SyncSchedule.PENDING))
     val user = syncUser()
     val res = sendTransfer(prisoner.prisonerNumber, request, user).successResponse<ReferenceId>()
 

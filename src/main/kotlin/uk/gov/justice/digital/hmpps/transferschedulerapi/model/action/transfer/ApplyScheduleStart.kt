@@ -18,7 +18,14 @@ data class ApplyScheduleStart(
     if (previouslyScheduled) {
       entity.schedule?.reschedule(this)
       if (entity.status.code == TransferStatus.Code.EXPIRED.name && start.isAfter(LocalDateTime.now())) {
-        entity.applyPlan(PlanTransfer(LocalDate.now(), TransferPriority.Code.LOW.name, null), rdProvider)
+        val plan = with(entity) {
+          PlanTransfer(
+            plan?.requestedOn ?: LocalDate.now(),
+            plan?.priority?.code ?: TransferPriority.Code.LOW.value,
+            plan?.comments,
+          )
+        }
+        entity.applyPlan(plan, rdProvider)
       } else if (entity.status.code == TransferStatus.Code.SCHEDULED.name && !start.isAfter(LocalDateTime.now())) {
         entity.applyStatus(TransferStatus.Code.EXPIRED, rdProvider)
       }

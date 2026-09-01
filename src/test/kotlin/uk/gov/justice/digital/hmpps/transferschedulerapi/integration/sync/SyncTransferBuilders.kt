@@ -115,7 +115,7 @@ fun syncMovementRequest(
   occurredAt: LocalDateTime = LocalDateTime.now(),
 ) = SyncMovementRequest(occurredAt, syncUser, syncMovement)
 
-fun Transfer.toTestSyncModel(): SyncTransfer = toSyncModel { _ -> emptyList() }
+fun Transfer.toTestSyncModel(): SyncTransfer = toSyncModel({ _ -> emptyList() }, { _ -> null })
 
 fun Transfer.movementSync(active: Boolean = Random.nextBoolean()) = movement?.movementSync(active) ?: syncMovement(
   dpsId = null,

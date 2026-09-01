@@ -293,8 +293,18 @@ class ResyncTransfersIntTest(
   fun `Incomplete planned transfers are completed by DPS`() {
     val prisonCode = prisonCode()
     val prisoner = prisonerSearch.givenPrisoner(prisoner(prisonCode))
-    val tr1 = resyncTransfer(transfer = syncTransfer(waitlist = null, schedule = syncSchedule(eventStatus = SyncSchedule.PENDING)))
-    val tr2 = resyncTransfer(transfer = syncTransfer(waitlist = null, schedule = syncSchedule(start = null, eventStatus = SyncSchedule.PENDING)))
+    val tr1 = resyncTransfer(
+      transfer = syncTransfer(
+        waitlist = null,
+        schedule = syncSchedule(eventStatus = SyncSchedule.PENDING),
+      ),
+    )
+    val tr2 = resyncTransfer(
+      transfer = syncTransfer(
+        waitlist = null,
+        schedule = syncSchedule(start = null, eventStatus = SyncSchedule.PENDING),
+      ),
+    )
     val request = resyncRequest(listOf(tr1, tr2))
 
     val res = sendTransfers(prisoner.prisonerNumber, request).successResponse<ResyncResponse>()
@@ -353,7 +363,7 @@ class ResyncTransfersIntTest(
 
   private infix fun LegacyData?.verifyAgainst(request: SyncTransfer) {
     check(nullStateIsEqual(this?.waitList, request.syncWaitlist))
-    if (request.syncSchedule.hiddenCommentText != null || request.syncSchedule.outcomeReasonCode != null) {
+    if (request.syncSchedule.hiddenCommentText != null || request.syncSchedule.outcomeReasonCode != null || request.syncSchedule.unexpectedComment()) {
       checkNotNull(this?.schedule)
     } else {
       check(this?.schedule == null)
@@ -362,7 +372,7 @@ class ResyncTransfersIntTest(
       with(this.waitList) {
         assertThat(statusDate).isEqualTo(request.syncWaitlist?.statusDate)
         assertThat(approved).isEqualTo(request.syncWaitlist?.approved)
-        assertThat(approvedStaffId).isEqualTo(request.syncWaitlist?.approvedUsername)
+        assertThat(approvedUsername).isEqualTo(request.syncWaitlist?.approvedUsername)
         assertThat(outcomeReasonCode).isEqualTo(request.syncWaitlist?.cancellationReason)
       }
     }
