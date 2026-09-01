@@ -24,6 +24,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferMovementD
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferMovementMigrated
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferMovementRecorded
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.MovementRequest
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.PrisonRelatedRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.movement.ApplyDestination
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.movement.ApplyLogistics
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.movement.ApplyMovementComments
@@ -123,6 +124,9 @@ final class Movement(
     applyComments(ApplyMovementComments(request.comments))
     if (request is StringLegacyIdRequest) {
       legacyId = request.legacyId
+    }
+    if (request is PrisonRelatedRequest) {
+      transfer.movePrison(request.prisonCode)
     }
   }
 

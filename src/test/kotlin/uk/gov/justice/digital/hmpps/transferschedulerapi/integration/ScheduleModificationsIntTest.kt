@@ -9,10 +9,12 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.access.Roles
 import uk.gov.justice.digital.hmpps.transferschedulerapi.context.SchedulerContext
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.HmppsDomainEvent
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.IdGenerator.newUuid
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Plan
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Schedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.publication
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferLogistics
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferPriority
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferReason
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.IN_TRANSIT
@@ -20,6 +22,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.Tr
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.ScheduleCommentsChanged
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferCancelled
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferLogisticsChanged
+import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferMovedToPlanning
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferRecategorised
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferRelocated
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferRescheduled
@@ -28,12 +31,14 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerat
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.word
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperations
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.movement
+import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.schedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.referencedata.TransferLogisticsCode
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.referencedata.TransferReasonCode
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.wiremock.PrisonRegisterMockServer.Companion.prison
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.AuditHistory
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.AuditedAction
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.PlanRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyDestination
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyLogistics
@@ -44,7 +49,10 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.C
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ScheduleTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.TransferAction
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.TransferActions
+import uk.gov.justice.digital.hmpps.transferschedulerapi.verifyAgainst
+import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter.ISO_LOCAL_DATE
 import java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME
 import java.time.temporal.ChronoUnit
 import java.util.UUID
@@ -107,6 +115,141 @@ class ScheduleModificationsIntTest(
       saved.schedule!!,
       setOf(
         TransferRescheduled(saved.person.identifier, saved.id, saved.stage).publication(saved.id),
+      ),
+    )
+  }
+
+  @Test
+  fun `200 - can change start time for an expired transfer making it ready to schedule when previously planned`() {
+    val transfer = givenTransfer(
+      transfer(
+        stage = TransferStage.SCHEDULED,
+        statusCode = TransferStatus.Code.EXPIRED,
+        schedule = schedule(start = LocalDateTime.now().minusDays(1).truncatedTo(ChronoUnit.SECONDS)),
+      ),
+    )
+    val action = ApplyScheduleStart(LocalDateTime.now().plusDays(14).truncatedTo(ChronoUnit.SECONDS))
+    val username = username()
+    val givenReason = word(20)
+
+    val res = applyAction(transfer.id, action, givenReason, username).successResponse<AuditHistory>()
+    with(res.content.single()) {
+      assertThat(domainEvents).containsExactlyInAnyOrder(
+        TransferRescheduled.EVENT_TYPE,
+        TransferMovedToPlanning.EVENT_TYPE,
+      )
+      assertThat(reason).isEqualTo(givenReason)
+      assertThat(changes).containsExactly(
+        AuditedAction.Change(
+          Transfer::status.name,
+          "Expired",
+          "Ready to schedule",
+        ),
+        AuditedAction.Change(
+          Schedule::start.name,
+          ISO_LOCAL_DATE_TIME.format(transfer.schedule!!.start),
+          ISO_LOCAL_DATE_TIME.format(action.start),
+        ),
+      )
+    }
+
+    val saved = requireNotNull(findTransfer(transfer.id))
+    assertThat(saved.status.code).isEqualTo(TransferStatus.Code.READY_TO_SCHEDULE.name)
+    assertThat(saved.schedule!!.start).isEqualTo(action.start)
+    saved.plan!! verifyAgainst object : PlanRequest {
+      override val requestedOn: LocalDate = transfer.plan!!.requestedOn
+      override val priorityCode: String = transfer.plan!!.priority.code
+      override val comments: String? = transfer.plan!!.comments
+    }
+
+    verifyAudit(
+      saved,
+      RevisionType.MOD,
+      setOf(HmppsDomainEvent::class.simpleName!!, Transfer::class.simpleName!!, Schedule::class.simpleName!!),
+      SchedulerContext.get().copy(username = username, reason = givenReason),
+    )
+
+    verifyEventPublications(
+      saved,
+      setOf(
+        TransferRescheduled(saved.person.identifier, saved.id, saved.stage).publication(saved.id),
+        TransferMovedToPlanning(saved.person.identifier, saved.id, saved.stage).publication(saved.id),
+      ),
+    )
+  }
+
+  @Test
+  fun `200 - can change start time for an expired transfer making it ready to schedule when not previously planned`() {
+    val transfer = givenTransfer(
+      transfer(
+        plan = null,
+        stage = TransferStage.SCHEDULED,
+        statusCode = TransferStatus.Code.EXPIRED,
+        logisticsCode = null,
+        schedule = schedule(start = LocalDateTime.now().minusDays(1).truncatedTo(ChronoUnit.SECONDS)),
+      ),
+    )
+    val action = ApplyScheduleStart(LocalDateTime.now().plusDays(14).truncatedTo(ChronoUnit.SECONDS))
+    val username = username()
+    val givenReason = word(20)
+
+    val res = applyAction(transfer.id, action, givenReason, username).successResponse<AuditHistory>()
+    with(res.content.single()) {
+      assertThat(domainEvents).containsExactlyInAnyOrder(
+        TransferRescheduled.EVENT_TYPE,
+        TransferMovedToPlanning.EVENT_TYPE,
+      )
+      assertThat(reason).isEqualTo(givenReason)
+      assertThat(changes).containsExactly(
+        AuditedAction.Change(
+          Transfer::status.name,
+          "Expired",
+          "Awaiting details",
+        ),
+        AuditedAction.Change(
+          Plan::requestedOn.name,
+          null,
+          ISO_LOCAL_DATE.format(LocalDate.now()),
+        ),
+        AuditedAction.Change(
+          Plan::priority.name,
+          null,
+          "Low",
+        ),
+        AuditedAction.Change(
+          Schedule::start.name,
+          ISO_LOCAL_DATE_TIME.format(transfer.schedule!!.start),
+          ISO_LOCAL_DATE_TIME.format(action.start),
+        ),
+      )
+    }
+
+    val saved = requireNotNull(findTransfer(transfer.id))
+    assertThat(saved.status.code).isEqualTo(TransferStatus.Code.PLANNING.name)
+    assertThat(saved.schedule!!.start).isEqualTo(action.start)
+    saved.plan!! verifyAgainst object : PlanRequest {
+      override val requestedOn: LocalDate = LocalDate.now()
+      override val priorityCode: String = TransferPriority.Code.LOW.value
+      override val comments: String? = null
+    }
+
+    verifyAudit(
+      saved,
+      RevisionType.MOD,
+      setOf(
+        HmppsDomainEvent::class.simpleName!!,
+        Transfer::class.simpleName!!,
+        Plan::class.simpleName!!,
+        Schedule::class.simpleName!!,
+      ),
+      SchedulerContext.get().copy(username = username, reason = givenReason),
+    )
+
+    verifyEventPublications(
+      saved,
+      setOf(
+        TransferRescheduled(saved.person.identifier, saved.id, saved.stage).publication(saved.id),
+        TransferMovedToPlanning(saved.person.identifier, saved.id, saved.stage).publication(saved.id),
       ),
     )
   }

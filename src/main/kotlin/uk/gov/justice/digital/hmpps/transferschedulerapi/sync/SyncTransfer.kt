@@ -75,10 +75,14 @@ data class SyncTransfer(
     .takeIf { it.isScheduled || it.isExpired || (syncWaitlist?.isCancelled != true && syncSchedule.isCancelled) || it.isCompleted }
     ?.let { TransferStage.SCHEDULED } ?: TransferStage.PLANNING
 
-  fun legacyData(): LegacyData? = if (syncWaitlist?.legacyData() == null && syncSchedule.legacyData() == null) {
+  fun legacyData(scheduleOriginDifferent: Boolean): LegacyData? = if (!scheduleOriginDifferent && syncWaitlist?.legacyData() == null && syncSchedule.legacyData() == null) {
     null
   } else {
-    LegacyData(syncWaitlist?.legacyData(), syncSchedule.legacyData())
+    LegacyData(
+      if (scheduleOriginDifferent) prisonCode else null,
+      syncWaitlist?.legacyData(),
+      syncSchedule.legacyData(),
+    )
   }
 }
 
@@ -141,10 +145,13 @@ data class SyncSchedule(
   @JsonIgnore
   val isCompleted = eventStatus == COMPLETED
 
-  fun legacyData() = if (outcomeReasonCode == null && hiddenCommentText == null) {
+  @JsonIgnore
+  fun unexpectedComment(): Boolean = commentText != null && start == null
+
+  fun legacyData() = if (outcomeReasonCode == null && hiddenCommentText == null && !unexpectedComment()) {
     null
   } else {
-    LegacyData.Schedule(hiddenCommentText, outcomeReasonCode)
+    LegacyData.Schedule(if (unexpectedComment()) commentText else null, hiddenCommentText, outcomeReasonCode)
   }
 
   companion object {
@@ -170,7 +177,11 @@ data class SyncMovement(
   @JsonProperty("commentText")
   override val comments: String?,
 ) : StringLegacyIdRequest,
+  PrisonRelatedRequest,
   MovementRequest {
+
+  @JsonIgnore
+  override val prisonCode: String = fromAgyLocId
 
   @JsonIgnore
   override val reasonCode: String = movementReasonCode
