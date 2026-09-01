@@ -114,7 +114,14 @@ class SyncScheduledTransferIntTest(
 
     verifyEventPublications(
       saved,
-      setOf(TransferRelocated(transfer.person.identifier, saved.id, saved.stage, DataSource.NOMIS).publication(saved.id)),
+      setOf(
+        TransferRelocated(
+          transfer.person.identifier,
+          saved.id,
+          saved.stage,
+          DataSource.NOMIS,
+        ).publication(saved.id),
+      ),
     )
   }
 
@@ -142,7 +149,14 @@ class SyncScheduledTransferIntTest(
 
     verifyEventPublications(
       saved,
-      setOf(TransferRecategorised(transfer.person.identifier, saved.id, saved.stage, DataSource.NOMIS).publication(saved.id)),
+      setOf(
+        TransferRecategorised(
+          transfer.person.identifier,
+          saved.id,
+          saved.stage,
+          DataSource.NOMIS,
+        ).publication(saved.id),
+      ),
     )
   }
 
@@ -197,7 +211,14 @@ class SyncScheduledTransferIntTest(
 
     verifyEventPublications(
       saved.schedule!!,
-      setOf(TransferRescheduled(transfer.person.identifier, saved.id, saved.stage, DataSource.NOMIS).publication(saved.id)),
+      setOf(
+        TransferRescheduled(
+          transfer.person.identifier,
+          saved.id,
+          saved.stage,
+          DataSource.NOMIS,
+        ).publication(saved.id),
+      ),
     )
   }
 
@@ -224,7 +245,11 @@ class SyncScheduledTransferIntTest(
 
     verifyEventPublications(
       saved,
-      setOf(TransferMovedToPlanning(transfer.person.identifier, saved.id, saved.stage, DataSource.NOMIS).publication(saved.id)),
+      setOf(
+        TransferMovedToPlanning(transfer.person.identifier, saved.id, saved.stage, DataSource.NOMIS).publication(
+          saved.id,
+        ),
+      ),
     )
   }
 
@@ -258,7 +283,12 @@ class SyncScheduledTransferIntTest(
       saved.plan!!,
       RevisionType.ADD,
       setOf(HmppsDomainEvent::class.simpleName!!, Plan::class.simpleName!!),
-      SchedulerContext.get().copy(username = SYSTEM_USERNAME, caseloadId = null, source = DataSource.DPS, reason = IncompletePlanHandler.REASON),
+      SchedulerContext.get().copy(
+        username = SYSTEM_USERNAME,
+        caseloadId = null,
+        source = DataSource.DPS,
+        reason = IncompletePlanHandler.REASON,
+      ),
     )
 
     verifyEventPublications(

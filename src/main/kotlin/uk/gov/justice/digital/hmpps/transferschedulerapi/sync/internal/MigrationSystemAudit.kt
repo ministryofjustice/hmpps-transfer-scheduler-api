@@ -60,7 +60,7 @@ data class LegacyData(
     @JsonIgnore
     fun outcomeReasonCodeAsEnum(): SyncWaitlist.OutcomeReasonCode? = outcomeReasonCode?.split("-")
       ?.find { p -> p.trim() in SyncWaitlist.OutcomeReasonCode.entries.map { it.name } }
-      ?.let { SyncWaitlist.OutcomeReasonCode.valueOf(it) }
+      ?.let { SyncWaitlist.OutcomeReasonCode.valueOf(it.trim()) }
   }
 
   data class Schedule(

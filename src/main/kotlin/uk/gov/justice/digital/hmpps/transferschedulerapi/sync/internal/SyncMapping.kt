@@ -65,7 +65,7 @@ fun Transfer.toSyncModel(
   id,
   legacyId,
   syncWaitList(statusChanges, legacyDataProvider),
-  syncSchedule(),
+  syncSchedule(legacyDataProvider),
 )
 
 fun Transfer.syncWaitList(
@@ -96,12 +96,14 @@ fun Transfer.syncWaitList(
   )
 }
 
-fun Transfer.syncSchedule() = SyncSchedule(
+fun Transfer.syncSchedule(
+  legacyDataProvider: (UUID) -> LegacyData? = { _ -> null },
+) = SyncSchedule(
   schedule?.start,
   reason.code,
   statusForSchedule(),
   schedule?.comments,
-  null,
+  legacyDataProvider(id)?.schedule?.hiddenCommentText,
   prisonCode,
   destinationCode,
   null,
