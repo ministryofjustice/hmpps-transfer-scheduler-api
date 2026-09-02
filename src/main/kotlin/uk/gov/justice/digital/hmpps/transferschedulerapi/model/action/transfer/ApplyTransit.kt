@@ -12,8 +12,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.StringLegacyIdRequ
 
 data class ApplyTransit(val request: MovementRequest) :
   TransferAction,
-  StringLegacyIdRequest,
-  MovementRequest by request {
+  StringLegacyIdRequest {
   companion object {
     private val VALID_STATUSES = setOf(IN_TRANSIT.name, SCHEDULED.name)
   }
@@ -29,5 +28,5 @@ data class ApplyTransit(val request: MovementRequest) :
 
   override fun domainEvent(entity: Transfer) = TransferInTransit(entity.person.identifier, entity.id, entity.stage)
 
-  infix fun changes(movement: Movement?): Boolean = (movement?.occurredAt != occurredAt) || (movement.comments != comments)
+  infix fun changes(movement: Movement?): Boolean = (movement?.occurredAt != request.occurredAt) || (movement.comments != request.comments)
 }

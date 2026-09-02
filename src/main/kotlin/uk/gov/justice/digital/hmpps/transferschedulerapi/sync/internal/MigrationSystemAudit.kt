@@ -47,7 +47,6 @@ class MigrationSystemAudit(
 }
 
 data class LegacyData(
-  val scheduledOriginPrisonCode: String?,
   val waitList: WaitList?,
   val schedule: Schedule?,
 ) {
@@ -74,7 +73,7 @@ data class LegacyData(
   }
 
   init {
-    check(waitList != null || schedule != null || scheduledOriginPrisonCode != null) { "Invalid legacy data object" }
+    check(waitList != null || schedule != null) { "Invalid legacy data object" }
   }
 }
 

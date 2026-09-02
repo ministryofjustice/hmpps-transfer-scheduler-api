@@ -33,9 +33,7 @@ val PRE_SCHEDULED_STATUSES: Set<TransferStatus.Code> = setOf(PLANNING, READY_TO_
 fun Transfer.updateFrom(request: SyncTransfer, personSummary: PersonSummary, rdProvider: RdProvider): Transfer = apply {
   applyLegacyId(legacyId)
   movePerson(personSummary)
-  if (movement == null) {
-    movePrison(request.syncSchedule.agyLocId)
-  }
+  movePrison(request.syncSchedule.agyLocId)
   applyDestination(ApplyDestination(request.destinationCode))
   applyLogistics(ApplyLogistics(request.logisticsCode), rdProvider)
   applyReason(ApplyReason(request.reasonCode), rdProvider)

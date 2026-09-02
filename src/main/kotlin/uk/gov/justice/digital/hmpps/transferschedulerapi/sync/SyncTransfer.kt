@@ -75,11 +75,10 @@ data class SyncTransfer(
     .takeIf { it.isScheduled || it.isExpired || (syncWaitlist?.isCancelled != true && syncSchedule.isCancelled) || it.isCompleted }
     ?.let { TransferStage.SCHEDULED } ?: TransferStage.PLANNING
 
-  fun legacyData(scheduleOriginDifferent: Boolean): LegacyData? = if (!scheduleOriginDifferent && syncWaitlist?.legacyData() == null && syncSchedule.legacyData() == null) {
+  fun legacyData(): LegacyData? = if (syncWaitlist?.legacyData() == null && syncSchedule.legacyData() == null) {
     null
   } else {
     LegacyData(
-      if (scheduleOriginDifferent) prisonCode else null,
       syncWaitlist?.legacyData(),
       syncSchedule.legacyData(),
     )
