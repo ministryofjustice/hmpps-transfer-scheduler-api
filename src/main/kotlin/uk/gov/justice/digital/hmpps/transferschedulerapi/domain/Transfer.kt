@@ -45,7 +45,6 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferRecorded
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferScheduled
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.MovementRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.PlanRequest
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.PrisonRelatedRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.ScheduleRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyDestination
@@ -345,11 +344,7 @@ final class Transfer(
     rdProvider.get(logisticsCode),
     comments,
     if (this is StringLegacyIdRequest) legacyId else null,
-  ).also {
-    if (this is PrisonRelatedRequest) {
-      transfer.movePrison(prisonCode)
-    }
-  }
+  )
 
   companion object {
     fun auditedProperties() = listOf(

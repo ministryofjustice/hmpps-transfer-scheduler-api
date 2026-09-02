@@ -46,10 +46,8 @@ infix fun ScheduleModel.verifyAgainst(schedule: ScheduleEntity) {
 }
 
 infix fun TransferEntity.verifyAgainst(request: TransferRequest) {
-  if (movement == null) {
-    val expectedPrisonCode = if (request is PrisonRelatedRequest) prisonCode else person.prisonCode
-    assertThat(prisonCode).isEqualTo(expectedPrisonCode)
-  }
+  val expectedPrisonCode = if (request is PrisonRelatedRequest) prisonCode else person.prisonCode
+  assertThat(prisonCode).isEqualTo(expectedPrisonCode)
   assertThat(reason.code).isEqualTo(request.reasonCode)
   assertThat(destinationCode).isEqualTo(request.destinationCode)
   assertThat(logistics?.code).isEqualTo(request.logisticsCode)
@@ -72,9 +70,6 @@ infix fun ScheduleEntity.verifyAgainst(request: ScheduleRequest) {
 }
 
 infix fun Movement.verifyAgainst(request: MovementRequest) {
-  if (request is PrisonRelatedRequest) {
-    assertThat(transfer.prisonCode).isEqualTo(request.prisonCode)
-  }
   assertThat(occurredAt.truncatedTo(ChronoUnit.SECONDS)).isEqualTo(request.occurredAt.truncatedTo(ChronoUnit.SECONDS))
   assertThat(reason.code).isEqualTo(request.reasonCode)
   assertThat(destinationCode).isEqualTo(request.destinationCode)
