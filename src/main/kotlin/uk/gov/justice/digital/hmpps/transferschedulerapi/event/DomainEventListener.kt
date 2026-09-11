@@ -9,12 +9,14 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.context.SchedulerContex
 import uk.gov.justice.digital.hmpps.transferschedulerapi.service.IncompletePlanHandler
 import uk.gov.justice.digital.hmpps.transferschedulerapi.service.PersonUpdatedHandler
 import uk.gov.justice.digital.hmpps.transferschedulerapi.service.PrisonerMergedHandler
+import uk.gov.justice.digital.hmpps.transferschedulerapi.service.PrisonerReceivedHandler
 
 @Component
 class DomainEventListener(
   private val jsonMapper: JsonMapper,
   private val personUpdated: PersonUpdatedHandler,
   private val prisonerMerged: PrisonerMergedHandler,
+  private val prisonerReceived: PrisonerReceivedHandler,
   private val incomplete: IncompletePlanHandler,
 ) {
 
@@ -24,6 +26,7 @@ class DomainEventListener(
       when (notification.eventType) {
         PrisonerUpdated.EVENT_TYPE -> personUpdated.handle(jsonMapper.readValue(notification.message))
         PrisonerMerged.EVENT_TYPE -> prisonerMerged.handle(jsonMapper.readValue(notification.message))
+        PrisonerReceived.EVENT_TYPE -> prisonerReceived.handle(jsonMapper.readValue(notification.message))
         PlanningIncomplete.EVENT_TYPE -> incomplete.handle(jsonMapper.readValue(notification.message))
       }
     } catch (ex: Exception) {
