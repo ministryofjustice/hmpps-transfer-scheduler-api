@@ -10,11 +10,14 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.context.SchedulerContex
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.DataSource
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.IdGenerator.newUuid
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.personIdentifier
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.IntegrationTestBase
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.PersonSummaryOperations
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperations
+import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.movement
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.transfer
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.MoveTransfersRequest
 import java.util.SequencedSet
 import java.util.UUID
@@ -46,7 +49,22 @@ class MoveTransferIntTest(
   fun `204 no content - can move transfers`() {
     val one = givenTransfer(transfer())
     val two = givenTransfer(transfer())
-    val request = moveRequest(sortedSetOf(one.id, two.id), one.person.identifier, two.person.identifier)
+    val unMo = givenTransfer(
+      transfer(
+        personIdentifier = one.person.identifier,
+        plan = null,
+        schedule = null,
+        statusCode = TransferStatus.Code.COMPLETED,
+        stage = TransferStage.UNSCHEDULED,
+        movement = movement(),
+      ),
+    )
+    val request = moveRequest(
+      sortedSetOf(one.id, two.id),
+      sortedSetOf(unMo.movement!!.id),
+      one.person.identifier,
+      two.person.identifier,
+    )
     moveTransfers(request).expectStatus().isNoContent
 
     val moved = requireNotNull(findTransfer(one.id))
@@ -55,21 +73,26 @@ class MoveTransferIntTest(
     val retained = requireNotNull(findTransfer(two.id))
     assertThat(retained.person.identifier).isEqualTo(two.person.identifier)
 
+    val unscheduled = requireNotNull(findTransfer(unMo.id))
+    assertThat(unscheduled.person.identifier).isEqualTo(two.person.identifier)
+
     assertThat(findPersonSummary(one.person.identifier)).isNull()
 
     verifyAudit(
       moved,
       RevisionType.MOD,
       setOf(Transfer::class.simpleName!!),
-      SchedulerContext.get().copy(username = SYSTEM_USERNAME, reason = "Prisoner booking moved", source = DataSource.NOMIS),
+      SchedulerContext.get()
+        .copy(username = SYSTEM_USERNAME, reason = "Prisoner booking moved", source = DataSource.NOMIS),
     )
   }
 
   private fun moveRequest(
     transferIds: SequencedSet<UUID> = sortedSetOf(),
+    unscheduledIds: Set<UUID> = sortedSetOf(),
     from: String = personIdentifier(),
     to: String = personIdentifier(),
-  ) = MoveTransfersRequest(from, to, transferIds)
+  ) = MoveTransfersRequest(from, to, transferIds, unscheduledIds)
 
   private fun moveTransfers(
     request: MoveTransfersRequest,

@@ -14,12 +14,16 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.MoveTransfersReque
 class TransfersMove(
   private val personSummaryService: PersonSummaryService,
   private val transferRepository: TransferRepository,
+  private val movementRepository: MovementRepository,
 ) {
   fun move(request: MoveTransfersRequest) {
     SchedulerContext.get().copy(username = SYSTEM_USERNAME, reason = "Prisoner booking moved").set()
     val person = personSummaryService.getWithSave(request.to)
     transferRepository.findAllById(request.transferIds).forEach {
       it.movePerson(person)
+    }
+    movementRepository.findAllById(request.unscheduledMovementIds).forEach {
+      it.transfer.movePerson(person)
     }
     if (transferRepository.countAllByPersonIdentifier(request.from) == 0) {
       personSummaryService.findPersonSummary(request.from)?.also(personSummaryService::remove)
