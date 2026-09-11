@@ -7,4 +7,5 @@ data class MoveTransfersRequest(
   val from: String,
   val to: String,
   val transferIds: SequencedSet<UUID>,
+  val unscheduledMovementIds: Set<UUID>,
 )
