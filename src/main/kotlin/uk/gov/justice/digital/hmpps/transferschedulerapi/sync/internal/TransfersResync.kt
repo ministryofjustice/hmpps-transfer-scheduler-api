@@ -49,9 +49,9 @@ class TransfersResync(
     val maProvider = MigrationAuditProvider(msa.findAllById(existing.flatMap { listOfNotNull(it.id, it.movement?.id) }))
 
     val transferProvider =
-      { id: UUID?, legacyId: Long -> existing.firstOrNull { it.id == id || it.legacyId == legacyId } }
+      { id: UUID?, legacyId: Long -> existing.firstOrNull { it.legacyId == legacyId || it.id == id } }
     val movementProvider =
-      { id: UUID?, legacyId: String? -> existing.firstOrNull { it.movement?.id == id || it.movement?.legacyId == legacyId }?.movement }
+      { id: UUID?, legacyId: String -> existing.mapNotNull { it.movement }.firstOrNull { it.legacyId == legacyId || it.id == id } }
 
     val scheduled = request.transfers.associate { it.resync(person, transferProvider, movementProvider, rdProvider, maProvider) }
     val unscheduled = request.unscheduledMovements.associate { it.resync(person, null, movementProvider, rdProvider, maProvider) }

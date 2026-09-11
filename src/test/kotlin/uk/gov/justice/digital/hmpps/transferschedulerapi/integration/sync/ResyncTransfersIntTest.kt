@@ -290,6 +290,106 @@ class ResyncTransfersIntTest(
   }
 
   @Test
+  fun `200 ok can re-migrate data without dps ids`() {
+    val person = givenPersonSummary(personSummary())
+    val schTr = givenTransfer(transfer(person.identifier, legacyId = newId()))
+    val movBookingId = newId()
+    val movSeq = newId()
+    val movTr = givenTransfer(
+      transfer(
+        person.identifier,
+        movement = movement(legacyId = "${movBookingId}_$movSeq"),
+        legacyId = newId(),
+      ),
+    )
+
+    val usBookingId = newId()
+    val usSeq = newId()
+    givenTransfer(
+      transfer(
+        person.identifier,
+        schedule = null,
+        plan = null,
+        stage = TransferStage.UNSCHEDULED,
+        statusCode = TransferStatus.Code.COMPLETED,
+        movement = movement(legacyId = "${usBookingId}_$usSeq"),
+      ),
+    )
+
+    val request = resyncRequest(
+      listOf(
+        resyncTransfer(transfer = syncTransfer(schedule = syncSchedule(hiddenCommentText = null))),
+        resyncTransfer(transfer = syncTransfer(eventId = requireNotNull(schTr.legacyId))),
+        resyncTransfer(
+          transfer = syncTransfer(waitlist = syncWaitList(), eventId = movTr.legacyId!!),
+          movement = resyncMovement(
+            movement = syncMovement(
+              offenderBookId = movBookingId,
+              movementSeq = movSeq.toInt(),
+            ),
+          ),
+        ),
+      ),
+      listOf(resyncMovement(movement = syncMovement(offenderBookId = usBookingId, movementSeq = usSeq.toInt()))),
+    )
+
+    val newTransfer = request.transfers.first()
+
+    val res = sendTransfers(person.identifier, request).successResponse<ResyncResponse>()
+    assertThat(res.transfers).hasSize(3)
+    assertThat(res.unscheduledMovements).hasSize(1)
+
+    res.transfers.forEach { tr ->
+      val saved = requireNotNull(findTransfer(tr.dpsId))
+      val detail = request.transfers.first { it.transfer.eventId == tr.eventId }
+      saved verifyAgainst detail.transfer
+      val msa = requireNotNull(msaRepository.findByIdOrNull(saved.id))
+      assertThat(msa.createdBy).isEqualTo(detail.created.by)
+      detail.modified?.also { assertThat(msa.modifiedBy).isEqualTo(it.by) }
+      msa.data verifyAgainst detail.transfer
+      tr.movement?.also { sm ->
+        val savedMov = requireNotNull(findMovement(sm.dpsId))
+        val smDetail = detail.movement!!.also {
+          with(it.movement) { offenderBookId == sm.bookingId && movementSeq == sm.sequenceNumber }
+        }
+        savedMov verifyAgainst smDetail.movement
+      }
+      verifyAudit(
+        saved,
+        if (saved.legacyId == newTransfer.transfer.eventId) RevisionType.ADD else RevisionType.MOD,
+        setOf(
+          HmppsDomainEvent::class.simpleName!!,
+          Transfer::class.simpleName!!,
+          Plan::class.simpleName!!,
+          Schedule::class.simpleName!!,
+          Movement::class.simpleName!!,
+        ),
+        SchedulerContext.get().copy(username = SYSTEM_USERNAME, source = DataSource.NOMIS),
+      )
+    }
+    res.unscheduledMovements.forEach { um ->
+      val mov = requireNotNull(findMovement(um.dpsId))
+      val detail = request.unscheduledMovements.first {
+        with(it.movement) { offenderBookId == um.bookingId && movementSeq == um.sequenceNumber }
+      }
+      mov verifyAgainst detail.movement
+      assertThat(mov.transfer.stage).isEqualTo(TransferStage.UNSCHEDULED)
+      verifyAudit(
+        mov,
+        RevisionType.MOD,
+        setOf(
+          HmppsDomainEvent::class.simpleName!!,
+          Transfer::class.simpleName!!,
+          Plan::class.simpleName!!,
+          Schedule::class.simpleName!!,
+          Movement::class.simpleName!!,
+        ),
+        SchedulerContext.get().copy(username = SYSTEM_USERNAME, source = DataSource.NOMIS),
+      )
+    }
+  }
+
+  @Test
   fun `Incomplete planned transfers are completed by DPS`() {
     val prisonCode = prisonCode()
     val prisoner = prisonerSearch.givenPrisoner(prisoner(prisonCode))

@@ -27,13 +27,8 @@ class ApiExceptionHandler {
   @ExceptionHandler(ConflictException::class)
   fun handleConflictException(e: ConflictException): ResponseEntity<ErrorResponse> = ResponseEntity
     .status(CONFLICT)
-    .body(
-      ErrorResponse(
-        status = CONFLICT,
-        userMessage = "A conflict has been detected",
-        developerMessage = e.message,
-      ),
-    )
+    .body(ErrorResponse(status = CONFLICT, userMessage = "A conflict has been detected", developerMessage = e.message))
+    .also { LOG.error(e.message, e) }
 
   @ExceptionHandler(ValidationException::class)
   fun handleValidationException(e: ValidationException): ResponseEntity<ErrorResponse> = ResponseEntity
