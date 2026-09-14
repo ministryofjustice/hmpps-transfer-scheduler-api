@@ -19,9 +19,6 @@ on:
 
 permissions:
   contents: read
-  packages: write
-  id-token: write
-  attestations: write
 
 jobs:
   helm_lint:
@@ -52,6 +49,11 @@ jobs:
     needs:
       - app_version
   build:
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
     name: Build docker image from hmpps-github-actions
     if: github.ref == 'refs/heads/main'
     uses: ministryofjustice/hmpps-github-actions/.github/workflows/docker_build.yml@v2 # WORKFLOW_VERSION
@@ -67,16 +69,6 @@ jobs:
       generate_sbom: true
       attach_sbom_to_registry: true
       sign_image: true
-  schema_spy:
-    uses: ./.github/workflows/schema-spy.yml
-    if: github.ref == 'refs/heads/main'
-    with:
-      docker_compose_file: 'docker-compose-schema-spy.yml'
-      database_name: 'transfer'
-      database_schema: 'public'
-      database_user: 'transfer'
-      database_password: '5ch3du13r'
-    secrets: inherit
   deploy_dev:
     name: Deploy to the development environment
     concurrency:
