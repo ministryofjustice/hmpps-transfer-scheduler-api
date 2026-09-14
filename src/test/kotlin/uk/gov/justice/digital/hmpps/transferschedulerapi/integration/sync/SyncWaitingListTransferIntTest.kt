@@ -13,6 +13,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Plan
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Schedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.publication
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferCancellationReason
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferCancelled
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferLogisticsChanged
@@ -283,7 +284,7 @@ class SyncWaitingListTransferIntTest(
       generateSequence { TransferPriorityCode.randomCode() }.first { it != transfer.plan?.priority?.code }
 
     val request = transfer.toTestSyncModel()
-      .copy(syncWaitlist = transfer.syncWaitList({ emptyList() }, { _ -> null })!!.copy(transferPriority = newPriority))
+      .copy(syncWaitlist = transfer.syncWaitList { _ -> null }!!.copy(transferPriority = newPriority))
     val user = syncUser()
     val res = sendTransfer(transfer.person.identifier, request, user).successResponse<ReferenceId>()
 
@@ -359,8 +360,8 @@ class SyncWaitingListTransferIntTest(
     val request = transfer.toTestSyncModel().copy(
       syncSchedule = transfer.syncSchedule()
         .copy(start = LocalDateTime.now().plusDays(5), eventStatus = SyncSchedule.CANCELLED),
-      syncWaitlist = transfer.syncWaitList({ _ -> emptyList() }, { _ -> null })!!
-        .copy(outcomeReasonCode = SyncWaitlist.OutcomeReasonCode.OIC, waitListStatus = SyncWaitlist.CANCELLED),
+      syncWaitlist = transfer.syncWaitList { _ -> null }!!
+        .copy(outcomeReasonCode = TransferCancellationReason.Code.OIC.name, waitListStatus = SyncWaitlist.CANCELLED),
     )
     val user = syncUser()
     val res = sendTransfer(transfer.person.identifier, request, user).successResponse<ReferenceId>()
@@ -368,19 +369,14 @@ class SyncWaitingListTransferIntTest(
     val saved = requireNotNull(findTransfer(res.dpsId))
     assertThat(saved.status.code).isEqualTo(TransferStatus.Code.CANCELLED.name)
     assertThat(saved.stage).isEqualTo(TransferStage.PLANNING)
+    assertThat(saved.cancellationReason?.code).isEqualTo(TransferCancellationReason.Code.OIC.name)
     saved verifyAgainst request
 
     verifyAudit(
       saved,
       RevisionType.MOD,
       setOf(HmppsDomainEvent::class.simpleName!!, Transfer::class.simpleName!!, Schedule::class.simpleName!!),
-      SchedulerContext.get()
-        .copy(
-          username = user.username,
-          caseloadId = user.activeCaseloadId,
-          source = DataSource.NOMIS,
-          reason = "OIC - Offence In Custody",
-        ),
+      SchedulerContext.get().copy(username = user.username, caseloadId = user.activeCaseloadId, source = DataSource.NOMIS),
     )
 
     verifyEventPublications(

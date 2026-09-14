@@ -6,12 +6,10 @@ import jakarta.persistence.Id
 import jakarta.persistence.PostLoad
 import jakarta.persistence.Table
 import jakarta.persistence.Transient
-import net.minidev.json.annotate.JsonIgnore
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.type.SqlTypes
 import org.springframework.data.domain.Persistable
 import org.springframework.data.repository.CrudRepository
-import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncWaitlist
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.UUID
@@ -54,21 +52,14 @@ data class LegacyData(
     val statusDate: LocalDate,
     val approved: Boolean,
     val approvedUsername: String?,
-    val outcomeReasonCode: String?,
-  ) {
-    @JsonIgnore
-    fun outcomeReasonCodeAsEnum(): SyncWaitlist.OutcomeReasonCode? = outcomeReasonCode?.split("-")
-      ?.find { p -> p.trim() in SyncWaitlist.OutcomeReasonCode.entries.map { it.name } }
-      ?.let { SyncWaitlist.OutcomeReasonCode.valueOf(it.trim()) }
-  }
+  )
 
   data class Schedule(
     val commentText: String?,
     val hiddenCommentText: String?,
-    val outcomeReasonCode: String?,
   ) {
     init {
-      check(commentText != null || hiddenCommentText != null || outcomeReasonCode != null) { "Invalid legacy data schedule object" }
+      check(commentText != null || hiddenCommentText != null) { "Invalid legacy data schedule object" }
     }
   }
 

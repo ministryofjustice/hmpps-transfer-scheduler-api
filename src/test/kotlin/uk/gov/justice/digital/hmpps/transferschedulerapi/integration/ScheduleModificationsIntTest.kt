@@ -13,6 +13,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Plan
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Schedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.publication
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferCancellationReason
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferLogistics
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferPriority
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferReason
@@ -430,7 +431,7 @@ class ScheduleModificationsIntTest(
   @Test
   fun `200 - can cancel a scheduled transfer`() {
     val transfer = givenTransfer(transfer())
-    val action = CancelTransfer
+    val action = CancelTransfer(TransferCancellationReason.Code.OIC.name)
     val username = username()
     val givenReason = word(20)
 
@@ -438,7 +439,12 @@ class ScheduleModificationsIntTest(
     with(res.content.single()) {
       assertThat(domainEvents).containsExactly(TransferCancelled.EVENT_TYPE)
       assertThat(reason).isEqualTo(givenReason)
-      assertThat(changes).containsExactly(
+      assertThat(changes).containsExactlyInAnyOrder(
+        AuditedAction.Change(
+          Transfer::cancellationReason.name,
+          null,
+          "Offence in custody",
+        ),
         AuditedAction.Change(
           Transfer::status.name,
           "Scheduled",
@@ -469,7 +475,7 @@ class ScheduleModificationsIntTest(
   @Test
   fun `409 - cannot cancel in transit`() {
     val transfer = givenTransfer(transfer(statusCode = IN_TRANSIT, movement = movement()))
-    val action = CancelTransfer
+    val action = CancelTransfer(TransferCancellationReason.Code.TRANS.name)
     val username = username()
     val givenReason = word(10)
 

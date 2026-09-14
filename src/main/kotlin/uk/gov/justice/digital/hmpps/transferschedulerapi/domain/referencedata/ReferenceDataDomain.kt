@@ -26,6 +26,7 @@ class ReferenceDataDomain(
   val description: String,
 ) {
   enum class Code(val clazz: KClass<out ReferenceData>) {
+    TRANSFER_CANCELLATION_REASON(TransferCancellationReason::class),
     TRANSFER_LOGISTICS(TransferLogistics::class),
     TRANSFER_PRIORITY(TransferPriority::class),
     TRANSFER_REASON(TransferReason::class),

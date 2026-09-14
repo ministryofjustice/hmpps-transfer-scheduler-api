@@ -3,6 +3,7 @@ package uk.gov.justice.digital.hmpps.transferschedulerapi.sync
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.CancelledRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.MovementRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.PlanRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.PrisonRelatedRequest
@@ -23,6 +24,7 @@ data class SyncTransfer(
   val syncSchedule: SyncSchedule,
 ) : NumericLegacyIdRequest,
   PrisonRelatedRequest,
+  CancelledRequest,
   TransferRequest {
   @JsonIgnore
   override val prisonCode: String = syncSchedule.agyLocId
@@ -62,6 +64,8 @@ data class SyncTransfer(
   @JsonIgnore
   val isExpired: Boolean = syncSchedule.isExpired
 
+  override val cancellationReason: String? = syncWaitlist?.cancellationReason ?: syncSchedule.cancellationReason
+
   override fun initialStatusCode(): TransferStatus.Code = when {
     syncSchedule.isCancelled -> TransferStatus.Code.CANCELLED
     syncSchedule.isExpired -> TransferStatus.Code.EXPIRED
@@ -88,28 +92,20 @@ data class SyncTransfer(
 data class SyncWaitlist(
   val requestDate: LocalDate,
   val waitListStatus: String,
-  val statusDate: LocalDate,
+  val statusDate: LocalDate?,
   val transferPriority: String,
   val approved: Boolean,
   val approvedUsername: String?,
-  val outcomeReasonCode: OutcomeReasonCode?,
+  val outcomeReasonCode: String?,
   val commentText1: String?,
 ) {
   @JsonIgnore
   val isCancelled = waitListStatus == CANCELLED
 
   @JsonIgnore
-  val cancellationReason = outcomeReasonCode?.takeIf { isCancelled }?.let {
-    "${it.name} - ${it.description}"
-  }
+  val cancellationReason = outcomeReasonCode?.takeIf { isCancelled }
 
-  enum class OutcomeReasonCode(val description: String) {
-    OIC("Offence In Custody"),
-    ADMI("Administrative"),
-    TRANS("Insufficient Transport"),
-  }
-
-  fun legacyData() = LegacyData.WaitList(statusDate, approved, approvedUsername, cancellationReason)
+  fun legacyData() = statusDate?.let { LegacyData.WaitList(it, approved, approvedUsername) }
 
   companion object {
     const val CANCELLED = "CAN"
@@ -145,12 +141,15 @@ data class SyncSchedule(
   val isCompleted = eventStatus == COMPLETED
 
   @JsonIgnore
+  val cancellationReason = outcomeReasonCode?.takeIf { isCancelled }
+
+  @JsonIgnore
   fun unexpectedComment(): Boolean = commentText != null && start == null
 
   fun legacyData() = if (outcomeReasonCode == null && hiddenCommentText == null && !unexpectedComment()) {
     null
   } else {
-    LegacyData.Schedule(if (unexpectedComment()) commentText else null, hiddenCommentText, outcomeReasonCode)
+    LegacyData.Schedule(if (unexpectedComment()) commentText else null, hiddenCommentText)
   }
 
   companion object {
