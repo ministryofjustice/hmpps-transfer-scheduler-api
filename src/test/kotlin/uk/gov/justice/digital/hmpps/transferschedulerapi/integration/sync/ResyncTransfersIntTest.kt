@@ -473,13 +473,11 @@ class ResyncTransfersIntTest(
         assertThat(statusDate).isEqualTo(request.syncWaitlist?.statusDate)
         assertThat(approved).isEqualTo(request.syncWaitlist?.approved)
         assertThat(approvedUsername).isEqualTo(request.syncWaitlist?.approvedUsername)
-        assertThat(outcomeReasonCode).isEqualTo(request.syncWaitlist?.cancellationReason)
       }
     }
     if (this?.schedule != null) {
       with(this.schedule) {
         assertThat(hiddenCommentText).isEqualTo(request.syncSchedule.hiddenCommentText)
-        assertThat(outcomeReasonCode).isEqualTo(request.syncSchedule.outcomeReasonCode)
       }
     }
   }

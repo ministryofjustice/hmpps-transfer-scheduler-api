@@ -28,6 +28,7 @@ import org.hibernate.envers.RelationTargetAuditMode.NOT_AUDITED
 import uk.gov.justice.digital.hmpps.transferschedulerapi.context.SchedulerContext
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.IdGenerator.newUuid
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.RdProvider
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferCancellationReason
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferLogistics
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferReason
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
@@ -72,6 +73,7 @@ import java.util.UUID
     NamedAttributeNode("plan", subgraph = "transfer.plan"),
     NamedAttributeNode("schedule"),
     NamedAttributeNode("movement", subgraph = "transfer.movement"),
+    NamedAttributeNode("cancellationReason"),
   ],
   subgraphs = [
     NamedSubgraph(name = "transfer.plan", attributeNodes = [NamedAttributeNode("priority")]),
@@ -92,6 +94,7 @@ final class Transfer(
   destinationCode: String?,
   logistics: TransferLogistics?,
   stage: TransferStage,
+  cancellationReason: TransferCancellationReason?,
   legacyId: Long?,
   @Id
   @Column(name = "id", nullable = false)
@@ -118,7 +121,6 @@ final class Transfer(
   var prisonCode: String = prisonCode
     private set
 
-  @Fetch(FetchMode.JOIN)
   @Audited(targetAuditMode = NOT_AUDITED)
   @NotNull
   @ManyToOne(optional = false)
@@ -126,7 +128,6 @@ final class Transfer(
   var status: TransferStatus = status
     private set
 
-  @Fetch(FetchMode.JOIN)
   @Audited(targetAuditMode = NOT_AUDITED)
   @NotNull
   @ManyToOne
@@ -139,11 +140,16 @@ final class Transfer(
   var destinationCode: String? = destinationCode
     private set
 
-  @Fetch(FetchMode.JOIN)
   @Audited(targetAuditMode = NOT_AUDITED)
   @ManyToOne
   @JoinColumn(name = "logistics_id")
   var logistics: TransferLogistics? = logistics
+    private set
+
+  @Audited(targetAuditMode = NOT_AUDITED)
+  @ManyToOne
+  @JoinColumn(name = "cancellation_reason_id")
+  var cancellationReason: TransferCancellationReason? = cancellationReason
     private set
 
   @Column(name = "legacy_id")
@@ -298,6 +304,7 @@ final class Transfer(
     if (applyStatus(CANCELLED, rdProvider)) {
       appliedActions += action
     }
+    action.reasonCode?.also { cancellationReason = rdProvider.get(it) }
   }
 
   fun expire(action: ExpireTransfer, rdProvider: RdProvider) = apply {
@@ -348,6 +355,7 @@ final class Transfer(
 
   companion object {
     fun auditedProperties() = listOf(
+      Transfer::cancellationReason,
       Transfer::reason,
       Transfer::status,
       Transfer::destinationCode,

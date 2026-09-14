@@ -27,6 +27,7 @@ class ReferenceDataController(private val rdService: ReferenceDataService) {
       Schema(
         type = "string",
         allowableValues = [
+          "transfer-cancellation-reason",
           "transfer-logistics",
           "transfer-priority",
           "transfer-reason",

@@ -9,9 +9,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.Tr
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferCancelled
 import uk.gov.justice.digital.hmpps.transferschedulerapi.exception.ConflictException
 
-data object CancelTransfer : TransferAction {
-  private val VALID_STATUSES = setOf(SCHEDULED.name, READY_TO_SCHEDULE.name, PLANNING.name, CANCELLED.name)
-
+data class CancelTransfer(val reasonCode: String?) : TransferAction {
   override fun applyTo(entity: Transfer, rdProvider: RdProvider) {
     if (entity.status.code !in VALID_STATUSES) {
       throw ConflictException("Cannot cancel from ${entity.status.code}")
@@ -20,4 +18,8 @@ data object CancelTransfer : TransferAction {
   }
 
   override fun domainEvent(entity: Transfer) = TransferCancelled(entity.person.identifier, entity.id, entity.stage)
+
+  companion object {
+    private val VALID_STATUSES = setOf(SCHEDULED.name, READY_TO_SCHEDULE.name, PLANNING.name, CANCELLED.name)
+  }
 }

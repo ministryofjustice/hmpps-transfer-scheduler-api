@@ -41,3 +41,7 @@ interface MovementRequest {
 interface PrisonRelatedRequest {
   val prisonCode: String
 }
+
+interface CancelledRequest {
+  val cancellationReason: String?
+}

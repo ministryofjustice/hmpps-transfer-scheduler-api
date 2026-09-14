@@ -74,6 +74,7 @@ class TransferOperationsImpl(
           else -> throw IllegalStateException("No default for transfer status $statusCode")
         }
       },
+      cancellationReasonCode: String? = null,
       legacyId: Long? = null,
       id: UUID = newUuid(),
     ): TransferProvider = { pp, rd ->
@@ -85,6 +86,7 @@ class TransferOperationsImpl(
         destinationCode ?: movement?.destinationCode,
         (logisticsCode ?: movement?.logisticsCode)?.let { rd.get(it) },
         stage,
+        cancellationReasonCode?.let { rd.get(it) },
         legacyId,
         id,
       )

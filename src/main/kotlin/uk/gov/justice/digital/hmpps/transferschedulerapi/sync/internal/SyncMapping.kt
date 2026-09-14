@@ -21,7 +21,6 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.C
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ExpireTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.PlanTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ScheduleTransfer
-import uk.gov.justice.digital.hmpps.transferschedulerapi.service.history.StatusChanged
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncMovement
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncSchedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncTransfer
@@ -49,7 +48,7 @@ fun Transfer.updateFrom(request: SyncTransfer, personSummary: PersonSummary, rdP
   }
 
   when {
-    request.isCancelled -> cancel(CancelTransfer, rdProvider)
+    request.isCancelled -> cancel(CancelTransfer(request.syncWaitlist?.cancellationReason ?: request.syncSchedule.cancellationReason), rdProvider)
     request.isExpired -> expire(ExpireTransfer, rdProvider)
     request.isReadyToSchedule && status.code == PLANNING.name -> applyStatus(READY_TO_SCHEDULE, rdProvider)
     !request.isReadyToSchedule && status.code == READY_TO_SCHEDULE.name -> applyStatus(PLANNING, rdProvider)
@@ -57,39 +56,26 @@ fun Transfer.updateFrom(request: SyncTransfer, personSummary: PersonSummary, rdP
 }
 
 fun Transfer.toSyncModel(
-  statusChanges: (UUID) -> List<StatusChanged>,
   legacyDataProvider: (UUID) -> LegacyData?,
 ): SyncTransfer = SyncTransfer(
   id,
   legacyId,
-  syncWaitList(statusChanges, legacyDataProvider),
+  syncWaitList(legacyDataProvider),
   syncSchedule(legacyDataProvider),
 )
 
 fun Transfer.syncWaitList(
-  statusChanges: (UUID) -> List<StatusChanged>,
   legacyDataProvider: (UUID) -> LegacyData?,
 ) = plan?.let {
-  val statusChanges = statusChanges(it.id).sortedByDescending { sc -> sc.occurredAt }
-  val mostRecent = statusChanges.firstOrNull { sc -> sc.to in setOf(PLANNING, READY_TO_SCHEDULE, SCHEDULED) }
-  val approvedBy = if (stage == TransferStage.SCHEDULED) {
-    statusChanges.firstOrNull { sc -> sc.to == SCHEDULED }
-  } else {
-    null
-  }
   val legacyData = legacyDataProvider(it.id)
   SyncWaitlist(
     it.requestedOn,
     statusForWaitlist(),
-    mostRecent?.occurredAt?.toLocalDate() ?: legacyData?.waitList?.statusDate ?: it.requestedOn,
+    null,
     it.priority.code,
     status.code in setOf(SCHEDULED.name, IN_TRANSIT.name, COMPLETED.name) || legacyData?.waitList?.approved == true,
-    approvedBy?.username ?: legacyData?.waitList?.approvedUsername,
-    if (status.code == TransferStatus.Code.CANCELLED.name) {
-      legacyData?.waitList?.outcomeReasonCodeAsEnum() ?: SyncWaitlist.OutcomeReasonCode.ADMI
-    } else {
-      null
-    },
+    null,
+    cancellationReason?.code,
     it.comments,
   )
 }
@@ -104,7 +90,7 @@ fun Transfer.syncSchedule(
   legacyDataProvider(id)?.schedule?.hiddenCommentText,
   prisonCode,
   destinationCode,
-  null,
+  cancellationReason?.code,
   logistics?.code,
 )
 

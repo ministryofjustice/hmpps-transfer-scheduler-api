@@ -13,6 +13,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Plan
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Schedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.publication
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferCancellationReason
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferPriority
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.IN_TRANSIT
@@ -549,7 +550,7 @@ class PlanModificationsIntTest(
   @Test
   fun `200 - can cancel a planned transfer`() {
     val transfer = givenTransfer(transfer(schedule = null, statusCode = READY_TO_SCHEDULE))
-    val action = CancelTransfer
+    val action = CancelTransfer(TransferCancellationReason.Code.ADMI.name)
     val username = username()
     val givenReason = word(20)
 
@@ -557,7 +558,12 @@ class PlanModificationsIntTest(
     with(res.content.single()) {
       assertThat(domainEvents).containsExactly(TransferCancelled.EVENT_TYPE)
       assertThat(reason).isEqualTo(givenReason)
-      assertThat(changes).containsExactly(
+      assertThat(changes).containsExactlyInAnyOrder(
+        AuditedAction.Change(
+          Transfer::cancellationReason.name,
+          null,
+          "Administrative",
+        ),
         AuditedAction.Change(
           Transfer::status.name,
           "Ready to schedule",
