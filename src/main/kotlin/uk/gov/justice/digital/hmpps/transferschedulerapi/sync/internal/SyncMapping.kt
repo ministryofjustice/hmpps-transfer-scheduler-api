@@ -30,7 +30,7 @@ import java.util.UUID
 val PRE_SCHEDULED_STATUSES: Set<TransferStatus.Code> = setOf(PLANNING, READY_TO_SCHEDULE)
 
 fun Transfer.updateFrom(request: SyncTransfer, personSummary: PersonSummary, rdProvider: RdProvider): Transfer = apply {
-  applyLegacyId(legacyId)
+  applyLegacyId(request.legacyId)
   movePerson(personSummary)
   movePrison(request.syncSchedule.agyLocId)
   applyDestination(ApplyDestination(request.destinationCode))
