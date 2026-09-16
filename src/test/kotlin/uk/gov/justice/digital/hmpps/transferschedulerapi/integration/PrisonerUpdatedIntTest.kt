@@ -23,7 +23,7 @@ class PrisonerUpdatedIntTest(
 ) : IntegrationTestBase(),
   PersonSummaryOperations by ps {
   @ParameterizedTest
-  @ValueSource(strings = ["PERSONAL_DETAILS", "LOCATION"])
+  @ValueSource(strings = ["PERSONAL_DETAILS", "LOCATION", "STATUS"])
   fun `person detail is updated when event received`(change: String) {
     val prisonCode = prisonCode()
     val person = givenPersonSummary(personSummary())
@@ -36,6 +36,38 @@ class PrisonerUpdatedIntTest(
 
     val updated = requireNotNull(ps.findPersonSummary(person.identifier))
     updated.verifyAgainst(newDetail)
+  }
+
+  @Test
+  fun `person temporarily out has responsible prison`() {
+    val prisonCode = prisonCode()
+    val person = givenPersonSummary(personSummary())
+    val newDetail = prisoner(prisonCode, person.identifier, status = "ACTIVE OUT").copy(prisonId = "OUT")
+    prisonerSearch.givenPrisoners(prisonCode, setOf(person.identifier), listOf(newDetail))
+
+    sendDomainEvent(prisonerUpdatedEvent(person.identifier, setOf("LOCATION", "STATUS")))
+
+    waitUntil { (ps.findPersonSummary(person.identifier)?.version ?: 0) > 0 }
+
+    val updated = requireNotNull(ps.findPersonSummary(person.identifier))
+    updated.verifyAgainst(newDetail)
+    assertThat(updated.prisonCode).isEqualTo(prisonCode)
+  }
+
+  @Test
+  fun `person released registered as OUT`() {
+    val prisonCode = prisonCode()
+    val person = givenPersonSummary(personSummary())
+    val newDetail = prisoner(prisonCode, person.identifier, status = "INACTIVE OUT").copy(prisonId = "OUT")
+    prisonerSearch.givenPrisoners(prisonCode, setOf(person.identifier), listOf(newDetail))
+
+    sendDomainEvent(prisonerUpdatedEvent(person.identifier, setOf("LOCATION", "STATUS")))
+
+    waitUntil { (ps.findPersonSummary(person.identifier)?.version ?: 0) > 0 }
+
+    val updated = requireNotNull(ps.findPersonSummary(person.identifier))
+    updated.verifyAgainst(newDetail)
+    assertThat(updated.prisonCode).isEqualTo("OUT")
   }
 
   private fun prisonerUpdatedEvent(personIdentifier: String, changes: Set<String>): PrisonerUpdated = PrisonerUpdated(
