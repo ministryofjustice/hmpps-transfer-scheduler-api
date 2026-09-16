@@ -45,11 +45,13 @@ class PrisonerSearchServer : WireMockServer(mockServerConfig(9000)) {
       personIdentifier: String = personIdentifier(),
       firstName: String = word(8),
       lastName: String = word(12),
+      status: String = "ACTIVE IN",
       cellLocation: String = cellLocation(),
     ): Prisoner = Prisoner(
       personIdentifier,
       firstName,
       lastName,
+      status,
       prisonCode,
       prisonCode,
       cellLocation,
