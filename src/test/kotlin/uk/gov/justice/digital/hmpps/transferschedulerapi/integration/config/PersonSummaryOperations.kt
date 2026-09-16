@@ -27,7 +27,11 @@ interface PersonSummaryOperations {
       assertThat(identifier).isEqualTo(prisoner.prisonerNumber)
       assertThat(firstName).isEqualTo(prisoner.firstName)
       assertThat(lastName).isEqualTo(prisoner.lastName)
-      assertThat(prisonCode).isEqualTo(prisoner.prisonId)
+      if (prisoner.status in setOf("ACTIVE IN", "ACTIVE OUT")) {
+        assertThat(prisonCode).isEqualTo(prisoner.lastPrisonId)
+      } else {
+        assertThat(prisonCode).isEqualTo(prisoner.prisonId)
+      }
       assertThat(cellLocation).isEqualTo(prisoner.cellLocation)
     }
   }
