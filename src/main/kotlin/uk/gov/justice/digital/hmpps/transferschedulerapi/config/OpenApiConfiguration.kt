@@ -24,6 +24,7 @@ import org.springframework.web.method.HandlerMethod
 import uk.gov.justice.digital.hmpps.transferschedulerapi.config.OpenApiTags.INTEGRATIONS
 import uk.gov.justice.digital.hmpps.transferschedulerapi.config.OpenApiTags.SYNC
 import uk.gov.justice.digital.hmpps.transferschedulerapi.config.OpenApiTags.UI
+import java.time.LocalTime
 
 object OpenApiTags {
   const val INTEGRATIONS = "Integrations"
@@ -69,7 +70,7 @@ class OpenApiConfiguration(buildProperties: BuildProperties, private val context
       ),
     )
     .addSecurityItem(SecurityRequirement().addList("bearer-jwt", listOf("read", "write")))
-    .also { PrimitiveType.enablePartialTime() }
+    .also { PrimitiveType.customClasses()[LocalTime::class.java.name] = PrimitiveType.PARTIAL_TIME }
 
   @Bean
   fun preAuthorizeCustomizer(): OperationCustomizer = OperationCustomizer { operation: Operation, handlerMethod: HandlerMethod ->
@@ -87,7 +88,7 @@ class OpenApiConfiguration(buildProperties: BuildProperties, private val context
 
       val roles = try {
         (preAuthExp.getValue(evalContext) as List<*>).filterIsInstance<String>()
-      } catch (e: SpelEvaluationException) {
+      } catch (_: SpelEvaluationException) {
         emptyList()
       }
       if (roles.isNotEmpty()) {
