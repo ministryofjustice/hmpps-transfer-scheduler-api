@@ -35,5 +35,13 @@ class PersonSummaryService(
 
   fun remove(personSummary: PersonSummary) = personSummaryRepository.delete(personSummary)
 
+  fun retrieveAndSaveAll(personIdentifiers: Set<String>): Map<String, PersonSummary> {
+    val existing = personSummaryRepository.findAllById(personIdentifiers).associateBy { it.identifier }
+    val newIdentifiers = personIdentifiers.filterNot { it in existing.keys }.toSet()
+    val new = prisonerSearch.getPrisoners(newIdentifiers).map { personSummaryRepository.save(it.summary()) }
+      .associateBy { it.identifier }
+    return existing + new
+  }
+
   private fun Prisoner.summary() = PersonSummary(firstName, lastName, responsiblePrison(), cellLocation, prisonerNumber)
 }

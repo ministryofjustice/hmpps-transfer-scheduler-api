@@ -1,10 +1,13 @@
 package uk.gov.justice.digital.hmpps.transferschedulerapi.service
 
+import org.hibernate.action.internal.BulkOperationCleanupAction.schedule
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.IdGenerator.newUuid
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.PersonSummary
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.PrisonProvider
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.RdProvider
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.CancelledRequest
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.IdRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.IntegrationResponse
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Movement
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Person
@@ -26,6 +29,7 @@ fun TransferRequest.asEntity(person: PersonSummary, rdProvider: RdProvider) = uk
   initialStage(),
   if (this is CancelledRequest && initialStatusCode() == TransferStatus.Code.CANCELLED) cancellationReason?.let { rdProvider.get(it) } else null,
   if (this is NumericLegacyIdRequest) legacyId else null,
+  if (this is IdRequest) id else newUuid(),
 )
   .withPlan(plan, rdProvider)
   .withSchedule(schedule)
