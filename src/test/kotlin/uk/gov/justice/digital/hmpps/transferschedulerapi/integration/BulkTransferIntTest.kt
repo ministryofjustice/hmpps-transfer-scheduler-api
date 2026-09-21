@@ -39,6 +39,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
 import uk.gov.justice.digital.hmpps.transferschedulerapi.verifyAgainst
 import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 class BulkTransferIntTest(
@@ -99,7 +100,12 @@ class BulkTransferIntTest(
   fun `200 ok - existing transfers are updated`() {
     val prison = prison()
     val destination = prison()
-    val existing = givenTransfer(transfer(prisonCode = prison.code, schedule = schedule(LocalDateTime.now().plusDays(1))))
+    val existing = givenTransfer(
+      transfer(
+        prisonCode = prison.code,
+        schedule = schedule(LocalDateTime.now().plusDays(1).truncatedTo(ChronoUnit.SECONDS)),
+      ),
+    )
     assertThat(existing.status.code).isEqualTo(SCHEDULED.name)
     val logisticsCode = generateSequence { TransferLogisticsCode.randomCode() }.first { it != existing.logistics?.code }
     val reasonCode = generateSequence { TransferReasonCode.randomCode() }.first { it != existing.reason.code }
@@ -165,7 +171,7 @@ class BulkTransferIntTest(
       logisticsCode: String = TransferLogisticsCode.randomCode(),
       reasonCode: String = TransferReasonCode.randomCode(),
       comments: String? = word(20),
-      start: LocalDateTime = LocalDateTime.now().plusDays(7),
+      start: LocalDateTime = LocalDateTime.now().plusDays(7).truncatedTo(ChronoUnit.SECONDS),
       statusCode: TransferStatus.Code = SCHEDULED,
       id: UUID = newUuid(),
     ) = BulkTransfer(personIdentifier, statusCode, destinationCode, logisticsCode, reasonCode, start, comments, id)

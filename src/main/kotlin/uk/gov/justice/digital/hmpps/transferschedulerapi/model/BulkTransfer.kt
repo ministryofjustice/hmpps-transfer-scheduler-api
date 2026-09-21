@@ -2,6 +2,7 @@ package uk.gov.justice.digital.hmpps.transferschedulerapi.model
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
+import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.internal.PRE_SCHEDULED_STATUSES
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -29,7 +30,7 @@ data class BulkTransfer(
   @JsonIgnore
   override val schedule: ScheduleRequest = this
   override fun initialStatusCode(): TransferStatus.Code = statusCode
-  override fun initialStage(): TransferStage = TransferStage.SCHEDULED
+  override fun initialStage(): TransferStage = if (statusCode in PRE_SCHEDULED_STATUSES) TransferStage.PLANNING else TransferStage.SCHEDULED
 }
 
 data class BulkTransfersResponse(val transfers: List<Transfer>)
