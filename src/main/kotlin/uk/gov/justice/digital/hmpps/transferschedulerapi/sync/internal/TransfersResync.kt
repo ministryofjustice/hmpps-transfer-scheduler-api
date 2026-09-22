@@ -105,7 +105,7 @@ class TransfersResync(
   ): Pair<TransferMovementMapping, Movement> {
     val existing = movementProvider(movement.dpsId, requireNotNull(movement.legacyId))
     val wrapper = transfer
-      ?: existing?.transfer.takeIf { it?.stage == TransferStage.UNSCHEDULED }
+      ?: existing?.transfer.takeIf { it?.stage == TransferStage.UNSCHEDULED }?.movePerson(person)
       ?: movement.unscheduledTransfer(person, rdProvider)
     val mov = existing?.updateFrom(movement, wrapper, rdProvider)
       ?: wrapper.addMovement(movement, rdProvider)
