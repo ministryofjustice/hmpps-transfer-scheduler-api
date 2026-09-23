@@ -33,6 +33,12 @@ spring:
       ddl-auto: validate
     properties:
       hibernate:
+        cache:
+          use_second_level_cache: true
+          use_query_cache: true
+          region:
+            factory_class: org.hibernate.cache.jcache.JCacheRegionFactory
+          provider_class: org.hibernate.cache.EhCacheProvider
         jdbc:
           lob.non_contextual_creation: true
           batch_size: 1000
