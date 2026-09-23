@@ -8,6 +8,29 @@ generic-service:
   env:
     SPRING_PROFILES_ACTIVE: prod
     SENTRY_ENVIRONMENT: prod
+
+  scheduledDowntime:
+    enabled: false
+
+  postgresDatabaseRestore:
+    enabled: true
+    jobName: transfer-scheduler-prod-to-preprod-restore
+    # using s3 bucket backup must be after 04:30
+    schedule: "30 5 * * *"
+    timeout: 7200
+    namespace_secrets:
+      hmpps-transfer-scheduler-postgres:
+        DB_HOST: "database_server"
+        DB_NAME: "database_name"
+        DB_USER: "database_username"
+        DB_PASS: "database_password"
+      refresh-preprod-postgres:
+        DB_HOST_PREPROD: "database_server"
+        DB_NAME_PREPROD: "database_name"
+        DB_USER_PREPROD: "database_username"
+        DB_PASS_PREPROD: "database_password"
+      s3-db-restore:
+        BUCKET_NAME: "bucket_name"
     
 # CloudPlatform AlertManager receiver to route prometheus alerts to slack
 # See https://user-guide.cloud-platform.service.justice.gov.uk/documentation/monitoring-an-app/how-to-create-alarms.html#creating-your-own-custom-alerts
