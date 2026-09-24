@@ -24,6 +24,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerat
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.prisonCode
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.IntegrationTestBase
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperations
+import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.movement
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.referencedata.TransferLogisticsCode
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.referencedata.TransferReasonCode
@@ -300,6 +301,30 @@ class SyncScheduledTransferIntTest(
       saved.plan!!,
       setOf(TransferMovedToPlanning(prisoner.prisonerNumber, saved.id, saved.stage).publication(saved.id)),
     )
+  }
+
+  @Test
+  fun `200 - can revert a scheduled transfer with movement to unscheduled`() {
+    val transfer = givenTransfer(transfer(statusCode = TransferStatus.Code.COMPLETED, movement = movement()))
+
+    val request = transfer.toTestSyncModel().copy(syncSchedule = transfer.syncSchedule().copy(eventStatus = SyncSchedule.PENDING, start = null))
+    val user = syncUser()
+    val res = sendTransfer(transfer.person.identifier, request, user).successResponse<ReferenceId>()
+
+    val saved = requireNotNull(findTransfer(res.dpsId))
+    assertThat(saved.status.code).isEqualTo(TransferStatus.Code.COMPLETED.name)
+    assertThat(saved.stage).isEqualTo(TransferStage.UNSCHEDULED)
+    saved verifyAgainst request
+
+    verifyAudit(
+      saved,
+      RevisionType.MOD,
+      setOf(Transfer::class.simpleName!!, Schedule::class.simpleName!!),
+      SchedulerContext.get()
+        .copy(username = user.username, caseloadId = user.activeCaseloadId, source = DataSource.NOMIS),
+    )
+
+    verifyEventPublications(saved, setOf())
   }
 
   private fun sendTransfer(

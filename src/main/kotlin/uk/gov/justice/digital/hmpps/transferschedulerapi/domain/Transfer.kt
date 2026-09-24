@@ -216,6 +216,12 @@ final class Transfer(
   }
 
   fun withSchedule(request: ScheduleRequest?) = apply {
+    if (request == null && stage == TransferStage.SCHEDULED) {
+      stage = when {
+        movement == null && plan != null -> TransferStage.PLANNING
+        else -> TransferStage.UNSCHEDULED
+      }
+    }
     schedule = request?.let { schedule?.match(it) ?: it.createNewSchedule(this) }
   }
 
