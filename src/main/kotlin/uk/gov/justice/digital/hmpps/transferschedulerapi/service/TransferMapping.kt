@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.hmpps.transferschedulerapi.service
 
-import org.hibernate.action.internal.BulkOperationCleanupAction.schedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.IdGenerator.newUuid
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.PersonSummary
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.PrisonProvider
