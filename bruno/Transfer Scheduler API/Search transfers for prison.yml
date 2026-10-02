@@ -1,0 +1,33 @@
+info:
+  name: Search transfers for prison
+  type: http
+  seq: 10
+
+http:
+  method: POST
+  url: "{{base_url}}/search/prisons/{{origin_code}}/transfers"
+  body:
+    type: json
+    data: |-
+      {
+        "stage": "SCHEDULED",
+        "start": "{{date_today}}",
+        "end": "{{date_next_month}}",
+        "status": [
+          "SCHEDULED"
+        ],
+        "query": null,
+        "page": 1,
+        "size": 10,
+        "sort": "start"
+      }
+  auth:
+    type: bearer
+    token: "{{bearer_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true

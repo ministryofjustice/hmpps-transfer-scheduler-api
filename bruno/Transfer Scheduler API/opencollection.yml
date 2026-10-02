@@ -1,0 +1,60 @@
+opencollection: 1.0.0
+
+info:
+  name: Transfer Scheduler API
+config:
+  proxy:
+    inherit: true
+    config:
+      protocol: http
+      hostname: ""
+      port: ""
+      auth:
+        username: ""
+        password: ""
+      bypassProxy: ""
+
+request:
+  scripts:
+    - type: before-request
+      code: |-
+        const baseUrl = bru.getGlobalEnvVar('base_auth_url');
+        const username = bru.getGlobalEnvVar('username');
+        const authUrl = `${baseUrl}/oauth/token?grant_type=client_credentials&username=${username}`; 
+
+        const clientId = bru.getGlobalEnvVar('client_id');
+        const clientSecret = bru.getGlobalEnvVar('client_secret');
+        const credentials = `${clientId}:${clientSecret}`;
+        const base64Credentials = Buffer.from(credentials).toString('base64');
+
+        const bearerToken = bru.getVar('bearer_token');
+        const expires = new Date(bru.getVar('token_expires'));
+        if (!bearerToken || isNaN(expires.valueOf()) || expires < new Date()) {
+          axios.post(authUrl, null, {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Basic ${base64Credentials}`,
+            }
+          })
+          .then((response) => {
+            const token = response.data.access_token;
+            const expires = new Date();
+            expires.setSeconds(expires.getSeconds() + response.data.expires_in);
+            bru.setVar('bearer_token', token);
+            bru.setVar('token_expires', expires)
+          })
+          .catch((error) => {
+            console.error('Failed to retrieve token:', error.response ? error.response.data : error.message);
+          });
+          
+          bru.setVar('date_today', new Date().toISOString().split('T')[0]);
+          bru.setVar('date_tomorrow', new Date(new Date().getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+          bru.setVar('date_next_week', new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+          bru.setVar('date_next_month', new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+        }
+bundled: false
+extensions:
+  bruno:
+    ignore:
+      - node_modules
+      - .git
