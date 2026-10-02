@@ -1,0 +1,37 @@
+info:
+  name: Schedule transfer
+  type: http
+  seq: 6
+
+http:
+  method: POST
+  url: "{{base_url}}/transfers/{{person_identifier}}"
+  body:
+    type: json
+    data: |-
+      {
+        "destinationCode": "{{destination_code}}",
+        "reasonCode": "PROD",
+        "logisticsCode": "GROUP4",
+        "schedule": {
+          "start": "{{date_next_week}}T10:00:00",
+          "comments": "Some comments to test the API"
+        }
+      }
+  auth:
+    type: bearer
+    token: "{{bearer_token}}"
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        let createdId = res.body.id;
+        bru.setVar('transfer_id', createdId);
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true

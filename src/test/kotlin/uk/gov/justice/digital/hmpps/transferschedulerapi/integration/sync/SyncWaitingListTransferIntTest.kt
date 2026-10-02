@@ -284,7 +284,7 @@ class SyncWaitingListTransferIntTest(
       generateSequence { TransferPriorityCode.randomCode() }.first { it != transfer.plan?.priority?.code }
 
     val request = transfer.toTestSyncModel()
-      .copy(syncWaitlist = transfer.syncWaitList { _ -> null }!!.copy(transferPriority = newPriority))
+      .copy(syncWaitlist = transfer.syncWaitList()!!.copy(transferPriority = newPriority))
     val user = syncUser()
     val res = sendTransfer(transfer.person.identifier, request, user).successResponse<ReferenceId>()
 
@@ -360,7 +360,7 @@ class SyncWaitingListTransferIntTest(
     val request = transfer.toTestSyncModel().copy(
       syncSchedule = transfer.syncSchedule()
         .copy(start = LocalDateTime.now().plusDays(5), eventStatus = SyncSchedule.CANCELLED),
-      syncWaitlist = transfer.syncWaitList { _ -> null }!!
+      syncWaitlist = transfer.syncWaitList()!!
         .copy(outcomeReasonCode = TransferCancellationReason.Code.OIC.name, waitListStatus = SyncWaitlist.CANCELLED),
     )
     val user = syncUser()

@@ -1,0 +1,10 @@
+name: Transfer Scheduler API
+variables:
+  - name: base_url
+    value: "{{process.env.BASE_URL}}"
+  - name: origin_code
+    value: "{{process.env.ORIGIN_CODE}}"
+  - name: destination_code
+    value: "{{process.env.DESTINATION_CODE}}"
+  - name: person_identifier
+    value: "{{process.env.PERSON_IDENTIFIER}}"

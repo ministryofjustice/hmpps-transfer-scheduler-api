@@ -1,0 +1,30 @@
+info:
+  name: Update transfer
+  type: http
+  seq: 8
+
+http:
+  method: PUT
+  url: "{{base_url}}/transfers/{{transfer_id}}"
+  body:
+    type: json
+    data: |-
+      {
+        "actions": [
+          {
+            "type": "ApplyScheduleComments",
+            "comments": "Updated comments.  The changes should now be visible in the history"
+          }
+        ],
+        "reason": "A reason for why the change was applied"
+      }
+  auth:
+    type: bearer
+    token: "{{bearer_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true
