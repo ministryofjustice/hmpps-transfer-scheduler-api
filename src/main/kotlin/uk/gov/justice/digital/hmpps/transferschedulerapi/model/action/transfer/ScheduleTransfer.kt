@@ -24,6 +24,9 @@ data class ScheduleTransfer(
     if (entity.status.code !in VALID_STATUSES) {
       throw ConflictException("Cannot move to scheduled from ${entity.status.code}")
     }
+    if (entity.logistics == null || entity.destinationCode == null || !start.isAfter(LocalDateTime.now())) {
+      throw ConflictException("Transfer not ready to schedule")
+    }
     entity.applySchedule(this, rdProvider)
   }
 
