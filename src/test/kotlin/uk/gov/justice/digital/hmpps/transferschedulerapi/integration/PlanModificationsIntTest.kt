@@ -33,6 +33,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerat
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperations
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.movement
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.plan
+import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.schedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.referencedata.TransferPriorityCode
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.AuditHistory
@@ -166,6 +167,19 @@ class PlanModificationsIntTest(
       RevisionType.ADD,
       setOf(HmppsDomainEvent::class.simpleName!!, Transfer::class.simpleName!!, Schedule::class.simpleName!!, Movement::class.simpleName!!),
     )
+  }
+
+  @Test
+  fun `409 - cannot schedule if date is not in the future`() {
+    val scheduleDateTime = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS)
+    val transfer = givenTransfer(transfer(schedule = schedule(scheduleDateTime), statusCode = READY_TO_SCHEDULE))
+    val action = ScheduleTransfer(scheduleDateTime, word(20))
+    val username = username()
+    val givenReason = word(10)
+
+    val res = applyAction(transfer.id, action, givenReason, username).errorResponse(HttpStatus.CONFLICT)
+    assertThat(res.status).isEqualTo(HttpStatus.CONFLICT.value())
+    assertThat(res.userMessage).isEqualTo("A conflict has been detected")
   }
 
   @Test

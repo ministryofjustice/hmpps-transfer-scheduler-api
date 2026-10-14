@@ -8,6 +8,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.Tran
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.schedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.service.TransferExpirer
+import java.time.LocalDate
 import java.time.LocalDateTime
 
 class TransferExpirerIntTest(
@@ -30,5 +31,31 @@ class TransferExpirerIntTest(
 
     val expired = requireNotNull(findTransfer(yesterday.id))
     assertThat(expired.status.code).isEqualTo(TransferStatus.Code.EXPIRED.name)
+  }
+
+  @Test
+  fun `can set ready to schedule as awaiting details`() {
+    val today = givenTransfer(
+      transfer(
+        schedule = schedule(start = LocalDate.now().atStartOfDay()),
+        statusCode = TransferStatus.Code.READY_TO_SCHEDULE,
+      ),
+    )
+    assertThat(today.status.code).isEqualTo(TransferStatus.Code.READY_TO_SCHEDULE.name)
+    val yesterday = givenTransfer(
+      transfer(
+        schedule = schedule(start = LocalDateTime.now().minusDays(1)),
+        statusCode = TransferStatus.Code.READY_TO_SCHEDULE,
+      ),
+    )
+    assertThat(yesterday.status.code).isEqualTo(TransferStatus.Code.READY_TO_SCHEDULE.name)
+
+    transferExpirer.expireScheduledTransfers()
+
+    val rts = requireNotNull(findTransfer(today.id))
+    assertThat(rts.status.code).isEqualTo(TransferStatus.Code.READY_TO_SCHEDULE.name)
+
+    val awaitingDetails = requireNotNull(findTransfer(yesterday.id))
+    assertThat(awaitingDetails.status.code).isEqualTo(TransferStatus.Code.PLANNING.name)
   }
 }

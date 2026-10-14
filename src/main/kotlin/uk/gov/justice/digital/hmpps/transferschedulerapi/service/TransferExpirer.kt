@@ -30,6 +30,9 @@ class TransferExpirer(
     val scheduled = rdProvider.get<TransferStatus>(TransferStatus.Code.SCHEDULED.name)
     transferRepository.findByStatusIdAndScheduleStartBefore(scheduled.id, LocalDate.now().atStartOfDay())
       .forEach { it.expire(ExpireTransfer, rdProvider) }
+    val readyToSchedule = rdProvider.get<TransferStatus>(TransferStatus.Code.READY_TO_SCHEDULE.name)
+    transferRepository.findByStatusIdAndScheduleStartBefore(readyToSchedule.id, LocalDate.now().atStartOfDay())
+      .forEach { it.applyStatus(TransferStatus.Code.PLANNING, rdProvider) }
   }
 }
 
