@@ -11,7 +11,19 @@ integration:
     url: "https://prisoner-search.prison.service.justice.gov.uk"
 
 service:
-  active-prisons: 
+  active-prisons:
+    - ACI
+    - BAI
+    - BZI
+    - DMI
+    - FBI
+    - HPI
+    - LEI
+    - NMI
+    - PBI
+    - PNI
+    - SUI
+    - WWI
   domain-events:
     poll-interval: PT0.5s
   api-base-url: "https://transfer-scheduler-api.hmpps.service.justice.gov.uk"
