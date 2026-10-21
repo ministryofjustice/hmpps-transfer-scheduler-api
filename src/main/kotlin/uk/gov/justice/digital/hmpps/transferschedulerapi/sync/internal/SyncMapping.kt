@@ -25,6 +25,9 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncMovement
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncSchedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncWaitlist
+import java.util.UUID
+
+typealias LegacyDataProvider = (UUID) -> LegacyData?
 
 val PRE_SCHEDULED_STATUSES: Set<TransferStatus.Code> = setOf(PLANNING, READY_TO_SCHEDULE)
 
@@ -54,21 +57,23 @@ fun Transfer.updateFrom(request: SyncTransfer, personSummary: PersonSummary, rdP
   }
 }
 
-fun Transfer.toSyncModel(): SyncTransfer = SyncTransfer(
+fun Transfer.toSyncModel(ldp: LegacyDataProvider): SyncTransfer = SyncTransfer(
   id,
   legacyId,
-  syncWaitList(),
+  syncWaitList(ldp),
   syncSchedule(),
 )
 
-fun Transfer.syncWaitList() = plan?.let {
+fun Transfer.syncWaitList(ldp: LegacyDataProvider) = plan?.let {
+  val legacyData = ldp(id)
+  val status = statusForWaitlist()
   SyncWaitlist(
     it.requestedOn,
-    statusForWaitlist(),
-    null,
+    status,
+    legacyData?.waitList?.statusDate,
     it.priority.code,
-    false,
-    null,
+    status == SyncWaitlist.CONFIRMED,
+    legacyData?.waitList?.approvedUsername,
     cancellationReason?.code,
     it.comments,
   )

@@ -18,11 +18,13 @@ import java.util.UUID
 class RetrieveForSync(
   private val transferRepository: TransferRepository,
   private val movementRepository: MovementRepository,
+  private val msaRepository: MigrationSystemAuditRepository,
 ) {
   fun transfer(id: UUID): SyncTransfer {
     val transfer = transferRepository.findByIdOrNull(id)
       ?.takeIf { it.stage != TransferStage.UNSCHEDULED }
-    return transfer?.toSyncModel() ?: throw NotFoundException("Transfer not found")
+    return transfer?.toSyncModel { msaRepository.findByIdOrNull(it)?.data }
+      ?: throw NotFoundException("Transfer not found")
   }
 
   fun movement(id: UUID): SyncMovement = movementRepository.findByIdOrNull(id)
@@ -30,7 +32,8 @@ class RetrieveForSync(
 
   fun all(personIdentifier: String): ReconciliationResponse {
     val all = transferRepository.findAllByPersonIdentifier(personIdentifier)
-    val mapped = all.mapNotNull { tr -> tr.forReconciliation() }
+    val legacyData = msaRepository.findAllById(all.map { it.id }.toSet()).associate { it.id to it.data }
+    val mapped = all.mapNotNull { tr -> tr.forReconciliation { legacyData[it] } }
     return ReconciliationResponse(
       mapped.filterIsInstance<ReconciliationTransfer>(),
       mapped.filterIsInstance<SyncMovement>(),
@@ -38,7 +41,7 @@ class RetrieveForSync(
   }
 }
 
-private fun Transfer.forReconciliation(): Any? = when (stage) {
+private fun Transfer.forReconciliation(ldp: LegacyDataProvider): Any? = when (stage) {
   TransferStage.UNSCHEDULED -> movement?.syncMovement()
-  else -> ReconciliationTransfer(toSyncModel(), movement?.syncMovement())
+  else -> ReconciliationTransfer(toSyncModel(ldp), movement?.syncMovement())
 }
