@@ -10,6 +10,8 @@ import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.type.SqlTypes
 import org.springframework.data.domain.Persistable
 import org.springframework.data.repository.CrudRepository
+import uk.gov.justice.digital.hmpps.transferschedulerapi.context.SchedulerContext
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.UUID
@@ -41,6 +43,12 @@ class MigrationSystemAudit(
   @PostLoad
   fun onLoad() {
     new = false
+  }
+
+  fun scheduledFromPlan(transfer: Transfer) = apply {
+    if (transfer.plan == null) return@apply
+    val waitList = LegacyData.WaitList(LocalDate.now(), true, SchedulerContext.get().username)
+    data = data?.copy(waitList = waitList) ?: LegacyData(waitList, null)
   }
 }
 

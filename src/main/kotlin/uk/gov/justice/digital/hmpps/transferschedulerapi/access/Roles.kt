@@ -10,6 +10,8 @@ object Roles {
   fun allExcept(vararg except: String): List<String> = listOf(
     TRANSFER_SCHEDULER_UI,
     SCHEDULE_CLASHES_RO,
+    TRANSFER_RO,
+    TRANSFER_RW,
     NOMIS_SYNC,
   ).filter { it !in except }
 }
