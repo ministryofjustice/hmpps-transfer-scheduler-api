@@ -2,16 +2,16 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-  id("uk.gov.justice.hmpps.gradle-spring-boot") version "11.0.12"
+  id("uk.gov.justice.hmpps.gradle-spring-boot") version "11.0.14"
   kotlin("plugin.spring") version "2.4.21"
   kotlin("plugin.jpa") version "2.4.21"
 }
 
 val ehcacheVersion = "3.12.0"
-val hibernateJcacheVersion = "7.4.13.Final"
+val hibernateJcacheVersion = "7.4.14.Final"
 val hmppsKotlinVersion = "3.0.3"
-val sentryVersion = "8.61.0"
-val springDocVersion = "3.1.1"
+val sentryVersion = "8.61.1"
+val springDocVersion = "3.2.0"
 val sqsStarterVersion = "7.4.1"
 val swaggerParserVersion = "2.1.48"
 val testContainersVersion = "1.21.4"
