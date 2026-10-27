@@ -154,6 +154,7 @@ fun clashesFor(personIdentifiers: Set<String>, ranges: Set<ClashRange>) = Specif
   }
   cb.and(
     tr.get<Any>(Transfer::person.name).get<String>(IDENTIFIER).`in`(personIdentifiers),
+    cb.equal(tr.get<TransferStage>(Transfer::stage.name), TransferStage.SCHEDULED),
     cb.or(rangeRestrictions),
   )
 }

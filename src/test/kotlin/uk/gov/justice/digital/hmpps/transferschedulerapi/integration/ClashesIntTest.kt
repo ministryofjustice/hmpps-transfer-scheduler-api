@@ -7,6 +7,7 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.springframework.beans.factory.annotation.Autowired
 import uk.gov.justice.digital.hmpps.transferschedulerapi.access.Roles
 import uk.gov.justice.digital.hmpps.transferschedulerapi.context.SchedulerContext.Companion.SYSTEM_USERNAME
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.personIdentifier
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperations
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperationsImpl.Companion.schedule
@@ -51,6 +52,14 @@ class ClashesIntTest(
   @MethodSource("clashes")
   fun `200 ok - can detect clashes`(range: ClashRange) {
     val transfer = givenTransfer(transfer(schedule = schedule(start = CLASH_DATE.atTime(10, 0))))
+    givenTransfer(
+      transfer(
+        transfer.person.identifier,
+        transfer.prisonCode,
+        schedule = schedule(start = CLASH_DATE.atTime(14, 0)),
+        statusCode = TransferStatus.Code.READY_TO_SCHEDULE,
+      ),
+    )
 
     val res = getClashes(
       clashRequest(
