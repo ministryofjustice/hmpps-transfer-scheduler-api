@@ -1,0 +1,1 @@
+create index if not exists idx_transfer_person_stage on transfer (person_identifier, stage);
