@@ -1,9 +1,12 @@
 package uk.gov.justice.digital.hmpps.transferschedulerapi.service
 
+import org.springframework.data.repository.findByIdOrNull
+import uk.gov.justice.digital.hmpps.transferschedulerapi.context.SchedulerContext
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.IdGenerator.newUuid
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.PersonSummary
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.PrisonProvider
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.RdProvider
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferPriority
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.CancelledRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.IdRequest
@@ -11,14 +14,26 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.model.IntegrationRespon
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Movement
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Person
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Plan
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.PlanRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.PrisonRelatedRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Schedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.referencedata.asCodedDescription
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.NumericLegacyIdRequest
+import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.internal.MigrationSystemAudit
+import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.internal.MigrationSystemAuditRepository
+import java.time.LocalDate
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Movement as MovementEntity
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Plan as PlanEntity
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Schedule as ScheduleEntity
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer as TransferEntity
 
-fun TransferRequest.asEntity(person: PersonSummary, rdProvider: RdProvider) = uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer(
+fun TransferRequest.asEntity(
+  person: PersonSummary,
+  rdProvider: RdProvider,
+  generateDefaultPlan: Boolean,
+) = TransferEntity(
   person,
   if (this is PrisonRelatedRequest) prisonCode else requireNotNull(person.prisonCode),
   rdProvider.get(reasonCode),
@@ -30,10 +45,16 @@ fun TransferRequest.asEntity(person: PersonSummary, rdProvider: RdProvider) = uk
   if (this is NumericLegacyIdRequest) legacyId else null,
   if (this is IdRequest) id else newUuid(),
 )
-  .withPlan(plan, rdProvider)
+  .withPlan(plan ?: if (generateDefaultPlan) scheduledPlan() else null, rdProvider)
   .withSchedule(schedule)
 
-fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer.asModel(prisonProvider: PrisonProvider) = Transfer(
+private fun scheduledPlan(): PlanRequest = object : PlanRequest {
+  override val requestedOn: LocalDate = LocalDate.now()
+  override val priorityCode: String = TransferPriority.Code.HIGH.value
+  override val comments: String = "Plan generated automatically for reporting purposes. Transfer created as scheduled."
+}
+
+fun TransferEntity.asModel(prisonProvider: PrisonProvider) = Transfer(
   id,
   person(),
   prisonProvider(prisonCode),
@@ -47,17 +68,17 @@ fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer.asModel(pr
   stage,
 )
 
-private fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer.person() = Person(person.identifier, person.firstName, person.lastName)
+private fun TransferEntity.person() = Person(person.identifier, person.firstName, person.lastName)
 
-private fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer.plan(): Plan? = with(plan) {
+private fun TransferEntity.plan(): Plan? = with(plan) {
   this?.let { Plan(requestedOn, priority.asCodedDescription(), comments) }
 }
 
-private fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer.schedule(): Schedule? = with(schedule) {
+private fun TransferEntity.schedule(): Schedule? = with(schedule) {
   this?.let { Schedule(start, comments) }
 }
 
-private fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer.movement(prisonProvider: PrisonProvider): Movement? = with(movement) {
+private fun TransferEntity.movement(prisonProvider: PrisonProvider): Movement? = with(movement) {
   this?.let {
     Movement(
       occurredAt,
@@ -69,7 +90,7 @@ private fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer.mo
   }
 }
 
-fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer.forIntegration() = IntegrationResponse.Transfer(
+fun TransferEntity.forIntegration() = IntegrationResponse.Transfer(
   id,
   person.identifier,
   prisonCode,
@@ -82,8 +103,25 @@ fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer.forIntegra
   movement?.forIntegration(),
 )
 
-fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Plan.forIntegration() = IntegrationResponse.Plan(requestedOn, priority.asCodedDescription(), comments)
+fun PlanEntity.forIntegration() = IntegrationResponse.Plan(requestedOn, priority.asCodedDescription(), comments)
 
-fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Schedule.forIntegration() = IntegrationResponse.Schedule(start, comments)
+fun ScheduleEntity.forIntegration() = IntegrationResponse.Schedule(start, comments)
 
-fun uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Movement.forIntegration() = IntegrationResponse.Movement(occurredAt, comments)
+fun MovementEntity.forIntegration() = IntegrationResponse.Movement(occurredAt, comments)
+
+fun TransferEntity.recordApprovalInformation(msaRepository: MigrationSystemAuditRepository): TransferEntity = apply {
+  if (plan == null) return@apply
+  msaRepository.findByIdOrNull(id)?.approvedScheduled(this) ?: run {
+    val context = SchedulerContext.get()
+    msaRepository.save(
+      MigrationSystemAudit(
+        id,
+        context.requestAt,
+        context.username,
+        null,
+        null,
+        null,
+      ).approvedScheduled(this),
+    )
+  }
+}

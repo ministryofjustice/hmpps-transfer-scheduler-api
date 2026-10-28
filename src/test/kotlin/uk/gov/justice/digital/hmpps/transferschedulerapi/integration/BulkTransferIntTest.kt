@@ -10,8 +10,10 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.config.CaseloadIdHeader
 import uk.gov.justice.digital.hmpps.transferschedulerapi.context.SchedulerContext
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.HmppsDomainEvent
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.IdGenerator.newUuid
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Plan
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Schedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.publication
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferPriority
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.SCHEDULED
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.ScheduleCommentsChanged
@@ -38,6 +40,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.model.BulkTransfersResp
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.Transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
 import uk.gov.justice.digital.hmpps.transferschedulerapi.verifyAgainst
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 import java.util.UUID
@@ -76,13 +79,24 @@ class BulkTransferIntTest(
       val saved = requireNotNull(findTransfer(tr.id))
       assertThat(saved.status.code).isEqualTo(SCHEDULED.name)
       assertThat(saved.stage).isEqualTo(TransferStage.SCHEDULED)
+      assertThat(saved.plan).isNotNull
+      with(saved.plan!!) {
+        assertThat(priority.code).isEqualTo(TransferPriority.Code.HIGH.value)
+        assertThat(requestedOn).isEqualTo(LocalDate.now())
+        assertThat(comments).isEqualTo("Plan generated automatically for reporting purposes. Transfer created as scheduled.")
+      }
       saved verifyAgainst tr
       res.transfers.first { it.id == tr.id } verifyAgainst saved
 
       verifyAudit(
         saved,
         RevisionType.ADD,
-        setOf(HmppsDomainEvent::class.simpleName!!, Transfer::class.simpleName!!, Schedule::class.simpleName!!),
+        setOf(
+          HmppsDomainEvent::class.simpleName!!,
+          Transfer::class.simpleName!!,
+          Plan::class.simpleName!!,
+          Schedule::class.simpleName!!,
+        ),
         SchedulerContext.get().copy(username = username, caseloadId = prison.code),
       )
       saved

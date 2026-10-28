@@ -8,6 +8,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.model.PlanRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.PrisonRelatedRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.ScheduleRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferRequest
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
 import java.time.temporal.ChronoUnit
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Plan as PlanEntity
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Schedule as ScheduleEntity
@@ -51,9 +52,11 @@ infix fun TransferEntity.verifyAgainst(request: TransferRequest) {
   assertThat(reason.code).isEqualTo(request.reasonCode)
   assertThat(destinationCode).isEqualTo(request.destinationCode)
   assertThat(logistics?.code).isEqualTo(request.logisticsCode)
-  check(nullStateIsEqual(plan, request.plan)) { "Invalid plan state" }
+  if (stage == TransferStage.PLANNING) {
+    check(nullStateIsEqual(plan, request.plan)) { "Invalid plan state" }
+    plan?.also { it verifyAgainst request.plan!! }
+  }
   check(nullStateIsEqual(schedule, request.schedule)) { "Invalid plan state" }
-  plan?.also { it verifyAgainst request.plan!! }
   schedule?.also { it verifyAgainst request.schedule!! }
 }
 

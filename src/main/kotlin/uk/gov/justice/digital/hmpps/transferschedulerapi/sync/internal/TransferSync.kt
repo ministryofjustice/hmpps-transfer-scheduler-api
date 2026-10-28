@@ -40,7 +40,7 @@ class TransferSync(
         ?: transfer.legacyId?.let { transferRepository.findByLegacyId(it) }
       )
       ?.updateFrom(transfer, person, rdRepository.rdProvider())
-      ?: transferRepository.save(transfer.asEntity(person, rdRepository.rdProvider()))
+      ?: transferRepository.save(transfer.asEntity(person, rdRepository.rdProvider(), false))
 
     if (saved.stage == TransferStage.PLANNING && saved.plan == null) {
       aep.publishEvent(InternalEvents(PlanningIncomplete(saved.person.identifier, saved.id)))

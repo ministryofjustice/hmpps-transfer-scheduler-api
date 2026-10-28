@@ -45,7 +45,7 @@ class MigrationSystemAudit(
     new = false
   }
 
-  fun scheduledFromPlan(transfer: Transfer) = apply {
+  fun approvedScheduled(transfer: Transfer) = apply {
     if (transfer.plan == null) return@apply
     val waitList = LegacyData.WaitList(LocalDate.now(), true, SchedulerContext.get().username)
     data = data?.copy(waitList = waitList) ?: LegacyData(waitList, null)

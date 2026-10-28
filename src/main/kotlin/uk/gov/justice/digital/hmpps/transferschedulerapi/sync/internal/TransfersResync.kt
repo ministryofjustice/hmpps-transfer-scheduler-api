@@ -90,7 +90,7 @@ class TransfersResync(
   ): Pair<TransferMapping, Transfer> {
     val tr = transferProvider(transfer.dpsId, requireNotNull(transfer.legacyId))
       ?.updateFrom(transfer, person, rdProvider)
-      ?: transferRepository.save(transfer.asEntity(person, rdRepository.rdProvider()))
+      ?: transferRepository.save(transfer.asEntity(person, rdRepository.rdProvider(), false))
     val sm = movement?.resync(person, tr, movementProvider, rdProvider, maProvider)
     mergeMigrationAudit(tr.id, created, modified, maProvider, transfer.legacyData())
     return TransferMapping(tr.id, requireNotNull(transfer.eventId), sm?.first) to tr
