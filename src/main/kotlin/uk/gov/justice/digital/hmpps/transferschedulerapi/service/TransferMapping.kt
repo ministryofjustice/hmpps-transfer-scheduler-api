@@ -51,7 +51,7 @@ fun TransferRequest.asEntity(
 private fun scheduledPlan(): PlanRequest = object : PlanRequest {
   override val requestedOn: LocalDate = LocalDate.now()
   override val priorityCode: String = TransferPriority.Code.HIGH.value
-  override val comments: String = "Plan generated automatically for reporting purposes. Transfer created as scheduled."
+  override val comments: String = "This plan has been automatically generated for reporting purposes. This transfer has been scheduled."
 }
 
 fun TransferEntity.asModel(prisonProvider: PrisonProvider) = Transfer(

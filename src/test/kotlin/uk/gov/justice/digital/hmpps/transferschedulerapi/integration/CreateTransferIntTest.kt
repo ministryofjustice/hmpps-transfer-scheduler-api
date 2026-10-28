@@ -209,7 +209,7 @@ class CreateTransferIntTest(
     with(saved.plan!!) {
       assertThat(priority.code).isEqualTo(TransferPriority.Code.HIGH.value)
       assertThat(requestedOn).isEqualTo(LocalDate.now())
-      assertThat(comments).isEqualTo("Plan generated automatically for reporting purposes. Transfer created as scheduled.")
+      assertThat(comments).isEqualTo("This plan has been automatically generated for reporting purposes. This transfer has been scheduled.")
     }
 
     saved verifyAgainst request
