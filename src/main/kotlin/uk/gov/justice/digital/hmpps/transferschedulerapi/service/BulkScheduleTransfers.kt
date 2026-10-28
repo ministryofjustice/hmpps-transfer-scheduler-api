@@ -15,6 +15,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.A
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyLogistics
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyReason
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ScheduleTransfer
+import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.internal.MigrationSystemAuditRepository
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.internal.PRE_SCHEDULED_STATUSES
 
 @Transactional
@@ -22,6 +23,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.internal.PRE_SCHED
 class BulkScheduleTransfers(
   private val rdRepository: ReferenceDataRepository,
   private val transferRepository: TransferRepository,
+  private val msaRepository: MigrationSystemAuditRepository,
   private val personSummaryService: PersonSummaryService,
   private val prisonRegister: PrisonRegisterClient,
 ) {
@@ -31,7 +33,9 @@ class BulkScheduleTransfers(
     val existing = transferRepository.findAllById(request.transfers.map { it.id }).associateBy { it.id }
     val transfers = request.transfers.mapNotNull { tr ->
       existing[tr.id]?.updateFrom(tr, rdProvider)
-        ?: people[tr.personIdentifier]?.let { transferRepository.save(tr.asEntity(it, rdProvider)) }
+        ?: people[tr.personIdentifier]?.let {
+          transferRepository.save(tr.asEntity(it, rdProvider, true)).recordApprovalInformation(msaRepository)
+        }
     }
     val prisons = prisonRegister.prisonProvider(transfers.flatMap { listOfNotNull(it.prisonCode, it.destinationCode) }.toSet())
     return BulkTransfersResponse(transfers.map { it.asModel(prisons::get) })

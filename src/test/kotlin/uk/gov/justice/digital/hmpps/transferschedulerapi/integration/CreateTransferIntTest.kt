@@ -14,6 +14,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.HmppsDomainEvent
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Plan
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Schedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.publication
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferPriority
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.PLANNING
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.READY_TO_SCHEDULE
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus.Code.SCHEDULED
@@ -190,7 +191,7 @@ class CreateTransferIntTest(
   }
 
   @Test
-  fun `201 created - transfer is initiated with schedule but no plan`() {
+  fun `201 created - transfer is initiated with schedule and plan automatically generated`() {
     val prison = prison()
     val destination = prison()
     val person = prisonerSearch.givenPrisoner(prisoner(prison.code))
@@ -204,13 +205,25 @@ class CreateTransferIntTest(
     val saved = requireNotNull(findTransfer(res.id))
     assertThat(saved.status.code).isEqualTo(SCHEDULED.name)
     assertThat(saved.stage).isEqualTo(TransferStage.SCHEDULED)
+    assertThat(saved.plan).isNotNull
+    with(saved.plan!!) {
+      assertThat(priority.code).isEqualTo(TransferPriority.Code.HIGH.value)
+      assertThat(requestedOn).isEqualTo(LocalDate.now())
+      assertThat(comments).isEqualTo("Plan generated automatically for reporting purposes. Transfer created as scheduled.")
+    }
+
     saved verifyAgainst request
     res verifyAgainst saved
 
     verifyAudit(
       saved,
       RevisionType.ADD,
-      setOf(HmppsDomainEvent::class.simpleName!!, Transfer::class.simpleName!!, Schedule::class.simpleName!!),
+      setOf(
+        HmppsDomainEvent::class.simpleName!!,
+        Transfer::class.simpleName!!,
+        Plan::class.simpleName!!,
+        Schedule::class.simpleName!!,
+      ),
       SchedulerContext.get().copy(username = username, caseloadId = prison.code),
     )
 

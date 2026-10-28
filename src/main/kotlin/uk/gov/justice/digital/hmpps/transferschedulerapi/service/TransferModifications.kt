@@ -48,7 +48,7 @@ class TransferModifications(
 
   private fun Transfer.recordApprovalInformation() {
     if (plan == null) return
-    msaRepository.findByIdOrNull(id)?.scheduledFromPlan(this) ?: run {
+    msaRepository.findByIdOrNull(id)?.approvedScheduled(this) ?: run {
       val transferHistory = history.changes(id)
       val created = transferHistory.content.firstOrNull()
       val context = SchedulerContext.get()
@@ -56,11 +56,11 @@ class TransferModifications(
         MigrationSystemAudit(
           id,
           created?.occurredAt ?: context.requestAt,
-          created?.user?.username ?: SchedulerContext.get().username,
+          created?.user?.username ?: context.username,
           context.requestAt,
           context.username,
           null,
-        ).scheduledFromPlan(this),
+        ).approvedScheduled(this),
       )
     }
   }
