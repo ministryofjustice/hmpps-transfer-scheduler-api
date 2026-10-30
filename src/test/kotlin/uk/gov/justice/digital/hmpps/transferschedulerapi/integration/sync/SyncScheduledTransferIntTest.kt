@@ -37,6 +37,7 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.ReferenceId
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncSchedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncUser
+import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.SyncWaitlist
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.internal.syncSchedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.verifyAgainst
 import java.time.LocalDateTime
@@ -166,7 +167,8 @@ class SyncScheduledTransferIntTest(
     val transfer = givenTransfer(transfer())
     val newLogistics = generateSequence { TransferLogisticsCode.randomCode() }.first { it != transfer.logistics?.code }
 
-    val request = transfer.toTestSyncModel().copy(syncSchedule = transfer.syncSchedule().copy(escortCode = newLogistics))
+    val request =
+      transfer.toTestSyncModel().copy(syncSchedule = transfer.syncSchedule().copy(escortCode = newLogistics))
     val user = syncUser()
     val res = sendTransfer(transfer.person.identifier, request, user).successResponse<ReferenceId>()
 
@@ -185,7 +187,11 @@ class SyncScheduledTransferIntTest(
 
     verifyEventPublications(
       saved,
-      setOf(TransferLogisticsChanged(transfer.person.identifier, saved.id, saved.stage, DataSource.NOMIS).publication(saved.id)),
+      setOf(
+        TransferLogisticsChanged(transfer.person.identifier, saved.id, saved.stage, DataSource.NOMIS).publication(
+          saved.id,
+        ),
+      ),
     )
   }
 
@@ -193,7 +199,8 @@ class SyncScheduledTransferIntTest(
   fun `200 - can reschedule a transfer`() {
     val transfer = givenTransfer(transfer())
 
-    val request = transfer.toTestSyncModel().copy(syncSchedule = transfer.syncSchedule().copy(start = LocalDateTime.now().plusDays(7)))
+    val request = transfer.toTestSyncModel()
+      .copy(syncSchedule = transfer.syncSchedule().copy(start = LocalDateTime.now().plusDays(7)))
     val user = syncUser()
     val res = sendTransfer(transfer.person.identifier, request, user).successResponse<ReferenceId>()
 
@@ -227,7 +234,10 @@ class SyncScheduledTransferIntTest(
   fun `200 - can revert a scheduled transfer to planning`() {
     val transfer = givenTransfer(transfer(plan = null))
 
-    val request = transfer.toTestSyncModel().copy(syncSchedule = transfer.syncSchedule().copy(eventStatus = SyncSchedule.PENDING), syncWaitlist = syncWaitList())
+    val request = transfer.toTestSyncModel().copy(
+      syncSchedule = transfer.syncSchedule().copy(eventStatus = SyncSchedule.PENDING),
+      syncWaitlist = syncWaitList(),
+    )
     val user = syncUser()
     val res = sendTransfer(transfer.person.identifier, request, user).successResponse<ReferenceId>()
 
@@ -307,7 +317,8 @@ class SyncScheduledTransferIntTest(
   fun `200 - can revert a scheduled transfer with movement to unscheduled`() {
     val transfer = givenTransfer(transfer(statusCode = TransferStatus.Code.COMPLETED, movement = movement()))
 
-    val request = transfer.toTestSyncModel().copy(syncSchedule = transfer.syncSchedule().copy(eventStatus = SyncSchedule.PENDING, start = null))
+    val request = transfer.toTestSyncModel()
+      .copy(syncSchedule = transfer.syncSchedule().copy(eventStatus = SyncSchedule.COMPLETED, start = null))
     val user = syncUser()
     val res = sendTransfer(transfer.person.identifier, request, user).successResponse<ReferenceId>()
 
@@ -325,6 +336,49 @@ class SyncScheduledTransferIntTest(
     )
 
     verifyEventPublications(saved, setOf())
+  }
+
+  @Test // only happens with corrupted nomis data
+  fun `can schedule from unscheduled stage`() {
+    val transfer = givenTransfer(
+      transfer(
+        plan = null,
+        schedule = null,
+        movement = movement(),
+        statusCode = TransferStatus.Code.EXPIRED,
+      ),
+    )
+    assertThat(transfer.stage).isEqualTo(TransferStage.UNSCHEDULED)
+    assertThat(transfer.status.code).isEqualTo(TransferStatus.Code.EXPIRED.name)
+
+    val request = transfer.toTestSyncModel().copy(
+      syncWaitlist = syncWaitList(waitListStatus = SyncWaitlist.CONFIRMED, approved = true),
+      syncSchedule = syncSchedule(
+        eventStatus = SyncSchedule.SCHEDULED,
+        eventSubType = transfer.reason.code,
+        escortCode = transfer.logistics?.code,
+        agyLocId = transfer.prisonCode,
+        toAgyLocId = transfer.destinationCode,
+      ),
+    )
+
+    val user = syncUser()
+    val res = sendTransfer(transfer.person.identifier, request, user).successResponse<ReferenceId>()
+
+    val saved = requireNotNull(findTransfer(res.dpsId))
+    assertThat(saved.status.code).isEqualTo(TransferStatus.Code.SCHEDULED.name)
+    assertThat(saved.stage).isEqualTo(TransferStage.SCHEDULED)
+    saved verifyAgainst request
+
+    verifyAudit(
+      saved,
+      RevisionType.MOD,
+      setOf(HmppsDomainEvent::class.simpleName!!, Transfer::class.simpleName!!, Plan::class.simpleName!!, Schedule::class.simpleName!!),
+      SchedulerContext.get()
+        .copy(username = user.username, caseloadId = user.activeCaseloadId, source = DataSource.NOMIS),
+    )
+
+    verifyEventPublications(saved, setOf(TransferScheduled(transfer.person.identifier, saved.id, saved.stage, DataSource.NOMIS).publication(saved.id)))
   }
 
   private fun sendTransfer(

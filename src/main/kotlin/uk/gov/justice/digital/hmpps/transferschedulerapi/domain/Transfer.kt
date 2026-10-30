@@ -331,6 +331,10 @@ final class Transfer(
     this.legacyId = legacyId
   }
 
+  fun removeCancellationReason() = apply {
+    cancellationReason = null
+  }
+
   fun makeUnscheduled(action: MakeUnscheduled) = apply {
     checkNotNull(movement)
     movement!!.also {

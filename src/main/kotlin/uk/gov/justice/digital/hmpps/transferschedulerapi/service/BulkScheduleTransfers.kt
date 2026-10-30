@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.TransferRepository
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.PRE_SCHEDULED_STATUSES
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.RdProvider
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.ReferenceDataRepository
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
@@ -16,7 +17,6 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.A
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ApplyReason
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.action.transfer.ScheduleTransfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.internal.MigrationSystemAuditRepository
-import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.internal.PRE_SCHEDULED_STATUSES
 
 @Transactional
 @Service

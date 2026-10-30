@@ -16,7 +16,11 @@ interface TransferRequest {
   fun initialStage(): TransferStage
 
   @get:JsonIgnore
-  val isReadyToSchedule get() = plan != null && destinationCode != null && logisticsCode != null && schedule?.start != null
+  val isSchedulable
+    get() = destinationCode != null && logisticsCode != null && schedule?.start?.isAfter(LocalDateTime.now()) ?: false
+
+  @get:JsonIgnore
+  val isReadyToSchedule get() = plan != null && isSchedulable
 }
 
 interface PlanRequest {
