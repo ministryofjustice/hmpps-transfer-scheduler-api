@@ -29,7 +29,8 @@ import java.util.UUID
 
 typealias LegacyDataProvider = (UUID) -> LegacyData?
 
-val PRE_SCHEDULED_STATUSES: Set<TransferStatus.Code> = setOf(PLANNING, READY_TO_SCHEDULE)
+private val NON_PLANNABLE_STATUSES = listOf(PLANNING, READY_TO_SCHEDULE, IN_TRANSIT, COMPLETED)
+private val NON_SCHEDULABLE_STATUSES = listOf(SCHEDULED, IN_TRANSIT, COMPLETED)
 
 fun Transfer.updateFrom(request: SyncTransfer, personSummary: PersonSummary, rdProvider: RdProvider): Transfer = apply {
   applyLegacyId(request.legacyId)
@@ -38,22 +39,27 @@ fun Transfer.updateFrom(request: SyncTransfer, personSummary: PersonSummary, rdP
   applyDestination(ApplyDestination(request.destinationCode))
   applyLogistics(ApplyLogistics(request.logisticsCode), rdProvider)
   applyReason(ApplyReason(request.reasonCode), rdProvider)
-  if (status.code == SCHEDULED.name && request.plan != null && request.syncSchedule.isPending) {
+  val currentStatus = status
+  if (request.plan != null && request.isPending && currentStatus.code !in NON_PLANNABLE_STATUSES.map { it.name }) {
     with(request.plan) { applyPlan(PlanTransfer(requestedOn, priorityCode, comments), rdProvider) }
   } else {
     withPlan(request.plan, rdProvider)
   }
-  if (request.syncSchedule.isScheduled && request.schedule != null && status.code in PRE_SCHEDULED_STATUSES.map { it.name }) {
+  if (request.schedule != null && request.isScheduled && currentStatus.code !in NON_SCHEDULABLE_STATUSES.map { it.name }) {
     with(request.schedule) { applySchedule(ScheduleTransfer(start, comments), rdProvider) }
   } else {
     withSchedule(request.schedule)
   }
 
+  if (cancellationReason != null && !request.isCancelled) {
+    removeCancellationReason()
+  }
+
   when {
     request.isCancelled -> cancel(CancelTransfer(request.syncWaitlist?.cancellationReason ?: request.syncSchedule.cancellationReason), rdProvider)
     request.isExpired -> expire(ExpireTransfer, rdProvider)
-    request.isReadyToSchedule && status.code == PLANNING.name -> applyStatus(READY_TO_SCHEDULE, rdProvider)
-    !request.isReadyToSchedule && status.code == READY_TO_SCHEDULE.name -> applyStatus(PLANNING, rdProvider)
+    request.isReadyToSchedule && currentStatus.code == PLANNING.name -> applyStatus(READY_TO_SCHEDULE, rdProvider)
+    !request.isReadyToSchedule && currentStatus.code == READY_TO_SCHEDULE.name -> applyStatus(PLANNING, rdProvider)
   }
 }
 

@@ -64,6 +64,12 @@ data class SyncTransfer(
   @JsonIgnore
   val isExpired: Boolean = syncSchedule.isExpired
 
+  @JsonIgnore
+  val isPending: Boolean = syncSchedule.isPending || syncWaitlist?.isPending ?: false
+
+  @JsonIgnore
+  val isScheduled: Boolean = syncSchedule.isScheduled || syncWaitlist?.isConfirmed ?: false
+
   override val cancellationReason: String? = syncWaitlist?.cancellationReason ?: syncSchedule.cancellationReason
 
   override fun initialStatusCode(): TransferStatus.Code = when {
@@ -101,6 +107,12 @@ data class SyncWaitlist(
 ) {
   @JsonIgnore
   val isCancelled = waitListStatus == CANCELLED
+
+  @JsonIgnore
+  val isPending = waitListStatus == PENDING
+
+  @JsonIgnore
+  val isConfirmed = waitListStatus == CONFIRMED
 
   @JsonIgnore
   val cancellationReason = outcomeReasonCode?.takeIf { isCancelled }

@@ -1,8 +1,8 @@
 package uk.gov.justice.digital.hmpps.transferschedulerapi.model
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.PRE_SCHEDULED_STATUSES
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
-import uk.gov.justice.digital.hmpps.transferschedulerapi.sync.internal.PRE_SCHEDULED_STATUSES
 import java.time.LocalDateTime
 import java.util.UUID
 
