@@ -19,7 +19,7 @@ data class Transfer(
   val stage: TransferStage,
 )
 
-data class Person(val identifier: String, val firstName: String, val lastName: String)
+data class Person(val identifier: String, val firstName: String, val lastName: String, val cellLocation: String?)
 
 data class Plan(val requestedOn: LocalDate, val priority: CodedDescription, val comments: String?)
 
