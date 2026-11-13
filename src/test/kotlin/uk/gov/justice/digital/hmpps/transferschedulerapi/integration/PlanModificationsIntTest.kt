@@ -27,7 +27,6 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferMovedToPl
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferReprioritised
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferRescheduled
 import uk.gov.justice.digital.hmpps.transferschedulerapi.event.TransferScheduled
-import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.personIdentifier
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.username
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.DataGenerator.word
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.config.TransferOperations
@@ -66,7 +65,7 @@ class PlanModificationsIntTest(
   fun `401 unauthorised without a valid token`() {
     webTestClient
       .put()
-      .uri(TRANSFER_MODIFICATIONS_URL, personIdentifier())
+      .uri(TRANSFER_MODIFICATIONS_URL, newUuid())
       .exchange()
       .expectStatus()
       .isUnauthorized

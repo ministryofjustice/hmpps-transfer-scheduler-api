@@ -68,7 +68,7 @@ fun TransferEntity.asModel(prisonProvider: PrisonProvider) = Transfer(
   stage,
 )
 
-private fun TransferEntity.person() = Person(person.identifier, person.firstName, person.lastName)
+private fun TransferEntity.person() = Person(person.identifier, person.firstName, person.lastName, person.cellLocation)
 
 private fun TransferEntity.plan(): Plan? = with(plan) {
   this?.let { Plan(requestedOn, priority.asCodedDescription(), comments) }
