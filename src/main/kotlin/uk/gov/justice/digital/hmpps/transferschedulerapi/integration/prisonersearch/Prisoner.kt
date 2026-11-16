@@ -10,16 +10,17 @@ data class Prisoner(
   val prisonerNumber: String,
   val firstName: String,
   val lastName: String,
-  val status: String,
+  val status: String?,
   val prisonId: String?,
   val lastPrisonId: String?,
   val cellLocation: String?,
 ) {
   @JsonIgnore
-  fun responsiblePrison() = if (status.startsWith(ACTIVE)) lastPrisonId else prisonId
+  fun responsiblePrison(): String = (if (status?.startsWith(ACTIVE) == true) lastPrisonId else prisonId) ?: OUT
 
   companion object {
     private const val ACTIVE = "ACTIVE"
+    private const val OUT = "OUT"
 
     fun fields() = arrayOf(
       Prisoner::prisonerNumber.name,
