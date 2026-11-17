@@ -8,11 +8,11 @@ plugins {
 }
 
 val ehcacheVersion = "3.12.0"
-val hibernateJcacheVersion = "7.4.15.Final"
+val hibernateJcacheVersion = "7.4.16.Final"
 val hmppsKotlinVersion = "3.1.0"
 val sentryVersion = "8.64.0"
 val springDocVersion = "3.2.0"
-val sqsStarterVersion = "7.4.1"
+val sqsStarterVersion = "7.6.0"
 val swaggerParserVersion = "2.1.48"
 val testContainersVersion = "1.21.4"
 val uuidGeneratorVersion = "5.2.0"
