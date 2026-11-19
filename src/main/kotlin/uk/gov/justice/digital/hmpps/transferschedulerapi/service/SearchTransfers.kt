@@ -20,9 +20,9 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.transferStatusCo
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.prisonersearch.Prisoner
 import uk.gov.justice.digital.hmpps.transferschedulerapi.integration.prisonregister.PrisonRegisterClient
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged.PageMetadata
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged.PersonTransferSearchRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged.PlanningSearchRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged.PrisonTransferSearchRequest
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged.QueryRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged.TransferSearchRequest
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.paged.TransferSearchResponse
 
@@ -33,10 +33,18 @@ class SearchTransfers(
 ) {
   fun findForPrison(prisonCode: String, request: PrisonTransferSearchRequest): TransferSearchResponse = transferRepository.findAll(request.asSpecification(prisonCode), request.pageable()).asSearchResponse()
 
+  fun findForPerson(personIdentifier: String, request: PersonTransferSearchRequest): TransferSearchResponse = transferRepository.findAll(request.asSpecification(personIdentifier), request.pageable()).asSearchResponse()
+
   private fun TransferSearchRequest.defaults(): List<Specification<Transfer>> = listOfNotNull(
     statusCodes.takeIf { it.isNotEmpty() }?.let { transferStatusCodeIn(it) },
     reasonCodes.takeIf { it.isNotEmpty() }?.let { transferReasonCodeIn(it) },
   )
+
+  private fun PersonTransferSearchRequest.asSpecification(personIdentifier: String): Specification<Transfer> = (
+    listOfNotNull(
+      transferMatchesPersonIdentifier(personIdentifier, null),
+    ) + defaults()
+    ).reduce(Specification<Transfer>::and)
 
   private fun PrisonTransferSearchRequest.asSpecification(prisonCode: String): Specification<Transfer> = (
     listOfNotNull(
@@ -46,7 +54,7 @@ class SearchTransfers(
       destinationCodes.takeIf { it.isNotEmpty() }?.let { destinationCodeIn(it) },
       logisticsCodes.takeIf { it.isNotEmpty() }?.let { logisticsCodeIn(it) },
       if (this is PlanningSearchRequest) priorityCodes.takeIf { it.isNotEmpty() }?.let { priorityCodeIn(it) } else null,
-      (this.takeIf { it is QueryRequest } as? QueryRequest)?.query?.let {
+      query?.let {
         if (it.isPersonIdentifier()) {
           transferMatchesPersonIdentifier(it, prisonCode)
         } else {

@@ -11,12 +11,8 @@ import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Schedule
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.Transfer
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.ReferenceData.Companion.SEQUENCE_NUMBER
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
-import uk.gov.justice.digital.hmpps.transferschedulerapi.model.StartAndEnd
-import java.time.LocalDate
 
-interface TransferSearchRequest :
-  PagedRequest,
-  StartAndEnd<LocalDate> {
+interface TransferSearchRequest : PagedRequest {
 
   @get:Schema(requiredMode = NOT_REQUIRED)
   val statusCodes: Set<TransferStatus.Code>

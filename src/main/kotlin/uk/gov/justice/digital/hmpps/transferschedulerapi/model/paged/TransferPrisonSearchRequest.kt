@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.media.Schema.RequiredMode.NOT_REQUIRED
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferPriority
 import uk.gov.justice.digital.hmpps.transferschedulerapi.domain.referencedata.TransferStatus
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.StageRequest
+import uk.gov.justice.digital.hmpps.transferschedulerapi.model.StartAndEnd
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.TransferStage
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.ValidDateRange
 import uk.gov.justice.digital.hmpps.transferschedulerapi.model.ValidStartAndEnd
@@ -41,6 +42,8 @@ const val SCHEDULED = "SCHEDULED"
 )
 sealed interface PrisonTransferSearchRequest :
   TransferSearchRequest,
+  StartAndEnd<LocalDate>,
+  QueryRequest,
   StageRequest {
   @get:Schema(requiredMode = NOT_REQUIRED)
   val destinationCodes: Set<String>
@@ -67,8 +70,7 @@ data class PlanningSearchRequest(
   override val page: Int = 1,
   override val size: Int = 10,
   override val sort: String = PLAN_REQUESTED,
-) : PrisonTransferSearchRequest,
-  QueryRequest {
+) : PrisonTransferSearchRequest {
   override val stage: TransferStage = TransferStage.PLANNING
   override fun validSortFields(): Set<String> = setOf(PLAN_REQUESTED, SCHEDULE_START, REASON, STATUS)
   enum class StartAndEndType {
@@ -93,8 +95,7 @@ data class ScheduledSearchRequest(
   override val page: Int = 1,
   override val size: Int = 10,
   override val sort: String = SCHEDULE_START,
-) : PrisonTransferSearchRequest,
-  QueryRequest {
+) : PrisonTransferSearchRequest {
   override val stage: TransferStage = TransferStage.SCHEDULED
   override fun validSortFields(): Set<String> = setOf(SCHEDULE_START, REASON, STATUS)
 }
