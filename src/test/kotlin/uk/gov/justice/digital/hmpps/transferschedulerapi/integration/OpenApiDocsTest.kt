@@ -1,12 +1,14 @@
 package uk.gov.justice.digital.hmpps.transferschedulerapi.integration
 
-import io.swagger.v3.parser.OpenAPIV3Parser
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.info.BuildProperties
 import org.springframework.boot.test.web.server.LocalServerPort
+import org.springframework.http.HttpMethod
 import org.springframework.http.MediaType
+import tools.jackson.databind.JsonNode
+import java.net.URI
 
 class OpenApiDocsTest(
   @Autowired private val buildProperties: BuildProperties,
@@ -45,11 +47,6 @@ class OpenApiDocsTest(
 
   @Test
   fun `the swagger json don't contain any duplicate methods`() {
-    // Methods in resource classes with the same name end up with operationIds that have _1 and _2 etc. in the name.
-    // When the code is then generated from the api docs we refer to the endpoint by operationId. If a new method is
-    // added or one removed then the _1 / _2 etc. can change order and thus we end up calling a completely different
-    // endpoint next time the code is generated. This test then prevents that from happening by ensuring all endpoints
-    // have method names / operation ids.
     webTestClient.get()
       .uri("/v3/api-docs")
       .accept(MediaType.APPLICATION_JSON)
@@ -72,8 +69,40 @@ class OpenApiDocsTest(
 
   @Test
   fun `the open api json is valid`() {
-    val result = OpenAPIV3Parser().readLocation("http://localhost:$port/v3/api-docs", null, null)
-    assertThat(result.messages).isEmpty()
+    val rawJson = URI("http://localhost:$port/v3/api-docs").toURL().readText()
+    val root: JsonNode = jsonMapper.readTree(rawJson)
+
+    assertThat(root.path("openapi").asString()).startsWith("3.")
+    assertThat(root.path("info").path("title").asString()).isNotBlank()
+    assertThat(root.path("paths").isObject).isTrue()
+    assertThat(root.path("paths").size()).isGreaterThan(0)
+  }
+
+  @Test
+  fun `the open api json path security requirements are valid`() {
+    val rawJson = URI("http://localhost:$port/v3/api-docs").toURL().readText()
+    val root: JsonNode = jsonMapper.readTree(rawJson)
+
+    val securityRequirements: Set<String> = root.path("security")
+      .flatMap { requirementObj -> requirementObj.propertyNames() }
+      .toSet()
+
+    val pathsNode = root.path("paths")
+    assertThat(pathsNode.isObject).isTrue()
+
+    pathsNode.properties().forEach { (path, pathItem) ->
+      HttpMethod.values().forEach { method ->
+        val operation = pathItem.path(method.name())
+        if (!operation.isMissingNode && operation.has("security")) {
+          val operationSecurityKeys = operation.path("security")
+            .flatMap { requirementObj -> requirementObj.propertyNames() }
+
+          assertThat(operationSecurityKeys)
+            .`as`("Security requirements for $method $path")
+            .isSubsetOf(securityRequirements)
+        }
+      }
+    }
   }
 
   @Test
@@ -86,5 +115,16 @@ class OpenApiDocsTest(
       .expectBody()
       .jsonPath("$.security").isArray()
       .jsonPath("$.security[0].bearer-jwt").exists()
+  }
+
+  @Test
+  fun `all endpoints have a security scheme defined`() {
+    webTestClient.get()
+      .uri("/v3/api-docs")
+      .accept(MediaType.APPLICATION_JSON)
+      .exchange()
+      .expectStatus().isOk
+      .expectBody()
+      .jsonPath("$.paths[*][*][?(!@.security)]").doesNotExist()
   }
 }

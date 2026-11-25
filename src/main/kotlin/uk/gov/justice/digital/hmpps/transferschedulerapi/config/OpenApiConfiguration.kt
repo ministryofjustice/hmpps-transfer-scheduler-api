@@ -92,9 +92,18 @@ class OpenApiConfiguration(buildProperties: BuildProperties, private val context
         emptyList()
       }
       if (roles.isNotEmpty()) {
-        operation.description = "${operation.description ?: ""}\n\n" +
-          "Requires one of the following roles:\n" +
-          roles.joinToString(prefix = "* ", separator = "\n* ")
+        val rolesDescription = """
+            Requires one of the following roles:
+            ${roles.joinToString(prefix = "* ", separator = "${System.lineSeparator()}* ")}
+        """.trimMargin()
+        operation.description = operation.description?.let { des ->
+          """
+            $des
+          """.trimMargin()
+        } ?: rolesDescription
+        roles.forEach { role ->
+          operation.addSecurityItem(SecurityRequirement().addList(role, listOf("read")))
+        }
       }
     }
 
